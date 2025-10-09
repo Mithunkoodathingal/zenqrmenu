@@ -1,0 +1,110 @@
+{% extends 'restaurant/base.html' %}
+{% load humanize %}
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Completed Orders</h3>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-auto">
+      <label class="form-label small mb-0">Search</label>
+      <input name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Order id, table number or item name">
+    </div>
+    <div class="col-auto">
+      <label class="form-label small mb-0">Start date</label>
+      <input type="date" name="start_date" value="{{ start_date }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-auto">
+      <label class="form-label small mb-0">End date</label>
+      <input type="date" name="end_date" value="{{ end_date }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      <a href="{% url 'completed_orders' %}" class="btn btn-outline-secondary btn-sm">Reset</a>
+    </div>
+  </form>
+
+  <div class="row">
+    <!-- left: completed orders list -->
+    <div class="col-lg-8 mb-4">
+      {% if orders %}
+        <div class="list-group">
+          {% for order in orders %}
+            <div class="list-group-item">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <div><strong>Order #{{ order.id }}</strong> &nbsp;
+                    <small class="text-muted">Table: {{ order.table.table_number }}</small>
+                  </div>
+                  <div class="small text-muted">Placed: {{ order.local_time|date:"d M Y H:i" }}</div>
+                </div>
+                <div class="text-end">
+                  <div class="fw-bold">₹{{ order._computed_total|floatformat:2 }}</div>
+                  <div class="small text-muted">Items: {{ order.order_items.count }}</div>
+                </div>
+              </div>
+
+              <hr class="my-2">
+
+              <div class="row gx-2">
+                <div class="col-12">
+                  <ul class="list-unstyled mb-0">
+                    {% for li in order.item_lines %}
+                      <li class="d-flex justify-content-between small py-1">
+                        <div>
+                          <strong>{{ li.quantity }}×</strong> {{ li.name }}
+                          {% if li.addons %}
+                            <div class="text-muted small">
+                              Add-ons:
+                              {% for a in li.addons %}
+                                {{ a.name }} (+₹{{ a.price }}){% if not forloop.last %}, {% endif %}
+                              {% endfor %}
+                            </div>
+                          {% endif %}
+                        </div>
+                        <div class="text-end">₹{{ li.line_total|floatformat:2 }}</div>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="card p-3 text-center text-muted">
+          No completed orders found for the selected filters.
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- right: totals per day -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm p-3 mb-3">
+        <h6 class="mb-3">Totals by day</h6>
+        {% if totals_by_date %}
+          <ul class="list-group">
+            {% for day, total in totals_by_date %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>{{ day|date:"d M Y" }}</div>
+                <div class="fw-bold">₹{{ total|floatformat:2 }}</div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="text-muted small">No totals to show.</div>
+        {% endif %}
+      </div>
+
+      <!-- quick export or summary actions -->
+      <div class="card shadow-sm p-3">
+        <h6 class="mb-2">Summary</h6>
+        <p class="small text-muted mb-2">Showing {{ orders|length }} completed orders.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,301 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ item.name }} — {{ restaurant.name }}</title>
+
+  <!-- keep same CSS includes as menu.html -->
+  <link href="{% static 'assets/vendor/magnific-popup/magnific-popup.min.css' %}" rel="stylesheet">
+  <link href="{% static 'assets/vendor/swiper/swiper-bundle.min.css' %}" rel="stylesheet">
+  <link href="{% static 'assets/vendor/bootstrap-select/css/bootstrap-select.min.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'assets/vendor/rangeslider/rangeslider.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/vendor/nouislider/nouislider.min.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/vendor/switcher/switcher.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+
+  <style>
+    /* Product detail component (scoped) */
+    .product-detail { display:flex; gap:40px; align-items:flex-start; padding:28px 12px; }
+    .product-detail .left {
+      flex:0 0 420px;
+    }
+    .product-detail .left .hero {
+      width:100%;
+      border-radius:12px;
+      overflow:hidden;
+      height:520px;
+      background:#f6f6f6;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .product-detail .left .hero img {
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    .product-detail .right { flex:1 1 auto; min-width:320px; }
+    .veg-tag {
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size:0.95rem;
+      color:#4a7a33;
+      margin-bottom:8px;
+    }
+    .veg-dot {
+      width:18px; height:18px; border-radius:3px; background:#2f9c44; display:inline-block; box-shadow:inset 0 0 0 4px #fff;
+    }
+    .product-title { font-size:2.4rem; margin:4px 0 12px; font-weight:800; color:#111; }
+    .rating-row { color:#f1c40f; margin-bottom:14px; display:flex; gap:12px; align-items:center; font-size:0.95rem; color:#5b5b5b; }
+    .product-desc { color:#666; line-height:1.6; margin-bottom:20px; max-width:760px; }
+
+    .price-qty-row { display:flex; gap:40px; align-items:center; margin-bottom:20px; }
+    .price-block { font-size:1rem; color:#666; }
+    .price-block .amount { display:block; font-size:1.4rem; font-weight:800; color:#2f9c44; margin-top:6px; }
+
+    .qty-control { display:flex; align-items:center; gap:8px; }
+    .qty-control button { width:36px; height:36px; border-radius:6px; border:1px solid #ddd; background:#fff; }
+    .qty-control input { width:56px; text-align:center; border:1px solid #eee; border-radius:6px; padding:6px; }
+
+    .addons-grid { display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:18px; }
+    .addon-card {
+      display:flex; gap:12px; align-items:center; padding:12px; border-radius:10px;
+      border:1px solid #eee; background:#fff;
+      justify-content:space-between;
+    }
+    .addon-left { display:flex; gap:12px; align-items:center; }
+    .addon-left img { width:56px; height:46px; object-fit:cover; border-radius:8px; }
+    .addon-title { font-weight:600; color:#333; }
+    .addon-price { color:#888; font-size:0.95rem; }
+
+    .action-row { display:flex; gap:12px; margin-top:18px; align-items:center; }
+    .btn-add { background:#6aa84f; color:#fff; border:none; padding:12px 22px; font-weight:700; border-radius:8px; }
+    .btn-buy { background:transparent; border:2px solid #f3c02c; color:#333; padding:10px 20px; border-radius:8px; font-weight:700; }
+
+    /* small avatars (as per screenshot) */
+    .avatars { position:relative; margin-left:8px; }
+    .avatars img { width:40px;height:40px;border-radius:50%; border:3px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.08); position:relative; margin-left:-10px; }
+    .avatars .more { width:40px;height:40px;border-radius:50%; background:#2f9c44;color:#fff;display:flex;align-items:center;justify-content:center;margin-left:-10px;font-weight:700; }
+
+    /* responsive */
+    @media (max-width: 992px){
+      .product-detail { flex-direction:column; }
+      .product-detail .left { width:100%; flex-basis:auto; }
+      .product-detail .left .hero { height:360px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container my-4">
+  <div class="product-detail">
+
+    <!-- LEFT: large image -->
+    <div class="left">
+      <div class="hero">
+        {% if item.image %}
+          <img src="{{ item.image.url }}" alt="{{ item.name }}">
+        {% else %}
+          <!-- fallback sample image -->
+          <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ item.name }}">
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- RIGHT: details -->
+    <div class="right">
+      <div class="veg-tag">
+        <span class="veg-dot" aria-hidden="true"></span>
+        <span>Pure veg</span>
+      </div>
+
+      <h1 class="product-title">{{ item.name }}</h1>
+
+      <div class="rating-row">
+        <span style="color:#f1c40f;">★ 4.5</span>
+        <span style="color:#666;">• 20 Reviews</span>
+      </div>
+
+      <p class="product-desc">
+        {{ item.description|default:"Delicious & made fresh. Ingredients sourced locally and prepared with care." }}
+      </p>
+
+      <div class="price-qty-row">
+        <div class="price-block">
+          <div style="color:#777;">Price</div>
+          <div class="amount">₹{{ item.price }}</div>
+        </div>
+
+        <div>
+          <div style="color:#777; margin-bottom:6px;">Quantity</div>
+          <div class="qty-control">
+            <button type="button" id="qty-decrease">−</button>
+            <input id="qty-input" type="number" value="1" min="1">
+            <button type="button" id="qty-increase">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:8px; font-weight:700;">Add On</div>
+
+      <div class="addons-grid">
+        {% for addon in addons %}
+        <label class="addon-card" data-addon-id="{{ addon.id }}">
+          <div class="addon-left">
+            {% if addon.image %}
+              <img src="{{ addon.image.url }}" alt="{{ addon.name }}">
+            {% else %}
+              <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ addon.name }}">
+            {% endif %}
+            <div>
+              <div class="addon-title">{{ addon.name }}</div>
+              <div class="addon-price">+ ₹{{ addon.price }}</div>
+            </div>
+          </div>
+          <input type="checkbox" class="addon-checkbox" value="{{ addon.id }}">
+        </label>
+        {% endfor %}
+      </div>
+
+      <div class="action-row">
+        <button id="add-to-cart" class="btn-add">Add To Cart</button>
+        <button id="buy-now" class="btn-buy">Buy Now</button>
+
+        <div class="avatars" title="150+ happy customers" style="margin-left:auto;">
+          <img src="{% static 'assets/images/avatar1.png' %}" alt="a1">
+          <img src="{% static 'assets/images/avatar2.png' %}" alt="a2">
+          <img src="{% static 'assets/images/avatar3.png' %}" alt="a3">
+          <div class="more">150+</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- keep same JS includes -->
+<script src="{% static 'assets/js/jquery.min.js' %}"></script>
+<script src="{% static 'assets/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'assets/vendor/bootstrap-select/js/bootstrap-select.min.js' %}"></script>
+<script src="{% static 'assets/vendor/masonry/masonry-4.2.2.js' %}"></script>
+<script src="{% static 'assets/js/custom.min.js' %}"></script>
+
+<script>
+/* Behavior: quantity +/- handling, collect addons, call add_to_cart_ajax endpoint.
+   Uses same CSRF helper as menu.js and calls updateMiniCart if available.
+*/
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+(function(){
+  const qtyInput = document.getElementById('qty-input');
+  const dec = document.getElementById('qty-decrease');
+  const inc = document.getElementById('qty-increase');
+  const addBtn = document.getElementById('add-to-cart');
+  const buyBtn = document.getElementById('buy-now');
+
+  if (dec) dec.addEventListener('click', () => {
+    const v = parseInt(qtyInput.value || 1, 10);
+    if (v > 1) qtyInput.value = v - 1;
+  });
+  if (inc) inc.addEventListener('click', () => {
+    const v = parseInt(qtyInput.value || 1, 10);
+    qtyInput.value = v + 1;
+  });
+
+  function collectAddonIds() {
+    return Array.from(document.querySelectorAll('.addon-checkbox:checked')).map(cb => cb.value);
+  }
+
+  function updateMiniCartSafely(count, total) {
+    try {
+      if (typeof updateMiniCart === 'function') {
+        updateMiniCart(count, total);
+        return;
+      }
+    } catch(e){}
+    const c = document.getElementById('cart-count');
+    const t = document.getElementById('cart-total');
+    if (c) c.textContent = count;
+    if (t) t.textContent = parseFloat(total).toFixed(2);
+  }
+
+  function handleAddToCart(redirectToConfirmation=false) {
+    const quantity = parseInt(qtyInput.value || 1, 10);
+    const addons = collectAddonIds();
+    const urlTemplate = "{% url 'add_to_cart_ajax' restaurant.id table.id item.id %}";
+    // If your url name differs, change accordingly. The view expects addons[] and quantity
+    fetch(urlTemplate, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'X-CSRFToken': csrftoken},
+      body: (function() {
+        const fd = new FormData();
+        fd.append('quantity', quantity);
+        addons.forEach(a => fd.append('addons[]', a));
+        return fd;
+      })()
+    })
+    .then(resp => {
+      if (!resp.ok) throw new Error('Add-to-cart failed');
+      return resp.json();
+    })
+    .then(data => {
+      if (data.success) {
+        updateMiniCartSafely(data.items_count || 0, data.total_price || 0);
+        // show small confirmation
+        const note = document.createElement('div');
+        note.className = 'alert alert-success position-fixed';
+        note.style.right = '18px';
+        note.style.bottom = '100px';
+        note.style.zIndex = 2000;
+        note.textContent = `Added • ₹${(data.line_total||0).toFixed(2)}`;
+        document.body.appendChild(note);
+        setTimeout(()=>note.remove(), 1400);
+
+        if (redirectToConfirmation && data.order_id) {
+          // redirect to order confirmation page (server-side view)
+          window.location.href = "{% url 'order_confirmation' 0 %}".replace('/0/', '/' + data.order_id + '/');
+        }
+      } else {
+        throw new Error('Server returned error');
+      }
+    })
+    .catch(err => {
+      console.error('add to cart error', err);
+      alert('Could not add to cart. Try again.');
+    });
+  }
+
+  if (addBtn) addBtn.addEventListener('click', function(e){
+    e.preventDefault();
+    handleAddToCart(false); // add to cart and stay
+  });
+
+  if (buyBtn) buyBtn.addEventListener('click', function(e){
+    e.preventDefault();
+    handleAddToCart(true); // add then go to confirmation
+  });
+
+})();
+</script>
+</body>
+</html>

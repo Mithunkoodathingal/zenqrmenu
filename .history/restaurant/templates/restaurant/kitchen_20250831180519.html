@@ -1,0 +1,42 @@
+{% comment %} {% extends 'restaurant/base.html' %}
+{% load static %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Kitchen Orders</h2>
+    
+    <div class="row">
+        {% for order in orders %}
+        <div class="col-md-6"> <!-- Two orders per row for better layout -->
+            <div class="card shadow-lg p-3 mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Order ID: {{ order.id }} - Table {{ order.table.table_number }}</h5>
+                    <p class="text-muted"><strong>Order Time:</strong> {{ order.created_at|date:"d M Y, h:i A" }}</p>
+
+                    <ul class="list-group mb-3">
+                        {% for item in order.order_items.all %}
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>{{ item.food_item.name }}</span> 
+                                <span class="badge bg-primary">x{{ item.quantity }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+
+                    <p><strong>Total Price:</strong> ₹{{ order.total_price }}</p>
+
+                    <form method="post" action="{% url 'complete_order' order.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success w-100">Mark as Completed</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+            <div class="col-12">
+                <p class="text-muted text-center">No pending orders</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %} {% endcomment %}
+

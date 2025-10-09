@@ -1,0 +1,21 @@
+{% extends 'restaurant/base.html' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Create New Table</h2>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Table Number</label>
+                {{ form.table_number }}
+                <div class="form-text">Enter a unique table number</div>
+            </div>
+            <button type="submit" class="btn btn-primary">Create Table</button>
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends 'restaurant/base1.html' %}
+{% load static socialaccount %}
+{% block title %}Log In — Zen Menu{% endblock %}
+{% block extra_css %}
+<style>
+/* small page-scoped tweaks — you already have these in your pages; kept consistent */
+.card-container{box-shadow:0 4px 20px rgba(0,0,0,0.15);border-radius:8px;overflow:hidden;}
+.card-left{background:#f8f9fa;padding:2rem;display:flex;justify-content:center;align-items:center;}
+.card-right{background:#fff;padding:2rem 3rem;}
+.form-title{font-weight:bold;color:#f97316;margin-bottom:1.5rem;text-align:center;}
+.btn-orange{background:#f97316;color:#fff}
+.btn-outline-orange{border:2px solid #f97316;color:#f97316}
+.btn-outline-orange:hover{background:#f97316;color:#fff}
+.form-control{border:2px solid #f97316;border-radius:8px}
+.form-control:focus{border-color:#ea580c;box-shadow:none}
+.non-field-errors{background:#fff5f5;border:1px solid #f5c6cb;color:#a94442;padding:10px;border-radius:6px;margin-bottom:12px}
+.field-error{color:#d9534f;font-size:.875rem;margin-top:.35rem}
+.is-invalid{border-color:#d9534f!important}
+@media(max-width:420px){.card-left{display:none}.card-right{padding:1.25rem}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center min-vh-100">
+  <div class="row card-container w-100" style="max-width:850px;">
+    <div class="col-md-6 d-none d-md-flex card-left">
+      <img src="{% static 'assets/images/login-placeholder.jpg' %}" alt="Login" class="img-fluid">
+    </div>
+    
+    <div class="col-12 col-md-6 card-right">
+      <h4 class="form-title">Log In</h4>
+
+      {# non-field errors #}
+      {% if form.non_field_errors %}
+        <div class="non-field-errors">
+          {% for err in form.non_field_errors %}<div>{{ err }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      {# social buttons (facebook/google) #}
+      <div class="d-grid gap-2 mb-3">
+        <a href="#" class="btn btn-outline-orange d-flex align-items-center justify-content-center">
+          <i class="bi bi-facebook me-2"></i> Continue with Facebook
+        </a>
+        <a href="#" class="btn btn-outline-orange d-flex align-items-center justify-content-center">
+          <i class="bi bi-google me-2"></i> Continue with Google
+        </a>
+      </div>
+
+      <div class="text-center my-2">OR</div>
+
+      {# allauth default login field name is "login" unless changed. Use form.login here. #}
+      <form method="post" action="{% url 'account_login' %}">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <input type="text"
+                 name="login"
+                 value="{{ form.login.value|default:'' }}"
+                 class="form-control {% if form.login.errors %}is-invalid{% endif %}"
+                 placeholder="Username or email"
+                 required>
+          {% if form.login.errors %}
+            {% for err in form.login.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <input type="password"
+                 name="password"
+                 class="form-control {% if form.password.errors %}is-invalid{% endif %}"
+                 placeholder="Password"
+                 required>
+          {% if form.password.errors %}
+            {% for err in form.password.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+          {% endif %}
+        </div>
+
+        <div class="d-grid">
+          <button class="btn btn-orange" type="submit">Log In</button>
+        </div>
+        <div class="mt-2 text-center "><small class="fs-6"><a href="{% url 'account_reset_password' %}">Forgot password?</a></small></div>
+      </form>
+
+      <div class="text-center mt-3">
+        <small>Don’t have an account ?</small>
+        <a href="{% url 'account_signup' %}" class="btn btn-orange btn-sm ms-2">Sign Up</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% load static %}
+<div class="product-detail" data-item-id="{{ item.id }}">
+  <div class="left">
+    <div class="hero">
+      {% if item.image %}
+        <img src="{{ item.image.url }}" alt="{{ item.name }}">
+      {% else %}
+        <img src="{% static 'assets/images/default-cover.jpg' %}" alt="{{ item.name }}">
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="veg-tag">
+      <span class="veg-dot" aria-hidden="true"></span>
+      <span>Pure veg</span>
+    </div>
+
+    <h1 class="product-title">{{ item.name }}</h1>
+
+    <p class="product-desc">{{ item.description|default:"Delicious & made fresh." }}</p>
+
+    <div class="price-qty-row">
+      <div class="price-block">
+        <div style="color:#777;">Price</div>
+        <div class="amount">₹{{ item.price }}</div>
+      </div>
+
+      <div>
+        <div style="color:#777; margin-bottom:6px;">Quantity</div>
+        <div class="qty-control">
+          <button type="button" class="qty-decrease">−</button>
+          <input class="qty-input" type="number" value="1" min="1" />
+          <button type="button" class="qty-increase">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:8px; font-weight:700;">Add On</div>
+
+    <div class="addons-grid">
+      {% for addon in addons %}
+      <label class="addon-card" data-addon-id="{{ addon.id }}">
+        <div class="addon-left">
+          {% if addon.image %}
+            <img src="{{ addon.image.url }}" alt="{{ addon.name }}">
+          {% else %}
+            <img src="{% static 'assets/images/default-cover.jpg' %}" alt="{{ addon.name }}">
+          {% endif %}
+          <div>
+            <div class="addon-title">{{ addon.name }}</div>
+            <div class="addon-price">+ ₹{{ addon.price }}</div>
+          </div>
+        </div>
+        <input type="checkbox" class="addon-checkbox" value="{{ addon.id }}">
+      </label>
+      {% empty %}
+        <div class="text-muted">No add-ons available</div>
+      {% endfor %}
+    </div>
+
+    <div class="action-row">
+      <button type="button" class="btn-add fragment-add-to-cart">Add To Cart</button>
+      <button type="button" class="btn-buy fragment-buy-now">Buy Now</button>
+    </div>
+  </div>
+</div>

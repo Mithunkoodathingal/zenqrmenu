@@ -1,0 +1,59 @@
+{# templates/account/signup.html #}
+{% extends "restaurant/base1.html" %}
+{% block title %}Sign up - Zen Menu{% endblock %}
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center min-vh-75">
+  <div class="row card-container w-100" style="max-width: 820px;">
+    <div class="col-md-6 d-none d-md-flex card-left">
+      <img src="{% static 'assets/images/signup-placeholder.jpg' %}" alt="Sign Up" class="img-fluid">
+    </div>
+    <div class="col-12 col-md-6 card-right">
+      <h4 class="form-title">Sign-Up</h4>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} py-2">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="post" action="{% url 'account_signup' %}">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="non-field-errors mb-2">
+            {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <input type="text" name="username" value="{{ form.username.value|default:'' }}" class="form-control {% if form.username.errors %}is-invalid{% endif %}" placeholder="User Name" required>
+          {% if form.username.errors %}{% for e in form.username.errors %}<div class="field-error">{{ e }}</div>{% endfor %}{% endif %}
+        </div>
+
+        <div class="mb-3">
+          <input type="email" name="email" value="{{ form.email.value|default:'' }}" class="form-control {% if form.email.errors %}is-invalid{% endif %}" placeholder="Email" required>
+          {% if form.email.errors %}{% for e in form.email.errors %}<div class="field-error">{{ e }}</div>{% endfor %}{% endif %}
+        </div>
+
+        <div class="mb-3">
+          <input type="password" name="password1" class="form-control {% if form.password1.errors %}is-invalid{% endif %}" placeholder="Password" required>
+          {% if form.password1.errors %}{% for e in form.password1.errors %}<div class="field-error">{{ e }}</div>{% endfor %}{% endif %}
+        </div>
+
+        <div class="mb-3">
+          <input type="password" name="password2" class="form-control {% if form.password2.errors %}is-invalid{% endif %}" placeholder="Confirm Password" required>
+          {% if form.password2.errors %}{% for e in form.password2.errors %}<div class="field-error">{{ e }}</div>{% endfor %}{% endif %}
+        </div>
+
+        <div class="d-grid">
+          <button type="submit" class="btn btn-orange">Sign-Up</button>
+        </div>
+      </form>
+
+      <div class="text-center mt-3">
+        <small>Already have an account ?</small>
+        <a href="{% url 'account_login' %}" class="btn btn-orange btn-sm ms-2">Login</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends 'restaurant/base.html' %}
+{% block content %}
+
+<div class="d-flex justify-content-center align-items-center mt-4">
+  <!-- Mobile mockup -->
+  <div class="shadow-lg rounded" style="border: 16px solid #333; border-radius: 40px; width: 360px; height: 640px; position: relative; background:#f8f9fa;">
+    <!-- Top notch -->
+    <div style="width: 150px; height: 20px; background:#333; border-radius:10px; position:absolute; top:4px; left:50%; transform:translateX(-50%);"></div>
+    
+    <!-- Scrollable menu content -->
+    <div class="p-3" style="margin-top:30px; height:580px; overflow-y:auto;">
+      <h5 class="fw-bold text-center mb-3">{{ restaurant.name }} Menu</h5>
+
+      {% for category in categories %}
+      <div class="mb-3">
+        <h6 class="fw-bold text-orange">{{ category.name }}</h6>
+        <ul class="list-group">
+          {% for item in category.fooditem_set.all %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <span class="fw-bold">{{ item.name }}</span>  
+              <span class="text-muted">₹{{ item.price }}</span>
+              {% if item.description %}
+              <p class="small text-muted mb-0">{{ item.description }}</p>
+              {% endif %}
+            </div>
+            <button class="btn btn-sm btn-warning text-white fw-bold">+ Add</button>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">No items in this category</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% empty %}
+      <p class="text-center text-muted">No categories yet</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

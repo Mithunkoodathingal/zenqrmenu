@@ -1,0 +1,210 @@
+{% extends 'restaurant/base.html' %}
+{% block content %}
+{% load static %}  
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zebra Menu - Login</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .text-orange { color: #ff6600; }
+    body {
+      background-color: #fff;
+      font-family: Arial, sans-serif;
+    }
+    .card-container {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .card-left {
+      background: #f8f9fa;
+      padding: 2rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .card-right {
+      background: #fff;
+      padding: 2rem 3rem;
+    }
+    .btn-orange {
+      background-color: #f97316;
+      color: white;
+    }
+    .btn-orange:hover {
+      background-color: #ea580c;
+      color: white;
+    }
+    .form-control {
+      border: 2px solid #f97316;
+      border-radius: 8px;
+    }
+    .form-control:focus {
+      border-color: #ea580c;
+      box-shadow: none;
+    }
+    .form-title {
+      font-weight: bold;
+      color: #f97316;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    .btn-outline-orange {
+      border: 2px solid #f97316;
+      color: #f97316;
+    }
+    .btn-outline-orange:hover {
+      background: #f97316;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container d-flex justify-content-center align-items-center min-vh-100">
+    <div class="row card-container w-100" style="max-width: 850px;">
+      
+      <!-- Left image (hidden on mobile) -->
+      <div class="col-md-6 d-none d-md-flex card-left">
+        <img src="{% static 'assets/images/login-placeholder.jpg' %}" alt="Login Illustration" class="img-fluid">
+      </div>
+
+      <!-- Right login form -->
+      <div class="col-12 col-md-6 card-right">
+        <h4 class="form-title">Log In</h4>
+        
+        <div class="d-grid gap-2 mb-3">
+          <button class="btn btn-outline-orange">
+            <i class="bi bi-facebook"></i> Continue with Facebook
+          </button>
+          <button class="btn btn-outline-orange">
+            <i class="bi bi-google"></i> Continue with Google
+          </button>
+        </div>
+
+        <div class="text-center my-2">OR</div>
+
+        <form method="post" action="{% url 'login' %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <input type="text" name="username" class="form-control" placeholder="User Name" required>
+          </div>
+          <div class="mb-3">
+            <input type="password" name="password" class="form-control" placeholder="Password" required>
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn btn-orange">Log In</button>
+          </div>
+        </form>
+
+        <div class="text-center mt-3">
+          <small>Don’t have an account ?</small>
+          <a href="{% url 'signup' %}" class="btn btn-orange btn-sm ms-2">Sign Up</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bootstrap icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+</body>
+</html>
+
+{% endblock %}
+
+
+
+{% comment %} {% load static %}  
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login & Signup</title>
+    <link rel="stylesheet" href="{% static 'css/auth_style.css' %}">
+</head>
+<body>
+    <div class="main-wrapper">
+  
+        <div class="card-container">
+            <div class="card">
+                <div class="login-form">
+                    <div class="header">Log in</div>
+                    <div class="content">
+                        <form method="post" action="{% url 'login' %}">
+                            {% csrf_token %}
+                            <div class="input-field" >
+                                <input type="text" name="username" placeholder="Username" required>
+                            </div>
+                            <div class="input-field">
+                                <input type="password" name="password" placeholder="Password" required>
+                            </div>
+                            <div class="input-field">
+                                <button class="btn btn-submit" type="submit">Log in</button>
+                            </div>
+                        </form>
+                        
+                    </div>
+                    {% if form.errors %}
+                            <p style="color: red;">Invalid username or password. Please try again.</p>
+                    {% endif %}
+                    <div class="footer">
+                        Don't have an account ?
+                        <button class="btn btn-rotate" id="btn-signup">Sign up</button>
+                    </div>
+                </div> <!-- end login-form panel -->
+                <div class="signup-form">
+                    <div class="header">Sign up</div>
+                    <div class="content">
+                        <form method="post" action="{% url 'signup' %}">
+                            {% csrf_token %}
+                            <div class="input-field" >
+                                <input type="text" name="username" placeholder="Username" required>
+                            </div>
+                            <div class="input-field" >
+                                <input name="email" placeholder="Email" required>
+                            </div>
+                            <div class="input-field group">
+                                <input type="password" name="password1" placeholder="Password" required>
+                                <span class="see-password">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                                        <path d="M0 0h24v24H0z" fill="none"/>
+                                        <path fill="#fff" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div class="input-field group">
+                                <input type="password" name="password2" placeholder="Rewrite Password" required>
+                                <span class="see-password">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                                        <path d="M0 0h24v24H0z" fill="none"/>
+                                        <path fill="#fff" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div class="input-field">
+                                <button class="btn btn-submit" type="submit">Get started</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="footer">
+                        <button class="btn btn-rotate" id="btn-login">I have an account</button>
+                    </div>
+                    {% if form.errors %}
+                        <p style="color: red;">{{ form.errors }}</p>
+                    {% endif %}
+                </div> <!-- end signup-form panel -->
+            </div> <!-- end card -->
+        </div> <!-- end card-container -->
+    </div>
+
+
+<script src="{% static 'js/auth_script.js' %}"></script>
+
+</body>
+</html> {% endcomment %}
+

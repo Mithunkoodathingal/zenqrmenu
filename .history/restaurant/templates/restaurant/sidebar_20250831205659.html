@@ -1,0 +1,49 @@
+<!-- Footer Section (sticks to bottom) -->
+<div class="mt-auto bg-dark text-white text-center p-3 position-relative">
+  <div class="d-flex justify-content-center align-items-center">
+    <p class="mb-0 fw-bold me-2">{{ request.user.username }}</p>
+    <!-- Settings icon -->
+    <button class="btn btn-sm btn-light rounded-circle" id="settingsToggle">
+      <i class="bi bi-gear-fill"></i>
+    </button>
+  </div>
+
+  <!-- Hidden dropdown -->
+  <div id="settingsMenu" class="bg-white text-dark shadow rounded position-absolute p-2" 
+       style="bottom:60px; left:50%; transform:translateX(-50%); display:none; min-width:160px; z-index:1000;">
+    
+    {% if not has_subscription %}
+      <a href="{% url 'subscription_plans' %}" class="dropdown-item text-warning fw-bold">
+        <i class="bi bi-star-fill me-2"></i> Subscribe Now
+      </a>
+    {% endif %}
+    
+    <form method="post" action="{% url 'logout' %}" class="mb-0">
+      {% csrf_token %}
+      <button type="submit" class="dropdown-item text-danger fw-bold">
+        <i class="bi bi-box-arrow-right me-2"></i> Logout
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Toggle dropdown visibility
+  document.addEventListener("DOMContentLoaded", function() {
+    const toggleBtn = document.getElementById("settingsToggle");
+    const menu = document.getElementById("settingsMenu");
+
+    toggleBtn.addEventListener("click", function() {
+      menu.style.display = (menu.style.display === "none" || menu.style.display === "") ? "block" : "none";
+    });
+
+    // Close if clicked outside
+    document.addEventListener("click", function(e) {
+      if (!toggleBtn.contains(e.target) && !menu.contains(e.target)) {
+        menu.style.display = "none";
+      }
+    });
+  });
+</script>
+
+

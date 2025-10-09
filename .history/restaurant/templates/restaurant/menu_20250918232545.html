@@ -1,0 +1,71 @@
+{% extends 'restaurant/base1.html' %}
+{% load static %}
+
+{% block content %}
+<div class="page-content bg-white">
+    <!-- ✅ Restaurant Banner -->
+    <div class="restaurant-banner position-relative">
+        <img src="{{ restaurant.cover_image.url }}" class="img-fluid w-100 restaurant-cover" alt="Restaurant Cover">
+        <div class="overlay"></div>
+        <div class="restaurant-info text-center">
+            <h1 class="restaurant-name">{{ restaurant.name }}</h1>
+            <p class="restaurant-description">{{ restaurant.about }}</p>
+        </div>
+    </div>
+
+    <!-- ✅ Menu Categories -->
+    <section class="content-inner">
+        <div class="container">
+            <div class="row">
+                <div class="col-xl-10 col-lg-9 col-md-12">
+                    <div class="site-filters style-1 clearfix">
+                        <ul class="filters" data-bs-toggle="buttons">
+                            <li data-filter=".All" class="btn active"><a href="#">ALL</a></li>
+                            {% for category in categories %}
+                                <li data-filter=".{{ category.name|slugify }}" class="btn">
+                                    <a href="#">{{ category.name }}</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ✅ Menu Items -->
+            <ul id="masonry" class="row">
+                {% for category in categories %}
+                    {% for item in category.fooditem_set.all %}
+                        <li class="card-container col-xl-3 col-lg-4 col-md-6 m-b30 {{ category.name|slugify }}">
+                            <div class="dz-img-box style-4 box-hover">
+                                <div class="menu-detail text-center">
+                                    <div class="dz-media">
+                                        {% if item.image %}
+                                            <img src="{{ item.image.url }}" alt="{{ item.name }}">
+                                        {% else %}
+                                            <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="default">
+                                        {% endif %}
+                                    </div>
+                                    <div class="dz-content">
+                                        <h5 class="title">{{ item.name }}</h5>
+                                        <p>{{ item.description|truncatechars:60 }}</p>
+                                    </div>
+                                </div>
+                                <div class="menu-footer text-center">
+                                    <span>Price</span>
+                                    <h5 class="price">₹{{ item.price }}</h5>
+                                </div>
+
+                                <!-- ✅ View Detail Button -->
+                                <a href="{% url 'product_detail' restaurant.id table.id item.id %}" class="btn btn-sm btn-orange">
+    View Details
+</a>
+
+                            </div>
+                        </li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
+</div>
+{% endblock %}

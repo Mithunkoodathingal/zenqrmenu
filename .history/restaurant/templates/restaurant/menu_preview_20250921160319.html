@@ -1,0 +1,520 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+/* ---------- Layout rule to show phone mockup only on wide screens ---------- */
+.phone-mockup { display:block; }
+.mobile-menu { display:none; }
+
+/* Hide the phone mockup and show raw menu on smaller screens */
+@media (max-width: 991.98px) {
+  .phone-mockup { display:none !important; }
+  .mobile-menu { display:block !important; }
+}
+
+/* Minor helper to ensure mockup scrollbar looks native */
+.phone-screen {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Keep phone look tasteful on very large screens */
+@media (min-width: 1400px) {
+  .phone-mockup { transform: scale(1.05); }
+}
+
+/* Reuse and keep the menu styles from your real menu (copy) */
+.restaurant-banner {
+  width:100%;
+  height:300px;
+  position:relative;
+  overflow:hidden;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+.restaurant-banner .restaurant-cover {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+.restaurant-banner .overlay {
+  position:absolute;
+  inset:0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.18) 35%, rgba(0,0,0,0.28) 100%);
+  pointer-events:none;
+}
+.banner-caption {
+  position:absolute;
+  left:16px;
+  bottom:16px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  z-index:5;
+  pointer-events:auto;
+}
+.banner-caption .thumb {
+  width:96px;
+  height:96px;
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow:0 8px 18px rgba(0,0,0,0.25);
+  border: 2px solid rgba(255,255,255,0.9);
+  background:#fafafa;
+  flex:0 0 auto;
+}
+.banner-caption .thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+.banner-caption .restaurant-name {
+  color:#fff;
+  font-size:1.3rem;
+  font-weight:800;
+  line-height:1.05;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width: calc(100vw - 160px);
+}
+@media (max-width: 768px) {
+  .restaurant-banner { height:220px; }
+  .banner-caption { left:12px; bottom:12px; gap:10px; }
+  .banner-caption .thumb { width:64px; height:64px; border-radius:8px; }
+  .banner-caption .restaurant-name { font-size:1.05rem; max-width: calc(100vw - 120px); }
+}
+
+/* copy remaining menu-card styles (kept identical to production menu) */
+.menu-card {
+  background:#fff;
+  border-radius:10px;
+  padding:12px;
+  box-shadow:0 8px 20px rgba(38,50,56,0.06);
+  display:flex;
+  gap:12px;
+  align-items:center;
+  min-height:120px;
+  height: auto;
+  transition: transform .18s ease;
+  position:relative;
+  overflow:hidden;
+  flex-direction: row;
+}
+.menu-card:hover { transform:translateY(-6px); }
+.menu-card .img-wrap {
+  flex: 0 0 110px;
+  height: 90px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background: #fafafa;
+  border-radius:8px;
+  padding:6px;
+}
+.menu-card img {
+  max-height:100%;
+  max-width:100%;
+  display:block;
+  object-fit:cover;
+  border-radius:6px;
+}
+.menu-card .content {
+  flex: 1 1 auto;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  min-height:80px;
+}
+.menu-card .title { font-size:1rem; font-weight:700; margin:0 0 6px; color:#222; }
+.menu-card .desc { font-size:.88rem; color:#666; margin:0; line-height:1.15; max-height:36px; overflow:hidden; }
+.menu-card .meta { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:8px; }
+.menu-card .price { font-size:1rem; font-weight:800; color:#2f9c44; }
+.price-top { display:none; font-size:1rem; font-weight:800; color:#2f9c44; margin-top:4px; }
+.plus-badge{ background:#6aa84f; color:#fff; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:20px; cursor:pointer; border: none; }
+.desktop-floating { position:absolute; right:12px; bottom:12px; display:flex; }
+.card-footer { display:none; margin-top:8px; width:100%; }
+.tile-link { text-decoration:none; color:inherit; display:block; height:100%; }
+
+/* mobile adjustments (kept) */
+@media (max-width:576px){
+  .restaurant-name{ font-size:1.6rem; }
+  .restaurant-banner{ height:220px; }
+  .menu-card { flex-direction: row; align-items:center; padding:10px; min-height:96px; }
+  .menu-card .img-wrap { flex: 0 0 80px; height: 72px; padding:4px; }
+  .menu-card .content { min-height:0; }
+  .desktop-floating { display:flex; right:8px; bottom:8px; }
+  .menu-card .meta .price { display:block; }
+  .card-footer { display:none !important; }
+}
+@media (min-width: 577px) and (max-width: 1024px) {
+  .menu-card { padding-right: 12px; }
+  .menu-card .desc { display:none; }
+  .price-top { display:block; }
+  .menu-card .meta .price { display:none; }
+  .card-footer { display:flex; justify-content:flex-end; align-items:center; }
+  .plus-badge { width:40px; height:40px; font-size:18px; border-radius:8px; }
+  .desktop-floating { display:none; }
+}
+@media (min-width: 1025px) {
+  .desktop-floating { display:flex; }
+}
+
+/* tiny adjustments so mockup scroll area doesn't show extra gap */
+.phone-screen::-webkit-scrollbar { width:8px; height:8px; }
+.phone-screen::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 8px; }
+</style>
+
+<!-- PHONE MOCKUP (desktop only) -->
+<div class="d-flex justify-content-center align-items-start mt-4 phone-mockup">
+  <div class="shadow-lg"
+       style="border: 14px solid #333; border-radius: 40px; width: 375px; height: 667px; background:#fff; position: relative;">
+    <!-- Speaker / notch -->
+    <div style="width: 120px; height: 16px; background:#333; border-radius:10px; position:absolute; top:6px; left:50%; transform:translateX(-50%);"></div>
+
+    <!-- Screen -->
+    <div class="p-0 phone-screen" style="margin-top:30px; height:620px; overflow-y:auto; -webkit-overflow-scrolling: touch; background: #fff;">
+
+      <!-- BANNER inside mockup -->
+      <div class="restaurant-banner" style="height:160px; border-bottom:1px solid #eee;">
+        {% if restaurant.cover_image %}
+          <img class="restaurant-cover" src="{{ restaurant.cover_image.url }}" alt="{{ restaurant.name }}">
+        {% else %}
+          <img class="restaurant-cover" src="{% static 'assets/images/banner/bnr4.jpg' %}" alt="{{ restaurant.name }}">
+        {% endif %}
+        <div class="overlay"></div>
+
+        <div class="banner-caption" role="contentinfo" aria-label="Restaurant name and thumbnail">
+          <div class="thumb" aria-hidden="true">
+            {% if restaurant.cover_image %}
+              <img src="{{ restaurant.cover_image.url }}" alt="{{ restaurant.name }}">
+            {% else %}
+              <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ restaurant.name }}">
+            {% endif %}
+          </div>
+          <div class="restaurant-name">{{ restaurant.name }}</div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div style="padding:10px 12px; border-bottom:1px solid #f1f1f1; background:#fff;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+          <button class="btn btn-sm btn-light active" data-filter="all" style="font-size:12px;">ALL</button>
+          {% for category in categories %}
+            <button class="btn btn-outline-secondary btn-sm" data-filter="cat-{{ category.id }}" style="font-size:12px;">{{ category.name }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Menu list (same markup as customer menu) -->
+      <div style="padding:12px;">
+        {% for category in categories %}
+          <div class="mb-3" data-preview-cat="cat-{{ category.id }}">
+            <h6 class="fw-bold" style="color:#ff7a45; margin:6px 0 8px;">{{ category.name }}</h6>
+
+            {% for item in category.fooditem_set.all %}
+              <div class="card shadow-sm mb-2 preview-card" data-cat="cat-{{ category.id }}" style="border-radius:10px; overflow:hidden;">
+                <div class="card-body d-flex justify-content-between align-items-center p-2" style="gap:12px;">
+                  <div style="display:flex; gap:12px; align-items:center;">
+                    <div style="flex:0 0 72px; height:72px; background:#fafafa; border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                      {% if item.image %}
+                        <img src="{{ item.image.url }}" alt="{{ item.name }}" style="width:100%;height:100%;object-fit:cover;">
+                      {% else %}
+                        <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ item.name }}" style="width:100%;height:100%;object-fit:cover;">
+                      {% endif %}
+                    </div>
+
+                    <div style="min-width:0;">
+                      <div style="font-weight:700; font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ item.name }}</div>
+                      <p class="small text-muted mb-0">₹{{ item.price }}</p>
+                      {% if item.description %}
+                        <p class="small text-muted mb-0" style="max-width:200px; overflow:hidden; text-overflow:ellipsis;">
+                          {{ item.description|slice:":10" }}{% if item.description and item.description|length > 10 %}...{% endif %}
+                        </p>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="btn btn-sm btn-warning text-white fw-bold preview-add-btn" data-item-id="{{ item.id }}" style="padding:6px 10px;">
+                      + Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+            {% empty %}
+              <p class="text-muted small">No items in this category</p>
+            {% endfor %}
+          </div>
+        {% empty %}
+          <p class="text-center text-muted">No categories added yet</p>
+        {% endfor %}
+      </div>
+
+    </div> <!-- /screen -->
+  </div> <!-- /mockup -->
+</div>
+
+<!-- RAW MENU (mobile & narrow screens) -->
+<div class="mobile-menu container mt-3">
+  <!-- Banner (no mockup) -->
+  <div class="restaurant-banner mb-3">
+    {% if restaurant.cover_image %}
+      <img class="restaurant-cover" src="{{ restaurant.cover_image.url }}" alt="{{ restaurant.name }}">
+    {% else %}
+      <img class="restaurant-cover" src="{% static 'assets/images/banner/bnr4.jpg' %}" alt="{{ restaurant.name }}">
+    {% endif %}
+    <div class="overlay"></div>
+    <div class="banner-caption" role="contentinfo" aria-label="Restaurant name and thumbnail">
+      <div class="thumb" aria-hidden="true">
+        {% if restaurant.cover_image %}
+          <img src="{{ restaurant.cover_image.url }}" alt="{{ restaurant.name }}">
+        {% else %}
+          <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ restaurant.name }}">
+        {% endif %}
+      </div>
+      <div class="restaurant-name">{{ restaurant.name }}</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="mb-3">
+    <div class="d-flex gap-2 flex-wrap">
+      <button class="btn btn-sm btn-light active" data-filter=".All">ALL</button>
+      {% for category in categories %}
+        <button class="btn btn-outline-secondary btn-sm" data-filter=".{{ category.name|lower|slugify }}">{{ category.name }}</button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Items -->
+  <div class="row g-3" id="masonry-mobile">
+    {% for category in categories %}
+      {% for item in category.fooditem_set.all %}
+        <div class="col-12 card-container {{ category.name|lower|slugify }}">
+          <a class="tile-link" href="/menu/{{ restaurant.id }}/{{ table.id }}/item/{{ item.id }}/">
+            <div class="menu-card mb-2" data-item-id="{{ item.id }}">
+              <div class="img-wrap">
+                {% if item.image %}
+                  <img src="{{ item.image.url }}" alt="{{ item.name }}">
+                {% else %}
+                  <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ item.name }}">
+                {% endif %}
+              </div>
+
+              <div class="content">
+                <div>
+                  <h5 class="title">{{ item.name }}</h5>
+                  <div class="price-top">₹{{ item.price }}</div>
+                  <p class="desc">
+                    {{ item.description|default:"Delicious and Spicy"|slice:":10" }}{% if item.description and item.description|length > 10 %}...{% endif %}
+                  </p>
+                </div>
+
+                <div class="meta">
+                  <div class="price">₹{{ item.price }}</div>
+                </div>
+                <div class="card-footer">
+                  <button type="button" class="plus-badge card-plus" aria-label="Add item">+</button>
+                </div>
+              </div>
+              <div class="plus-badge desktop-floating card-plus" aria-hidden="true">+</div>
+            </div>
+          </a>
+        </div>
+      {% endfor %}
+    {% endfor %}
+  </div>
+</div>
+
+<!-- MINI CART (floating) - keep as in customer menu -->
+<div id="mini-cart" style="position: fixed; right: 18px; bottom: 18px; background: #fff; border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); padding:10px 12px; z-index:1200; width:220px;">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <div style="font-size:0.95rem;color:#666;">Items: <span id="cart-count">0</span></div>
+      <div style="font-weight:700; font-size:1rem;">Total: ₹<span id="cart-total">0.00</span></div>
+    </div>
+    <form id="place-order-form" method="post" action="/menu/{{ restaurant.id }}/{{ table.id }}/cart/place/">
+      {% csrf_token %}
+      <button id="place-order-btn" type="submit" class="btn btn-sm btn-success" disabled style="margin-left:8px;">Order</button>
+    </form>
+  </div>
+</div>
+
+<!-- PRODUCT MODAL (Bootstrap 5) -->
+<div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div style="display:flex;align-items:center;justify-content:center;padding:36px;color:#888;">
+          Click a product to view details...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JS (kept identical to customer menu JS) -->
+<script src="{% static 'assets/js/jquery.min.js' %}"></script>
+<script src="{% static 'assets/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'assets/vendor/bootstrap-select/js/bootstrap-select.min.js' %}"></script>
+<script src="{% static 'assets/vendor/masonry/masonry-4.2.2.js' %}"></script>
+<script src="{% static 'assets/js/custom.min.js' %}"></script>
+
+<script>
+/* ------------------- Helper utilities ------------------- */
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+/* Update mini-cart UI */
+function updateMiniCartUI(count, total) {
+  const c = document.getElementById('cart-count');
+  const t = document.getElementById('cart-total');
+  if (c) c.textContent = count;
+  if (t) t.textContent = parseFloat(total || 0).toFixed(2);
+  const btn = document.getElementById('place-order-btn');
+  if (btn) btn.disabled = (count === 0);
+}
+window.updateMiniCart = updateMiniCartUI;
+
+/* initial call to set visibility of plus badge buttons for tablet vs others */
+function updatePlusVisibility() {
+  const isTablet = window.innerWidth >= 577 && window.innerWidth <= 1024;
+  document.querySelectorAll('.desktop-floating').forEach(el => {
+    el.style.display = isTablet ? 'none' : 'flex';
+  });
+  document.querySelectorAll('.card-footer').forEach(el => {
+    el.style.display = isTablet ? 'flex' : 'none';
+  });
+}
+window.addEventListener('load', updatePlusVisibility);
+window.addEventListener('resize', updatePlusVisibility);
+
+/* initialize mini-cart by fetching server summary */
+(function fetchCartSummary() {
+  const url = "/menu/{{ restaurant.id }}/{{ table.id }}/cart/summary/";
+  fetch(url, { credentials: 'same-origin' })
+    .then(resp => {
+      if (!resp.ok) throw new Error('cart_summary failed: ' + resp.status);
+      return resp.json();
+    })
+    .then(data => {
+      if (data && data.success) updateMiniCartUI(data.items_count || 0, data.total_price || 0);
+    })
+    .catch(err => {
+      console.warn('cart_summary error', err);
+    });
+})();
+
+/* Fragment loader & modal wiring (kept identical) */
+function injectFragmentHtml(html) {
+  const modalBody = document.querySelector('#productModal .modal-body');
+  if (!modalBody) return;
+  modalBody.innerHTML = html;
+  try { initInjectedFragment(modalBody); } catch(e){ console.error('initInjectedFragment error', e); }
+  const modalEl = document.getElementById('productModal');
+  const bs = new bootstrap.Modal(modalEl, {});
+  bs.show();
+}
+function loadProductFragment(itemId) {
+  const urlTemplate = "/menu/{{ restaurant.id }}/{{ table.id }}/item/99999/html/";
+  const url = urlTemplate.replace('99999', itemId);
+  const modalBody = document.querySelector('#productModal .modal-body');
+  if (modalBody) modalBody.innerHTML = '<div style="padding:36px;color:#888;">Loading...</div>';
+  fetch(url, { credentials: 'same-origin' })
+    .then(resp => {
+      if (!resp.ok) return resp.text().then(txt => { throw new Error(txt || 'Failed to load'); });
+      return resp.text();
+    })
+    .then(html => injectFragmentHtml(html))
+    .catch(err => {
+      console.error('[menu] load fragment failed', err);
+      const modalBody = document.querySelector('#productModal .modal-body');
+      if (modalBody) modalBody.innerHTML = '<div style="padding:18px;color:#b00;">Could not load product details. Check console/server logs.</div>';
+    });
+}
+function findItemIdFromElement(el) {
+  if (!el) return null;
+  if (el.classList && el.classList.contains && el.classList.contains('menu-card')) {
+    return el.getAttribute('data-item-id');
+  }
+  let card = el.closest && el.closest('.menu-card');
+  if (card) return card.getAttribute('data-item-id');
+  const anchor = el.closest && el.closest('a.tile-link');
+  if (anchor) {
+    const inner = anchor.querySelector && anchor.querySelector('.menu-card');
+    if (inner && inner.getAttribute('data-item-id')) return inner.getAttribute('data-item-id');
+    if (anchor.getAttribute('data-item-id')) return anchor.getAttribute('data-item-id');
+  }
+  const withAttr = el.closest && el.closest('[data-item-id]');
+  if (withAttr) return withAttr.getAttribute('data-item-id');
+  return null;
+}
+
+/* event delegation: intercept clicks on tile links and plus buttons */
+document.addEventListener('click', function (e) {
+  const tile = e.target.closest && e.target.closest('a.tile-link');
+  if (tile) {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    e.preventDefault();
+    const id = findItemIdFromElement(tile);
+    if (id) loadProductFragment(id);
+    return;
+  }
+  const plus = e.target.closest && e.target.closest('.card-plus');
+  if (plus) {
+    e.preventDefault();
+    const id = findItemIdFromElement(plus);
+    if (id) loadProductFragment(id);
+    return;
+  }
+}, false);
+
+/* Category filter (works both in mockup and mobile) */
+document.addEventListener('click', function(e) {
+  if (e.target && e.target.matches('[data-filter]')) {
+    const btn = e.target;
+    const filter = btn.getAttribute('data-filter');
+    document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Normalize two filter variants: 'all' / '.All' / 'cat-<id>' / '.catname'
+    if (filter === 'all' || filter === '.All') {
+      document.querySelectorAll('.preview-card, .card-container').forEach(el => el.style.display = '');
+      return;
+    }
+
+    // show/hide based on data-cat / class names
+    document.querySelectorAll('.preview-card, .card-container').forEach(el => {
+      const matchesData = el.dataset.cat === filter || el.dataset.cat === (filter.replace('.', ''));
+      const matchesClass = filter.startsWith('.') ? el.classList.contains(filter.replace('.','')) : false;
+      const matchesPreview = el.dataset.cat === filter || el.dataset.cat === filter.replace('.', '');
+      if (matchesData || matchesClass || matchesPreview) el.style.display = '';
+      else el.style.display = 'none';
+    });
+  }
+}, false);
+
+/* initInjectedFragment placeholder - identical behaviour expected in customer menu fragment pages */
+function initInjectedFragment(root) {
+  if (!root) return;
+  // leave the implementation to product_detail_fragment (server) — this placeholder lets injected fragments
+  // call the same functions (qty buttons, add to cart, etc.) — if your fragment defines them they will run.
+  // (actual implementation already shipped in the main menu template in your app, so no change here)
+}
+</script>
+{% endblock %}

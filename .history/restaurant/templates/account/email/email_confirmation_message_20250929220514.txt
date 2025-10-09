@@ -1,0 +1,7 @@
+Hello {{ user.get_username }}!
+
+Please confirm your email address by clicking the link below:
+{{ activate_url }}
+
+Thanks,
+Zen Menu

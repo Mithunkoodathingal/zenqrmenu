@@ -1,0 +1,316 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ restaurant.name }} - Menu</title>
+
+  <!-- keep original CSS files -->
+  <link href="{% static 'assets/vendor/magnific-popup/magnific-popup.min.css' %}" rel="stylesheet">
+  <link href="{% static 'assets/vendor/swiper/swiper-bundle.min.css' %}" rel="stylesheet">
+  <link href="{% static 'assets/vendor/bootstrap-select/css/bootstrap-select.min.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'assets/vendor/rangeslider/rangeslider.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/vendor/nouislider/nouislider.min.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/vendor/switcher/switcher.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+
+  <!-- Minimal modal / cart styles (extend as needed) -->
+  <style>
+    .mini-cart {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+      padding: 10px 12px;
+      z-index: 1200;
+      width: 220px;
+    }
+    .mini-cart .total { font-weight: 700; font-size: 1rem; }
+    .mini-cart .count { font-size: 0.95rem; color: #666; }
+    .modal-img { width: 100%; height: 200px; object-fit: cover; margin-bottom: 8px; border-radius:6px; }
+    .addon-row { display: flex; align-items:center; gap:8px; margin-bottom:6px; }
+    .addon-row label { margin:0; }
+    .quantity-input { width: 64px; text-align:center; }
+  </style>
+</head>
+<body>
+<div class="page-content bg-white">
+
+  <!-- Banner -->
+  <div class="dz-bnr-inr style-1 text-center">
+    <div class="container-fluid p-0">
+      <div class="restaurant-banner">
+        {% if restaurant.cover_image %}
+          <img class="restaurant-cover" src="{{ restaurant.cover_image.url }}" alt="{{ restaurant.name }}">
+        {% else %}
+          <img class="restaurant-cover" src="{% static 'assets/images/banner/bnr4.jpg' %}" alt="{{ restaurant.name }}">
+        {% endif %}
+        <div class="overlay"></div>
+        <div class="restaurant-info">
+          <h1 class="restaurant-name">{{ restaurant.name }}</h1>
+          <p class="restaurant-description">{{ restaurant.about }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- /Banner -->
+
+  <!-- Menu content -->
+  <section class="content-inner py-5">
+    <div class="container">
+      <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+          <ul class="filters list-inline text-center" style="gap:10px;">
+            <li class="list-inline-item"><button class="btn btn-light btn-sm active" data-filter=".All">ALL</button></li>
+            {% for category in categories %}
+              <li class="list-inline-item"><button class="btn btn-outline-secondary btn-sm" data-filter=".{{ category.name|lower|slugify }}">{{ category.name }}</button></li>
+            {% endfor %}
+          </ul>
+
+          <!-- Place Order button (disabled when cart empty) -->
+          <form id="place-order-form" method="post" action="{% url 'place_cart_order' restaurant.id table.id %}">
+            {% csrf_token %}
+            <button id="place-order-btn" class="btn btn-success" type="submit" disabled>Place Order</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="row g-3" id="masonry">
+        {% for category in categories %}
+          {% for item in category.fooditem_set.all %}
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3 card-container {{ category.name|lower|slugify }}">
+              <div class="menu-card" data-item-id="{{ item.id }}">
+                <div class="img-wrap">
+                  {% if item.image %}
+                    <img src="{{ item.image.url }}" alt="{{ item.name }}">
+                  {% else %}
+                    <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ item.name }}">
+                  {% endif %}
+                </div>
+
+                <div class="content">
+                  <div>
+                    <h5 class="title">{{ item.name }}</h5>
+                    <p class="desc">{{ item.description|default:"Delicious and Spicy" }}</p>
+                  </div>
+
+                  <div class="meta">
+                    <div class="price">₹{{ item.price }}</div>
+                  </div>
+                </div>
+
+                <!-- Open product modal -->
+                <button class="btn btn-light open-product" data-item-id="{{ item.id }}" style="position:absolute; right: 12px; bottom: 12px;">+</button>
+              </div>
+            </div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- MINI CART (floating) -->
+<div id="mini-cart" class="mini-cart" aria-live="polite">
+  <div class="d-flex justify-content-between">
+    <div>
+      <div class="count">Items: <span id="cart-count">0</span></div>
+      <div class="total">Total: ₹<span id="cart-total">0.00</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- PRODUCT MODAL (Bootstrap 5 markup) -->
+<div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <form id="modal-add-form">
+        <div class="modal-header">
+          <h5 id="modal-title" class="modal-title">Item</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <img id="modal-image" class="modal-img" src="" alt="">
+          <p id="modal-desc"></p>
+
+          <div class="mb-2">
+            <label><strong>Price:</strong> ₹<span id="modal-price">0.00</span></label>
+          </div>
+
+          <div id="modal-addons" class="mb-3">
+            <!-- populated dynamically -->
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <label for="modal-quantity" class="m-0">Quantity</label>
+            <input id="modal-quantity" name="quantity" type="number" min="1" value="1" class="form-control quantity-input">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <input type="hidden" id="modal-item-id" name="item_id" value="">
+          {% csrf_token %}
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button id="modal-add-btn" type="submit" class="btn btn-primary">Add to cart</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Keep original JS files -->
+<script src="{% static 'assets/js/jquery.min.js' %}"></script>
+<script src="{% static 'assets/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'assets/vendor/bootstrap-select/js/bootstrap-select.min.js' %}"></script>
+<script src="{% static 'assets/vendor/masonry/masonry-4.2.2.js' %}"></script>
+<script src="{% static 'assets/js/custom.min.js' %}"></script>
+
+<script>
+  // CSRF helper for fetch
+  function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+          const cookies = document.cookie.split(';');
+          for (let i = 0; i < cookies.length; i++) {
+              const cookie = cookies[i].trim();
+              // Does this cookie string begin with the name we want?
+              if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                  cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                  break;
+              }
+          }
+      }
+      return cookieValue;
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  // Inline helper to update mini-cart display
+  function updateMiniCart(count, total) {
+    document.getElementById('cart-count').innerText = count;
+    document.getElementById('cart-total').innerText = parseFloat(total).toFixed(2);
+    // enable/disable place order button
+    const btn = document.getElementById('place-order-btn');
+    btn.disabled = (count === 0);
+  }
+
+  // Open product modal: fetch JSON
+  document.querySelectorAll('.open-product').forEach(btn => {
+    btn.addEventListener('click', function (e) {
+      const itemId = this.dataset.itemId;
+      fetchProduct(itemId);
+    });
+  });
+
+  let currentRestaurantId = "{{ restaurant.id }}";
+  let currentTableId = "{{ table.id }}";
+
+  function fetchProduct(itemId) {
+    const url = "{% url 'product_json' restaurant.id table.id 99999 %}".replace('99999', itemId);
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById('modal-title').textContent = data.name;
+        document.getElementById('modal-desc').textContent = data.description || '';
+        document.getElementById('modal-price').textContent = parseFloat(data.price).toFixed(2);
+        document.getElementById('modal-image').src = data.image_url || "{% static 'assets/images/menu-small/pic1.png' %}";
+        document.getElementById('modal-item-id').value = data.id;
+        document.getElementById('modal-quantity').value = 1;
+
+        // build addons
+        const addonsDiv = document.getElementById('modal-addons');
+        addonsDiv.innerHTML = '';
+        if (data.addons && data.addons.length) {
+          const heading = document.createElement('div');
+          heading.innerHTML = '<strong>Add-ons</strong>';
+          addonsDiv.appendChild(heading);
+          data.addons.forEach(a => {
+            const row = document.createElement('div');
+            row.className = 'addon-row';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.name = 'addon';
+            cb.value = a.id;
+            cb.id = 'addon-' + a.id;
+            const label = document.createElement('label');
+            label.htmlFor = cb.id;
+            label.innerText = `${a.name} (+₹${parseFloat(a.price).toFixed(2)})`;
+            row.appendChild(cb);
+            row.appendChild(label);
+            addonsDiv.appendChild(row);
+          });
+        }
+
+        // show modal (bootstrap)
+        const modalEl = document.getElementById('productModal');
+        const bsModal = new bootstrap.Modal(modalEl, {});
+        bsModal.show();
+      });
+  }
+
+  // Handle Add to cart form submit inside modal
+  document.getElementById('modal-add-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    const itemId = document.getElementById('modal-item-id').value;
+    const qty = parseInt(document.getElementById('modal-quantity').value || 1, 10);
+    const addonEls = document.querySelectorAll('#modal-addons input[type="checkbox"]:checked');
+    const addons = Array.from(addonEls).map(x => x.value);
+
+    const url = "{% url 'add_to_cart_ajax' restaurant.id table.id 99999 %}".replace('99999', itemId);
+
+    const formData = new FormData();
+    formData.append('quantity', qty);
+    // support multiple addon[] keys
+    addons.forEach(a => formData.append('addons[]', a));
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrftoken
+      },
+      body: formData
+    })
+    .then(r => {
+      if (!r.ok) throw new Error("Failed to add to cart");
+      return r.json();
+    })
+    .then(data => {
+      if (data.success) {
+        // close modal
+        const modalEl = document.getElementById('productModal');
+        const bsModal = bootstrap.Modal.getInstance(modalEl);
+        bsModal.hide();
+
+        // update mini-cart
+        updateMiniCart(data.items_count, data.total_price);
+
+        // optional: show a quick toast / flash
+        const el = document.createElement('div');
+        el.className = 'alert alert-success position-fixed';
+        el.style.right = '18px';
+        el.style.bottom = '80px';
+        el.style.zIndex = 1300;
+        el.textContent = `Added to cart • ₹${data.line_total.toFixed(2)}`;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 1600);
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Could not add to cart. Try again.');
+    });
+  });
+
+  // On page load, try to fetch existing open order totals (optional).
+  // If you want server-side initial cart status, you can implement an endpoint to return the open order summary.
+  // For now we'll start empty.
+  updateMiniCart(0, 0.00);
+
+  // Optionally keep place-order POST as normal form submission. The form points to place_cart_order view (server-side).
+  // No extra JS needed for that.
+</script>
+</body>
+</html>

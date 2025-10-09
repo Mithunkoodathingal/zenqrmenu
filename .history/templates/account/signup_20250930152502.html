@@ -1,0 +1,81 @@
+{% extends 'restaurant/base1.html' %}
+{% load static %}
+{% block title %}Sign Up — Zen Menu{% endblock %}
+{% block extra_css %}
+<style>
+/* reuse same CSS as login page — keep consistent */
+
+.card-container{box-shadow:0 4px 20px rgba(0,0,0,0.15);border-radius:8px;overflow:hidden}
+.card-left{background:#f8f9fa;padding:2rem;display:flex;justify-content:center;align-items:center}
+.card-right{background:#fff;padding:2rem 3rem}
+.form-title{font-weight:bold;color:#f97316;margin-bottom:1.5rem;text-align:center}
+.form-control{border:2px solid #f97316;border-radius:8px;height:44px;padding:.5rem .75rem}
+.field-error{color:#d9534f;font-size:.875rem;margin-top:.35rem}
+.non-field-errors{background:#fff5f5;border:1px solid #f5c6cb;color:#a94442;padding:10px;border-radius:6px;margin-bottom:1rem}
+.is-invalid{border-color:#d9534f!important}
+@media(max-width:420px){.card-left{display:none}.card-right{padding:1.25rem}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center min-vh-100">
+  <div class="row card-container w-100" style="max-width:850px;">
+    <div class="col-md-6 d-none d-md-flex card-left">
+      <img src="{% static 'assets/images/signup-placeholder.jpg' %}" alt="SignUp" class="img-fluid">
+    </div>
+
+    <div class="col-12 col-md-6 card-right">
+      <h4 class="form-title">Sign-Up</h4>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} py-2 mb-2">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      {% if form.non_field_errors %}
+        <div class="non-field-errors">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
+      {% endif %}
+
+      <form method="post" action="{% url 'account_signup' %}">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <input type="text" name="username" value="{{ form.username.value|default:'' }}"
+                 class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+                 placeholder="User Name" required>
+          {% if form.username.errors %}{% for e in form.username.errors %}<div class="field-error">{{ e }}</div>{% endfor %}{% endif %}
+        </div>
+
+        <div class="mb-3">
+          <input type="email" name="email" value="{{ form.email.value|default:'' }}"
+                 class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                 placeholder="Email" required>
+          {% if form.email.errors %}{% for e in form.email.errors %}<div class="field-error">{{ e }}</div>{% endfor %}{% endif %}
+        </div>
+
+        <div class="mb-3">
+          <input type="password" name="password1"
+                 class="form-control {% if form.password1.errors %}is-invalid{% endif %}"
+                 placeholder="Password" required>
+          {% if form.password1.errors %}{% for e in form.password1.errors %}<div class="field-error">{{ e }}</div>{% endfor %}{% endif %}
+        </div>
+
+        <div class="mb-3">
+          <input type="password" name="password2"
+                 class="form-control {% if form.password2.errors %}is-invalid{% endif %}"
+                 placeholder="Re-write Password" required>
+          {% if form.password2.errors %}{% for e in form.password2.errors %}<div class="field-error">{{ e }}</div>{% endfor %}{% endif %}
+        </div>
+
+        <div class="d-grid"><button class="btn btn-orange" type="submit">Sign-Up</button></div>
+      </form>
+
+      <div class="text-center mt-3">
+        <small>Already have an account ?</small>
+        <a href="{% url 'account_login' %}" class="btn btn-orange btn-sm ms-2">Login</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

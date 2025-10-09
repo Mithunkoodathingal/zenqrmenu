@@ -1,0 +1,167 @@
+{% extends 'restaurant/base.html' %}
+{% block content %}
+
+<div class="container mt-4">
+  
+  <!-- Top Action Buttons -->
+  <div class="d-flex justify-content-center mb-4">
+    <a href="{% url 'category_create' %}" class="btn btn-warning fw-bold text-white px-4 py-2 me-3">Add Categories</a>
+    <a href="{% url 'fooditem_create' %}" class="btn btn-warning fw-bold text-white px-4 py-2">Add Items</a>
+  </div>
+
+  <!-- Categories -->
+  {% for category in categories %}
+  <div class="card shadow-sm mb-4 border-orange">
+    <div class="card-body">
+      <h5 class="fw-bold text-orange mb-3">{{ category.name }}</h5>
+
+      <!-- Items inside category -->
+      {% for item in category.fooditem_set.all %}
+      <div class="d-flex justify-content-between align-items-center border p-2 mb-2 rounded position-relative">
+        <div>
+          <span class="fw-bold">{{ item.name }}</span>
+          <span class="text-muted ms-3">₹{{ item.price }}</span>
+        </div>
+        <div class="d-flex align-items-center">
+          <!-- Pause/unpause button -->
+          <button type="button"
+                  class="btn btn-sm me-2 pause-btn"
+                  data-item-id="{{ item.id }}"
+                  aria-pressed="{{ item.is_paused|yesno:'true,false' }}"
+                  title="{% if item.is_paused %}Unpause (Back in stock){% else %}Pause (Out of stock){% endif %}">
+            {% if item.is_paused %}
+              <i class="bi bi-pause-circle-fill me-1"></i><span class="d-none d-md-inline">Paused</span>
+            {% else %}
+              <i class="bi bi-play-circle-fill me-1"></i><span class="d-none d-md-inline">Live</span>
+            {% endif %}
+          </button>
+
+          <a href="{% url 'edit_fooditem' item.id %}" class="btn btn-sm btn-warning text-white fw-bold me-2">
+            <i class="bi bi-pencil-square me-1"></i> Edit
+          </a>
+          <a href="{% url 'delete_fooditem' item.id %}" class="btn btn-sm btn-danger fw-bold">
+            <i class="bi bi-trash3 me-1"></i> Delete
+          </a>
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-muted">No items added in this category yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+  {% empty %}
+  <p class="text-center text-muted">No categories created yet. Use Add Categories above.</p>
+  {% endfor %}
+</div>
+
+<!-- Inline styles specific to pause button (keeps it subtle & consistent) -->
+<style>
+  .pause-btn {
+    min-width: 84px;
+    border-radius: 999px;
+    font-weight: 700;
+    padding: 6px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pause-btn[aria-pressed="true"] {
+    background-color: #dc3545; /* bootstrap danger-ish */
+    color: #fff;
+    border: none;
+  }
+  .pause-btn[aria-pressed="false"] {
+    background-color: #198754; /* bootstrap success-ish */
+    color: #fff;
+    border: none;
+  }
+  @media (max-width: 576px) {
+    .pause-btn { min-width: 64px; padding: 5px 8px; font-size: .85rem; }
+    .pause-btn span { display: none; } /* hide text on very small screens */
+  }
+</style>
+
+<!-- JS: uses csrftoken cookie like your menu page -->
+<script>
+  (function() {
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    document.addEventListener('click', function (e) {
+      const btn = e.target.closest && e.target.closest('.pause-btn');
+      if (!btn) return;
+      e.preventDefault();
+
+      const itemId = btn.getAttribute('data-item-id');
+      if (!itemId) return;
+
+      // optimistic UI flip
+      const currentlyPaused = btn.getAttribute('aria-pressed') === 'true';
+      const newPaused = !currentlyPaused;
+      btn.setAttribute('aria-pressed', newPaused.toString());
+      btn.disabled = true;
+
+      // update icon + label quickly
+      if (newPaused) {
+        btn.innerHTML = '<i class="bi bi-pause-circle-fill me-1"></i><span class="d-none d-md-inline">Paused</span>';
+      } else {
+        btn.innerHTML = '<i class="bi bi-play-circle-fill me-1"></i><span class="d-none d-md-inline">Live</span>';
+      }
+
+      const fd = new FormData();
+      fd.append('item_id', itemId);
+      fd.append('paused', newPaused.toString());
+
+      fetch("{% url 'toggle_item_availability' %}", {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: fd
+      })
+      .then(async resp => {
+        const text = await resp.text();
+        let json = null;
+        try { json = text ? JSON.parse(text) : null; } catch(e) { /* ignore */ }
+        if (!resp.ok || !json || !json.success) {
+          throw new Error('Toggle failed');
+        }
+        // success: leave UI as is
+      })
+      .catch(err => {
+        console.error('toggle-item error', err);
+        // revert UI on error
+        btn.setAttribute('aria-pressed', currentlyPaused.toString());
+        if (currentlyPaused) {
+          btn.innerHTML = '<i class="bi bi-pause-circle-fill me-1"></i><span class="d-none d-md-inline">Paused</span>';
+        } else {
+          btn.innerHTML = '<i class="bi bi-play-circle-fill me-1"></i><span class="d-none d-md-inline">Live</span>';
+        }
+        alert('Could not update item availability. See console.');
+      })
+      .finally(() => {
+        btn.disabled = false;
+      });
+    }, false);
+  })();
+
+  
+</script>
+
+{% endblock %}
+

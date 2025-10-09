@@ -1,0 +1,198 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ restaurant.name }} - Menu</title>
+
+  <!-- original CSS files (kept) -->
+  <link href="{% static 'assets/vendor/magnific-popup/magnific-popup.min.css' %}" rel="stylesheet">
+  <link href="{% static 'assets/vendor/swiper/swiper-bundle.min.css' %}" rel="stylesheet">
+  <link href="{% static 'assets/vendor/bootstrap-select/css/bootstrap-select.min.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'assets/vendor/rangeslider/rangeslider.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/vendor/nouislider/nouislider.min.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/vendor/switcher/switcher.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+
+  <style>
+    /* Banner (kept) */
+    .restaurant-banner { position: relative; width:100%; height:300px; overflow:hidden; }
+    .restaurant-cover { width:100%; height:100%; object-fit:cover; filter:brightness(0.7); }
+    .overlay{ position:absolute; inset:0; background:rgba(0,0,0,0.45); }
+    .restaurant-info{ position:absolute;top:50%;left:50%;transform:translate(-50%,-50%); color:#fff; text-align:center; padding:0 12px;}
+    .restaurant-name{ font-size:2.2rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
+    .restaurant-description{ font-size:1rem; font-weight:300; margin-top:6px; max-width:900px; }
+
+    /* Card grid */
+    .menu-card {
+      background:#fff;
+      border-radius:10px;
+      padding:12px;
+      box-shadow:0 8px 20px rgba(38,50,56,0.06);
+      display:flex;
+      gap:12px;
+      align-items:center;
+      min-height:120px;            /* reduced height */
+      height: auto;
+      transition: transform .18s ease;
+      position:relative;
+      overflow:hidden;
+    }
+    .menu-card:hover { transform:translateY(-6px); }
+
+    /* left image column */
+    .menu-card .img-wrap {
+      flex: 0 0 110px;             /* fixed width for image column */
+      height: 90px;                /* fixed height for image box */
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      background: #fafafa;
+      border-radius:8px;
+      padding:6px;
+    }
+    .menu-card img {
+      max-height:100%;
+      max-width:100%;
+      display:block;
+      object-fit:cover;
+      border-radius:6px;
+    }
+
+    /* content (right column) */
+    .menu-card .content {
+      flex: 1 1 auto;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      min-height:80px;
+    }
+    .menu-card .title { font-size:1rem; font-weight:700; margin:0 0 6px; color:#222; }
+    .menu-card .desc { font-size:.88rem; color:#666; margin:0; line-height:1.15; max-height:36px; overflow:hidden; }
+    .menu-card .meta { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:8px; }
+    .menu-card .price { font-size:1rem; font-weight:800; color:#2f9c44; }
+
+    /* small plus badge to indicate clickable */
+    .plus-badge{ position:absolute; right:12px; bottom:12px; background:#6aa84f; color:#fff; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:20px; }
+
+    /* maintain tile link */
+    .tile-link { text-decoration:none; color:inherit; display:block; height:100%; }
+
+    /* responsive - stack image on top for very small widths */
+    @media (max-width:576px){
+      .restaurant-name{ font-size:1.6rem; }
+      .restaurant-banner{ height:220px; }
+      .menu-card { flex-direction:column; align-items:flex-start; min-height: auto; padding:10px; }
+      .menu-card .img-wrap { width:100%; height:160px; flex: none; margin-bottom:10px; }
+      .plus-badge { right:8px; bottom:8px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-content bg-white">
+
+  <!-- Banner -->
+  <div class="dz-bnr-inr style-1 text-center">
+    <div class="container-fluid p-0">
+      <div class="restaurant-banner">
+        {% if restaurant.cover_image %}
+          <img class="restaurant-cover" src="{{ restaurant.cover_image.url }}" alt="{{ restaurant.name }}">
+        {% else %}
+          <img class="restaurant-cover" src="{% static 'assets/images/banner/bnr4.jpg' %}" alt="{{ restaurant.name }}">
+        {% endif %}
+        <div class="overlay"></div>
+        <div class="restaurant-info">
+          <h1 class="restaurant-name">{{ restaurant.name }}</h1>
+          <p class="restaurant-description">{{ restaurant.about }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- /Banner -->
+
+  <!-- Menu content -->
+  <section class="content-inner py-5">
+    <div class="container">
+      <div class="row mb-4">
+        <div class="col-12">
+          <ul class="filters list-inline text-center" style="gap:10px;">
+            <li class="list-inline-item"><button class="btn btn-light btn-sm active" data-filter=".All">ALL</button></li>
+            {% for category in categories %}
+              <li class="list-inline-item"><button class="btn btn-outline-secondary btn-sm" data-filter=".{{ category.name|lower|slugify }}">{{ category.name }}</button></li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <div class="row g-3" id="masonry">
+        {% for category in categories %}
+          {% for item in category.fooditem_set.all %}
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3 card-container {{ category.name|lower|slugify }}">
+              <a class="tile-link" href="{% url 'product_detail' restaurant.id table.id item.id %}">
+                <div class="menu-card">
+                  <div class="img-wrap">
+                    {% if item.image %}
+                      <img src="{{ item.image.url }}" alt="{{ item.name }}">
+                    {% else %}
+                      <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ item.name }}">
+                    {% endif %}
+                  </div>
+
+                  <div class="content">
+                    <div>
+                      <h5 class="title">{{ item.name }}</h5>
+                      <p class="desc">{{ item.description|default:"Delicious and Spicy" }}</p>
+                    </div>
+
+                    <div class="meta">
+                      <div class="price">₹{{ item.price }}</div>
+                      <div style="opacity:.9; font-size:.85rem; color:#666;">{{ category.name }}</div>
+                    </div>
+                  </div>
+
+                  <div class="plus-badge">+</div>
+                </div>
+              </a>
+            </div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- original JS files (kept) -->
+<script src="{% static 'assets/js/jquery.min.js' %}"></script>
+<script src="{% static 'assets/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'assets/vendor/bootstrap-select/js/bootstrap-select.min.js' %}"></script>
+<script src="{% static 'assets/vendor/masonry/masonry-4.2.2.js' %}"></script>
+<script src="{% static 'assets/js/custom.min.js' %}"></script>
+
+<script>
+  // filter logic (unchanged)
+  document.addEventListener('click', function(e){
+    if(e.target && e.target.matches('[data-filter]')){
+      const btn = e.target;
+      const filter = btn.getAttribute('data-filter');
+      document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      if(filter === '.All'){
+        document.querySelectorAll('#masonry .card-container').forEach(el => el.style.display = '');
+      } else {
+        document.querySelectorAll('#masonry .card-container').forEach(el => {
+          if(el.classList.contains(filter.replace('.',''))){
+            el.style.display = '';
+          } else {
+            el.style.display = 'none';
+          }
+        });
+      }
+    }
+  }, false);
+</script>
+</body>
+</html>

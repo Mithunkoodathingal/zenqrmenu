@@ -1,0 +1,799 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ restaurant.name }} - Menu</title>
+
+  <!-- original CSS files (kept) -->
+  <link href="{% static 'assets/vendor/magnific-popup/magnific-popup.min.css' %}" rel="stylesheet">
+  <link href="{% static 'assets/vendor/swiper/swiper-bundle.min.css' %}" rel="stylesheet">
+  <link href="{% static 'assets/vendor/bootstrap-select/css/bootstrap-select.min.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'assets/vendor/rangeslider/rangeslider.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/vendor/nouislider/nouislider.min.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/vendor/switcher/switcher.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+
+  <style>
+    /* Banner (kept) */
+    .restaurant-banner { position: relative; width:100%; height:300px; overflow:hidden; }
+    .restaurant-cover { width:100%; height:100%; object-fit:cover; filter:brightness(0.7); }
+    .overlay{ position:absolute; inset:0; background:rgba(0,0,0,0.45); }
+    .restaurant-info{ position:absolute;top:50%;left:50%;transform:translate(-50%,-50%); color:#fff; text-align:center; padding:0 12px;}
+    .restaurant-name{ font-size:2.2rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
+    .restaurant-description{ font-size:1rem; font-weight:300; margin-top:6px; max-width:900px; }
+
+    /* Card grid */
+    .menu-card {
+      background:#fff;
+      border-radius:10px;
+      padding:12px;
+      box-shadow:0 8px 20px rgba(38,50,56,0.06);
+      display:flex;
+      gap:12px;
+      align-items:center;
+      min-height:120px;
+      height: auto;
+      transition: transform .18s ease;
+      position:relative;
+      overflow:hidden;
+      flex-direction: row;
+    }
+    .menu-card:hover { transform:translateY(-6px); }
+
+    /* left image column */
+    .menu-card .img-wrap {
+      flex: 0 0 110px;
+      height: 90px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      background: #fafafa;
+      border-radius:8px;
+      padding:6px;
+    }
+    .menu-card img {
+      max-height:100%;
+      max-width:100%;
+      display:block;
+      object-fit:cover;
+      border-radius:6px;
+    }
+
+    /* content (right column) */
+    .menu-card .content {
+      flex: 1 1 auto;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      min-height:80px;
+    }
+    .menu-card .title { font-size:1rem; font-weight:700; margin:0 0 6px; color:#222; }
+    .menu-card .desc { font-size:.88rem; color:#666; margin:0; line-height:1.15; max-height:36px; overflow:hidden; }
+
+    /* price: normal placement (desktop & mobile) */
+    .menu-card .meta { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:8px; }
+    .menu-card .price { font-size:1rem; font-weight:800; color:#2f9c44; }
+
+    /* price area used for tablet (where description used to be) - hidden by default */
+    .price-top {
+      display:none;
+      font-size:1rem;
+      font-weight:800;
+      color:#2f9c44;
+      margin-top:4px;
+    }
+
+    /* plus badge (common style) */
+    .plus-badge{
+      background:#6aa84f;
+      color:#fff;
+      width:36px;
+      height:36px;
+      border-radius:8px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+      font-size:20px;
+      cursor:pointer;
+      border: none;
+    }
+
+    /* floating plus for desktop/mobile - absolute positioning */
+    .desktop-floating {
+      position:absolute;
+      right:12px;
+      bottom:12px;
+      display:flex;
+    }
+
+    /* footer container for inline plus on tablet */
+    .card-footer {
+      display:none; /* shown on tablet */
+      margin-top:8px;
+      width:100%;
+    }
+
+    /* maintain tile link */
+    .tile-link { text-decoration:none; color:inherit; display:block; height:100%; }
+
+    /* -------------------------
+       MOBILE: keep image left, text right (user requested)
+       ------------------------- */
+    @media (max-width:576px){
+      .restaurant-name{ font-size:1.6rem; }
+      .restaurant-banner{ height:220px; }
+
+      /* Keep row layout: image left, content right */
+      .menu-card { flex-direction: row; align-items:center; padding:10px; min-height:96px; }
+
+      /* Make image a bit smaller on narrow screens to fit text on right */
+      .menu-card .img-wrap {
+        flex: 0 0 80px;
+        height: 72px;
+        padding:4px;
+      }
+
+      /* text area spacing */
+      .menu-card .content { min-height:0; }
+
+      /* ensure floating + remains visible (desktop-like) on mobile */
+      .desktop-floating { display:flex; }
+      .desktop-floating { right:8px; bottom:8px; }
+
+      /* keep meta and price as before on mobile */
+      .menu-card .meta .price { display:block; }
+
+      /* hide tablet-only footer plus */
+      .card-footer { display:none !important; }
+    }
+
+    /* --- Tablet (iPad) specific rules: 577px to 1024px --- */
+    @media (min-width: 577px) and (max-width: 1024px) {
+      /* ensure content doesn't go under any absolute elements (we won't use absolute plus here) */
+      .menu-card { padding-right: 12px; } 
+
+      /* Hide the description on tablet as requested */
+      .menu-card .desc { display:none; }
+
+      /* Show price in the top area (where description used to be) */
+      .price-top { display:block; }
+
+      /* Keep meta compact but move price display to .price-top; hide meta's price to avoid duplication */
+      .menu-card .meta .price { display:none; }
+
+      /* Show footer and render + button inline (no absolute) */
+      .card-footer {
+        display:flex;
+        justify-content:flex-end;
+        align-items:center;
+      }
+
+      /* Make plus-badge static (not absolute) inside footer on tablet */
+      .plus-badge {
+        width:40px;
+        height:40px;
+        font-size:18px;
+        border-radius:8px;
+      }
+
+      /* hide floating desktop + on tablet */
+      .desktop-floating { display:none; }
+    }
+
+    /* optional: for larger tablets / small desktops center the plus vertically (keeps it tidy) */
+    @media (min-width: 768px) and (max-width: 1024px) {
+      .menu-card { padding-right: 12px; }
+    }
+
+    /* Desktop large screens: ensure floating + visible */
+    @media (min-width: 1025px) {
+      .desktop-floating { display:flex; }
+    }
+
+    /* ===== product-detail fragment CSS (scoped styles are fine in menu page) ===== */
+    .product-detail { display:flex; gap:40px; align-items:flex-start; padding:8px 12px; }
+    .product-detail .left { flex:0 0 420px; }
+    .product-detail .left .hero { width:100%; border-radius:12px; overflow:hidden; height:520px; background:#f6f6f6; display:flex; align-items:center; justify-content:center; }
+    .product-detail .left .hero img { width:100%; height:100%; object-fit:cover; display:block; }
+    .product-detail .right { flex:1 1 auto; min-width:320px; }
+    .veg-tag { display:inline-flex; align-items:center; gap:8px; font-size:0.95rem; color:#4a7a33; margin-bottom:8px; }
+    .veg-dot { width:18px; height:18px; border-radius:3px; background:#2f9c44; display:inline-block; box-shadow:inset 0 0 0 4px #fff; }
+    .product-title { font-size:2.4rem; margin:4px 0 12px; font-weight:800; color:#111; }
+    .rating-row { color:#f1c40f; margin-bottom:14px; display:flex; gap:12px; align-items:center; font-size:0.95rem; color:#5b5b5b; }
+    .product-desc { color:#666; line-height:1.6; margin-bottom:20px; max-width:760px; }
+    .price-qty-row { display:flex; gap:40px; align-items:center; margin-bottom:20px; }
+    .price-block { font-size:1rem; color:#666; }
+    .price-block .amount { display:block; font-size:1.4rem; font-weight:800; color:#2f9c44; margin-top:6px; }
+    .qty-control { display:flex; align-items:center; gap:8px; }
+    .qty-control button { width:36px; height:36px; border-radius:6px; border:1px solid #ddd; background:#fff; }
+    .qty-control input { width:56px; text-align:center; border:1px solid #eee; border-radius:6px; padding:6px; }
+    .addons-grid { display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:18px; }
+    .addon-card { display:flex; gap:12px; align-items:center; padding:12px; border-radius:10px; border:1px solid #eee; background:#fff; justify-content:space-between; }
+    .addon-left { display:flex; gap:12px; align-items:center; }
+    .addon-left img { width:56px; height:46px; object-fit:cover; border-radius:8px; }
+    .addon-title { font-weight:600; color:#333; }
+    .addon-price { color:#888; font-size:0.95rem; }
+    .action-row { display:flex; gap:12px; margin-top:18px; align-items:center; }
+    .btn-add { background:#6aa84f; color:#fff; border:none; padding:12px 22px; font-weight:700; border-radius:8px; }
+    .btn-buy { background:transparent; border:2px solid #f3c02c; color:#333; padding:10px 20px; border-radius:8px; font-weight:700; }
+    .avatars { position:relative; margin-left:8px; }
+    .avatars img { width:40px;height:40px;border-radius:50%; border:3px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.08); position:relative; margin-left:-10px; }
+    .avatars .more { width:40px;height:40px;border-radius:50%; background:#2f9c44;color:#fff;display:flex;align-items:center;justify-content:center;margin-left:-10px;font-weight:700; }
+    @media (max-width: 992px){
+      .product-detail { flex-direction:column; }
+      .product-detail .left { width:100%; flex-basis:auto; }
+      .product-detail .left .hero { height:360px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-content bg-white">
+
+  <!-- Banner -->
+  <div class="dz-bnr-inr style-1 text-center">
+    <div class="container-fluid p-0">
+      <div class="restaurant-banner">
+        {% if restaurant.cover_image %}
+          <img class="restaurant-cover" src="{{ restaurant.cover_image.url }}" alt="{{ restaurant.name }}">
+        {% else %}
+          <img class="restaurant-cover" src="{% static 'assets/images/banner/bnr4.jpg' %}" alt="{{ restaurant.name }}">
+        {% endif %}
+        <div class="overlay"></div>
+        <div class="restaurant-info">
+          <h1 class="restaurant-name">{{ restaurant.name }}</h1>
+          <p class="restaurant-description">{{ restaurant.about }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- /Banner -->
+
+  <!-- Menu content -->
+  <section class="content-inner py-5">
+    <div class="container">
+      <div class="row mb-4">
+        <div class="col-12">
+          <ul class="filters list-inline text-center" style="gap:10px;">
+            <li class="list-inline-item"><button class="btn btn-light btn-sm active" data-filter=".All">ALL</button></li>
+            {% for category in categories %}
+              <li class="list-inline-item"><button class="btn btn-outline-secondary btn-sm" data-filter=".{{ category.name|lower|slugify }}">{{ category.name }}</button></li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <div class="row g-3" id="masonry">
+        {% for category in categories %}
+          {% for item in category.fooditem_set.all %}
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3 card-container {{ category.name|lower|slugify }}">
+              <a class="tile-link" href="{% url 'product_detail' restaurant.id table.id item.id %}">
+                <div class="menu-card" data-item-id="{{ item.id }}">
+                  <div class="img-wrap">
+                    {% if item.image %}
+                      <img src="{{ item.image.url }}" alt="{{ item.name }}">
+                    {% else %}
+                      <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ item.name }}">
+                    {% endif %}
+                  </div>
+
+                  <div class="content">
+                    <div>
+                      <h5 class="title">{{ item.name }}</h5>
+
+                      <!-- on tablet: price-top will show where description used to be -->
+                      <div class="price-top">₹{{ item.price }}</div>
+
+                      <!-- description is present for non-tablet views; hidden on tablet via CSS -->
+                      <p class="desc">{{ item.description|default:"Delicious and Spicy" }}</p>
+                    </div>
+
+                    <!-- meta kept for desktop/mobile price placement; price hidden on tablet to avoid duplication -->
+                    <div class="meta">
+                      <div class="price">₹{{ item.price }}</div>
+                    </div>
+
+                    <!-- card footer: shown only on tablet (CSS) to place + on right end below -->
+                    <div class="card-footer">
+                      <!-- on tablet this is the inline + button at right end. On other views it's hidden by CSS (display:none). -->
+                      <button type="button" class="plus-badge card-plus" aria-label="Add item">+</button>
+                    </div>
+                  </div>
+
+                  <!-- floating plus for desktop/mobile (kept for non-tablet views) -->
+                  <div class="plus-badge desktop-floating card-plus" aria-hidden="true">+</div>
+                </div>
+              </a>
+            </div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- MINI CART (floating) -->
+<div id="mini-cart" style="position: fixed; right: 18px; bottom: 18px; background: #fff; border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); padding:10px 12px; z-index:1200; width:220px;">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <div style="font-size:0.95rem;color:#666;">Items: <span id="cart-count">0</span></div>
+      <div style="font-weight:700; font-size:1rem;">Total: ₹<span id="cart-total">0.00</span></div>
+    </div>
+    <!-- Place order button: adjust URL name if necessary -->
+    <form id="place-order-form" method="post" action="{% url 'place_cart_order' restaurant.id table.id %}">
+      {% csrf_token %}
+      <button id="place-order-btn" type="submit" class="btn btn-sm btn-success" disabled style="margin-left:8px;">Order</button>
+    </form>
+  </div>
+</div>
+
+<!-- PRODUCT MODAL (Bootstrap 5). The server fragment will be injected into .modal-body -->
+<div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-body">
+        <!-- fragment HTML from product_detail_html endpoint will be injected here -->
+        <div style="display:flex;align-items:center;justify-content:center;padding:36px;color:#888;">
+          Loading...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- original JS files (kept) -->
+<script src="{% static 'assets/js/jquery.min.js' %}"></script>
+<script src="{% static 'assets/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'assets/vendor/bootstrap-select/js/bootstrap-select.min.js' %}"></script>
+<script src="{% static 'assets/vendor/masonry/masonry-4.2.2.js' %}"></script>
+<script src="{% static 'assets/js/custom.min.js' %}"></script>
+
+<script>
+  // filter logic
+  document.addEventListener('click', function(e){
+    if(e.target && e.target.matches('[data-filter]')){
+      const btn = e.target;
+      const filter = btn.getAttribute('data-filter');
+      document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      if(filter === '.All'){
+        document.querySelectorAll('#masonry .card-container').forEach(el => el.style.display = '');
+      } else {
+        document.querySelectorAll('#masonry .card-container').forEach(el => {
+          if(el.classList.contains(filter.replace('.',''))){
+            el.style.display = '';
+          } else {
+            el.style.display = 'none';
+          }
+        });
+      }
+    }
+  }, false);
+
+  // Runtime fallback for plus visibility (keeps behavior consistent on resize)
+  function updatePlusVisibility() {
+    const isTablet = window.innerWidth >= 577 && window.innerWidth <= 1024;
+    document.querySelectorAll('.desktop-floating').forEach(el => {
+      el.style.display = isTablet ? 'none' : 'flex';
+    });
+    document.querySelectorAll('.card-footer').forEach(el => {
+      el.style.display = isTablet ? 'flex' : 'none';
+    });
+  }
+  window.addEventListener('resize', updatePlusVisibility);
+  window.addEventListener('load', updatePlusVisibility);
+</script>
+
+<!-- APPENDED JS: modal integration, fetching HTML fragment & fragment init -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  console.log('[menu] init');
+
+  /* CSRF helper */
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  /* mini-cart UI updater */
+  function updateMiniCartUI(count, total) {
+    const c = document.getElementById('cart-count');
+    const t = document.getElementById('cart-total');
+    if (c) c.textContent = count;
+    if (t) t.textContent = parseFloat(total).toFixed(2);
+    const btn = document.getElementById('place-order-btn');
+    if (btn) btn.disabled = (count === 0);
+  }
+
+  /* Find item id from clicked element (robust) */
+  function findItemIdFromElement(el) {
+    if (!el) return null;
+    // If element itself is .menu-card
+    if (el.classList && el.classList.contains && el.classList.contains('menu-card')) {
+      return el.getAttribute('data-item-id');
+    }
+    // climb up to menu-card
+    let card = el.closest && el.closest('.menu-card');
+    if (card) return card.getAttribute('data-item-id');
+    // maybe el is anchor containing the card
+    const anchor = el.closest && el.closest('a.tile-link');
+    if (anchor) {
+      const inner = anchor.querySelector && anchor.querySelector('.menu-card');
+      if (inner) return inner.getAttribute('data-item-id');
+      // fallback: anchor might have data-item-id
+      if (anchor.getAttribute('data-item-id')) return anchor.getAttribute('data-item-id');
+    }
+    // final fallback: search ancestors for data-item-id
+    const ancestorWith = el.closest && el.closest('[data-item-id]');
+    if (ancestorWith) return ancestorWith.getAttribute('data-item-id');
+    return null;
+  }
+
+  /* Inject HTML fragment into modal body and initialize fragment behavior */
+  function injectFragmentHtml(html) {
+    const modalBody = document.querySelector('#productModal .modal-body');
+    if (!modalBody) { alert('Modal not found'); return; }
+    modalBody.innerHTML = html;
+    initInjectedFragment(modalBody);
+
+    // show modal
+    const modalEl = document.getElementById('productModal');
+    const bs = new bootstrap.Modal(modalEl, {});
+    bs.show();
+  }
+
+  /* Fetch fragment HTML from server for a given item id */
+  function loadProductFragment(itemId) {
+  const urlTemplate = "{% url 'product_detail_html' restaurant.id table.id 99999 %}";
+  const url = urlTemplate.replace('99999', itemId);
+  fetch(url, { credentials: 'same-origin' })
+    .then(resp => {
+      if (!resp.ok) {
+        // try to read response text to show traceback / message
+        return resp.text().then(txt => {
+          console.error('Failed to load fragment:', resp.status, txt);
+          // show in modal a friendly error but include server text in console
+          const modalBody = document.querySelector('#productModal .modal-body');
+          if (modalBody) modalBody.innerHTML = '<div style="padding:18px;color:#b00;">Could not load product details. Check console/server logs.</div>';
+          throw new Error('Failed to load product fragment: ' + resp.status);
+        });
+      }
+      return resp.text();
+    })
+    .then(html => injectFragmentHtml(html))
+    .catch(err => {
+      console.error('[menu] load fragment failed', err);
+      // user already sees modal error above
+    });
+}
+
+
+  /* Event delegation: clicks on tile-link or plus buttons open modal */
+  document.addEventListener('click', function (e) {
+    // intercept anchor tile-link (left-click)
+    const tile = e.target.closest && e.target.closest('a.tile-link');
+    if (tile) {
+      if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return; // allow new-tab
+      e.preventDefault();
+      const id = findItemIdFromElement(tile);
+      if (id) loadProductFragment(id);
+      return;
+    }
+    // intercept plus button (floating or footer)
+    const plus = e.target.closest && e.target.closest('.card-plus');
+    if (plus) {
+      e.preventDefault();
+      const id = findItemIdFromElement(plus);
+      if (id) loadProductFragment(id);
+      return;
+    }
+  }, false);
+
+  /* Initialize interactive behavior for the injected fragment */
+  function initInjectedFragment(root) {
+    // root: modal-body or element containing the fragment
+    const fragment = root;
+    // find item id from data attribute
+    const itemContainer = fragment.querySelector('.product-detail[data-item-id]') || fragment.querySelector('[data-item-id]');
+    const itemId = itemContainer ? itemContainer.getAttribute('data-item-id') : null;
+
+    const qtyInput = fragment.querySelector('.qty-input') || fragment.querySelector('.qty-input') || fragment.querySelector('input.qty-input');
+    const inc = fragment.querySelector('.qty-increase') || fragment.querySelector('.qty-increase');
+    const dec = fragment.querySelector('.qty-decrease') || fragment.querySelector('.qty-decrease');
+    const addBtn = fragment.querySelector('.fragment-add-to-cart') || fragment.querySelector('.btn-add') || fragment.querySelector('.fragment-add-to-cart');
+    const buyBtn = fragment.querySelector('.fragment-buy-now') || fragment.querySelector('.btn-buy') || fragment.querySelector('.fragment-buy-now');
+
+    function safeParseInt(v, fallback=1) {
+      const n = parseInt(v, 10);
+      return (isNaN(n) || n < 1) ? fallback : n;
+    }
+
+    if (dec) dec.addEventListener('click', function(){ if (!qtyInput) return; const v = safeParseInt(qtyInput.value,1); if (v>1) qtyInput.value = v-1; });
+    if (inc) inc.addEventListener('click', function(){ if (!qtyInput) return; const v = safeParseInt(qtyInput.value,1); qtyInput.value = v+1; });
+
+    function collectAddonIds() {
+      return Array.from(fragment.querySelectorAll('.addon-checkbox:checked')).map(i => i.value);
+    }
+
+    function updateMiniCartSafely(count, total) {
+      try {
+        if (typeof updateMiniCart === 'function') { updateMiniCart(count, total); return; }
+      } catch(e){}
+      updateMiniCartUI(count, total);
+    }
+
+    function postAddToCart(redirectToConfirm) {
+      if (!itemId) { alert('Item ID missing'); return; }
+      const qty = qtyInput ? safeParseInt(qtyInput.value,1) : 1;
+      const addons = collectAddonIds();
+
+      const urlTemplate = "{% url 'add_to_cart_ajax' restaurant.id table.id 99999 %}";
+      const url = urlTemplate.replace('99999', itemId);
+
+      const fd = new FormData();
+      fd.append('quantity', qty);
+      addons.forEach(a => fd.append('addons[]', a));
+
+      fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'X-CSRFToken': csrftoken },
+        body: fd
+      })
+      .then(resp => {
+        if (!resp.ok) throw new Error('Add to cart failed: ' + resp.status);
+        return resp.json();
+      })
+      .then(data => {
+        if (!data.success) throw new Error('Server error');
+        updateMiniCartSafely(data.items_count || 0, data.total_price || 0);
+
+        // small toast
+        const toast = document.createElement('div');
+        toast.className = 'alert alert-success position-fixed';
+        toast.style.right = '18px';
+        toast.style.bottom = '100px';
+        toast.style.zIndex = 2000;
+        toast.textContent = `Added • ₹${(data.line_total||0).toFixed(2)}`;
+        document.body.appendChild(toast);
+        setTimeout(()=>toast.remove(), 1400);
+
+        if (redirectToConfirm && data.order_id) {
+          // redirect to order_confirmation
+          const redirect = "{% url 'order_confirmation' 0 %}".replace('/0/', '/' + data.order_id + '/');
+          window.location.href = redirect;
+        }
+      })
+      .catch(err => {
+        console.error('[menu] add to cart error', err);
+        alert('Could not add to cart. Try again.');
+      });
+    }
+
+    if (addBtn) addBtn.addEventListener('click', function(e){ e.preventDefault(); postAddToCart(false); });
+    if (buyBtn) buyBtn.addEventListener('click', function(e){ e.preventDefault(); postAddToCart(true); });
+  }
+
+  /* Expose updateMiniCartUI for other pages to call */
+  window.updateMiniCart = updateMiniCartUI;
+
+  // initial mini-cart state (optionally you can fetch server to initialize)
+  updateMiniCartUI(0, 0.00);
+
+  console.log('[menu] ready');
+});
+
+// NEWLY Added
+
+document.addEventListener('DOMContentLoaded', function () {
+  // CSRF helper
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  /* ---- mini-cart UI updater and initialization ----- */
+  function updateMiniCartUI(count, total) {
+    const c = document.getElementById('cart-count');
+    const t = document.getElementById('cart-total');
+    if (c) c.textContent = count;
+    if (t) t.textContent = parseFloat(total).toFixed(2);
+    const btn = document.getElementById('place-order-btn');
+    if (btn) btn.disabled = (count === 0);
+  }
+  window.updateMiniCart = updateMiniCartUI;
+
+  // initialize mini-cart from server so totals persist when returning to menu
+  (function fetchCartSummary() {
+    const url = "{% url 'cart_summary' restaurant.id table.id %}";
+    fetch(url, { credentials: 'same-origin' })
+      .then(resp => {
+        if (!resp.ok) throw new Error('cart_summary failed: ' + resp.status);
+        return resp.json();
+      })
+      .then(data => {
+        if (data && data.success) updateMiniCartUI(data.items_count || 0, data.total_price || 0);
+      })
+      .catch(err => {
+        console.warn('cart_summary error', err);
+      });
+  })();
+
+  /* ---- load fragment HTML for an item and inject into modal body ----- */
+  function loadProductFragment(itemId) {
+    const urlTemplate = "{% url 'product_detail_html' restaurant.id table.id 99999 %}";
+    const url = urlTemplate.replace('99999', itemId);
+    const modalBody = document.querySelector('#productModal .modal-body');
+    if (modalBody) modalBody.innerHTML = '<div style="padding:36px;color:#888;">Loading...</div>';
+    fetch(url, { credentials: 'same-origin' })
+      .then(resp => {
+        if (!resp.ok) return resp.text().then(txt => { throw new Error(txt || 'Failed to load'); });
+        return resp.text();
+      })
+      .then(html => {
+        const modalBody = document.querySelector('#productModal .modal-body');
+        if (modalBody) modalBody.innerHTML = html;
+        initInjectedFragment(modalBody);
+        const modalEl = document.getElementById('productModal');
+        new bootstrap.Modal(modalEl, {}).show();
+      })
+      .catch(err => {
+        console.error('loadProductFragment error', err);
+        const modalBody = document.querySelector('#productModal .modal-body');
+        if (modalBody) modalBody.innerHTML = '<div style="padding:18px;color:#b00;">Could not load product details.</div>';
+      });
+  }
+
+  /* ---- event delegation: open modal when user clicks tile link or plus ---- */
+  document.addEventListener('click', function(e) {
+    const tile = e.target.closest && e.target.closest('a.tile-link');
+    if (tile) {
+      // respect ctrl/cmd/middle clicks
+      if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      e.preventDefault();
+      // find the data-item-id from the menu-card inside the anchor (robust)
+      const card = tile.querySelector && tile.querySelector('.menu-card');
+      const id = (card && card.getAttribute('data-item-id')) || tile.getAttribute('data-item-id');
+      if (id) loadProductFragment(id);
+      return;
+    }
+
+    const plus = e.target.closest && e.target.closest('.card-plus');
+    if (plus) {
+      e.preventDefault();
+      const card = plus.closest && plus.closest('.menu-card');
+      const id = card ? card.getAttribute('data-item-id') : null;
+      if (id) loadProductFragment(id);
+      return;
+    }
+  }, false);
+
+  /* ---- initialize injected fragment: wire up qty/addons and the two buttons ---- */
+  function initInjectedFragment(root) {
+    if (!root) return;
+    const fragment = root;
+
+    // item id: either on .product-detail or an element with data-item-id
+    const itemContainer = fragment.querySelector('.product-detail[data-item-id]') || fragment.querySelector('[data-item-id]');
+    const itemId = itemContainer ? itemContainer.getAttribute('data-item-id') : null;
+
+    const qtyInput = fragment.querySelector('.qty-input');
+    const inc = fragment.querySelector('.qty-increase');
+    const dec = fragment.querySelector('.qty-decrease');
+
+    const btnAddBack = fragment.querySelector('.fragment-add-back'); // add and return to menu
+    const btnBackMenu = fragment.querySelector('.fragment-back-menu'); // close/no add, go to menu if standalone
+
+    // quantity handlers
+    const safeParseInt = (v, fallback=1) => {
+      const n = parseInt(v, 10);
+      return (isNaN(n) || n < 1) ? fallback : n;
+    };
+    if (dec) dec.addEventListener('click', () => { if (!qtyInput) return; const v = safeParseInt(qtyInput.value,1); if (v>1) qtyInput.value = v-1; });
+    if (inc) inc.addEventListener('click', () => { if (!qtyInput) return; const v = safeParseInt(qtyInput.value,1); qtyInput.value = v+1; });
+
+    function collectAddonIds() {
+      return Array.from(fragment.querySelectorAll('.addon-checkbox:checked')).map(cb => cb.value);
+    }
+
+    // POST to add_to_cart_ajax then update mini-cart and close modal (no confirmation redirect)
+    function postAddToCartThenBack() {
+      if (!itemId) { alert('Item id missing'); return; }
+      const qty = qtyInput ? safeParseInt(qtyInput.value,1) : 1;
+      const addons = collectAddonIds();
+
+      const urlTemplate = "{% url 'add_to_cart_ajax' restaurant.id table.id 99999 %}";
+      const url = urlTemplate.replace('99999', itemId);
+
+      const fd = new FormData();
+      fd.append('quantity', qty);
+      addons.forEach(a => fd.append('addons[]', a));
+
+      fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'X-CSRFToken': csrftoken },
+        body: fd
+      })
+      .then(resp => {
+        if (!resp.ok) throw new Error('Add to cart failed: ' + resp.status);
+        return resp.json();
+      })
+      .then(data => {
+        if (!data.success) throw new Error('Server returned error');
+        // Update mini-cart using server totals returned
+        updateMiniCartUI(data.items_count || 0, data.total_price || 0);
+
+        // close modal:
+        const modalEl = document.getElementById('productModal');
+        const bs = bootstrap.Modal.getInstance(modalEl);
+        if (bs) bs.hide();
+
+        // small non-blocking toast
+        const note = document.createElement('div');
+        note.className = 'alert alert-success position-fixed';
+        note.style.right = '18px';
+        note.style.bottom = '100px';
+        note.style.zIndex = 2000;
+        note.textContent = `Added • ₹${(data.line_total||0).toFixed(2)}`;
+        document.body.appendChild(note);
+        setTimeout(()=>note.remove(), 1400);
+      })
+      .catch(err => {
+        console.error('postAddToCartThenBack error', err);
+        alert('Could not add to cart. Try again.');
+      });
+    }
+
+    // Close modal if present; if this page is NOT the menu page (standalone detail page), navigate to menu view.
+    function closeOrNavigateToMenu() {
+      const modalEl = document.getElementById('productModal');
+      const bs = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
+
+      if (bs) {
+        // we're in modal context — just hide it
+        bs.hide();
+        return;
+      }
+
+      // not a modal — navigate to menu view (template-built URL)
+      const menuUrl = "{% url 'menu_view' restaurant.id table.id %}";
+      window.location.href = menuUrl;
+    }
+
+    if (btnAddBack) btnAddBack.addEventListener('click', function(e){ e.preventDefault(); postAddToCartThenBack(); });
+    if (btnBackMenu) btnBackMenu.addEventListener('click', function(e){ e.preventDefault(); closeOrNavigateToMenu(); });
+  }
+});
+
+
+</script>
+</body>
+</html>

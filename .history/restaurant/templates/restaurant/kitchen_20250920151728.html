@@ -1,0 +1,185 @@
+{% extends 'restaurant/base.html' %}
+{% block title %}Kitchen - Orders{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3 class="fw-bold text-center mb-4 text-orange">Orders</h3>
+
+  <div id="orders-container" class="row">
+    {% for order in orders %}
+    <div class="col-md-6 col-lg-4 mb-4 order-card-col" data-order-id="{{ order.id }}">
+      <div class="card shadow-lg p-3 h-100 order-card" data-order-id="{{ order.id }}">
+        <h5 class="fw-bold mb-2">Order #{{ order.id }}</h5>
+        <p class="text-muted small mb-2">
+          Table: {{ order.table.table_number }} <br>
+          Time: {{ order.local_time|date:"d M Y, h:i A" }}
+        </p>
+        <ul class="list-group mb-3">
+          {% for item in order.order_items.all %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ item.food_item.name }}
+            <span class="badge bg-warning text-dark">x{{ item.quantity }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        <p class="fw-bold mb-3">Total: ₹{{ order.total_price|default:"0.00" }}</p>
+
+        <form method="post" action="{% url 'complete_order' order.id %}" class="complete-order-form" data-order-id="{{ order.id }}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-warning text-white fw-bold w-100">Mark as Completed</button>
+        </form>
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center">
+      <p class="text-muted">No pending orders</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function(){
+  const POLL_MS = 5000;
+  const ORDERS_JSON = "{% url 'orders_json' %}";
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const parts = document.cookie.split(';');
+      for (let i = 0; i < parts.length; i++) {
+        const c = parts[i].trim();
+        if (c.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(c.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  function toast(msg, kind='success') {
+    const wrapId = 'kitchen-toast-wrap';
+    let wrap = document.getElementById(wrapId);
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.id = wrapId;
+      wrap.style.position = 'fixed';
+      wrap.style.right = '18px';
+      wrap.style.bottom = '20px';
+      wrap.style.zIndex = 9999;
+      document.body.appendChild(wrap);
+    }
+    const el = document.createElement('div');
+    el.className = 'alert ' + (kind === 'error' ? 'alert-danger' : 'alert-success');
+    el.textContent = msg;
+    el.style.marginTop = '8px';
+    wrap.appendChild(el);
+    setTimeout(()=> el.remove(), 2200);
+  }
+
+  // Intercept complete-order forms and POST via fetch (AJAX)
+  document.addEventListener('submit', async function(e){
+    const form = e.target;
+    if (!form.classList || !form.classList.contains('complete-order-form')) return;
+    e.preventDefault();
+
+    if (!confirm('Mark this order as completed?')) return;
+    const orderId = form.dataset.orderId || form.getAttribute('data-order-id');
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+    try {
+      const resp = await fetch(form.action, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
+        },
+        body: new FormData(form)
+      });
+
+      if (!resp.ok) {
+        const text = await resp.text();
+        console.error('complete-order failed', resp.status, text);
+        toast('Error marking order completed', 'error');
+        return;
+      }
+      toast('Order marked completed');
+      // remove card from DOM
+      const cardCol = document.querySelector('.order-card-col[data-order-id="'+orderId+'"]');
+      if (cardCol) cardCol.remove();
+    } catch (err) {
+      console.error('complete-order fetch error', err);
+      toast('Request failed', 'error');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  });
+
+  // poll orders_json and update DOM
+  let lastSnapshot = null;
+  async function poll() {
+    try {
+      const resp = await fetch(ORDERS_JSON, { credentials: 'same-origin', headers: {'X-Requested-With': 'XMLHttpRequest'} });
+      if (!resp.ok) {
+        console.warn('orders_json returned', resp.status);
+        return;
+      }
+      const data = await resp.json();
+      if (!data || !data.success) return;
+      const jsonText = JSON.stringify(data.orders);
+      if (jsonText === lastSnapshot) return; // no change
+      lastSnapshot = jsonText;
+
+      // rebuild DOM (simple approach)
+      const container = document.getElementById('orders-container');
+      if (!container) return;
+      container.innerHTML = ''; // clear
+      if (!data.orders.length) {
+        container.innerHTML = '<div class="col-12 text-center"><p class="text-muted">No pending orders</p></div>';
+        return;
+      }
+
+      data.orders.forEach(o => {
+        const col = document.createElement('div');
+        col.className = 'col-md-6 col-lg-4 mb-4 order-card-col';
+        col.setAttribute('data-order-id', o.order_id);
+
+        const card = document.createElement('div');
+        card.className = 'card shadow-lg p-3 h-100 order-card';
+        card.setAttribute('data-order-id', o.order_id);
+
+        card.innerHTML = `
+          <h5 class="fw-bold mb-2">Order #${o.order_id}</h5>
+          <p class="text-muted small mb-2">Table: ${o.table_number || '-'} <br> Time: ${new Date(o.created_at).toLocaleString()}</p>
+          <ul class="list-group mb-3">
+            ${o.items.map(it => `<li class="list-group-item d-flex justify-content-between align-items-center">${it.name} <span class="badge bg-warning text-dark">x${it.quantity}</span></li>`).join('')}
+          </ul>
+          <p class="fw-bold mb-3">Total: ₹${(o.total||0).toFixed(2)}</p>
+          <form method="post" action="/complete_order/${o.order_id}/" class="complete-order-form" data-order-id="${o.order_id}">
+            <input type="hidden" name="csrfmiddlewaretoken" value="${csrftoken}">
+            <button type="submit" class="btn btn-warning text-white fw-bold w-100">Mark as Completed</button>
+          </form>
+        `;
+
+        col.appendChild(card);
+        container.appendChild(col);
+      });
+
+    } catch (err) {
+      console.error('poll error', err);
+    }
+  }
+
+  // initial poll + periodic
+  poll();
+  setInterval(poll, POLL_MS);
+})();
+</script>
+{% endblock %}

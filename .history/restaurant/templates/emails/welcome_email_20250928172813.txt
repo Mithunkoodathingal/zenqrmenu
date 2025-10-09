@@ -1,0 +1,12 @@
+Hi {{ user.username }},
+
+Welcome to {{ site_name }}! We're excited to have you on board.
+
+You can log in here:
+{{ login_url }}
+
+If you ever forget your password, you can reset it at:
+{{ login_url }} (use "Forgot password?" link)
+
+Best,
+{{ site_name }} team

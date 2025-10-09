@@ -1,0 +1,24 @@
+{% extends 'restaurant/basedash.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6">
+            <div class="custom-card">
+                <h5 class="text-center mb-4">Add Table</h5>
+                <form method="post" class="d-flex align-items-center">
+                    {% csrf_token %}
+                    <div class="flex-grow-1 me-3">
+                        <label for="id_table_number" class="form-label visually-hidden">Unique Table Number</label>
+                        <input type="number" name="table_number" class="form-control" placeholder="Unique Table Number" required id="id_table_number">
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-orange">Add</button>
+                        <a href="{% url 'create_table_qr' %}" class="btn btn-red">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

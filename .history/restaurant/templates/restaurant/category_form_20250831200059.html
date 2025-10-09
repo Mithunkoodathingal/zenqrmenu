@@ -1,0 +1,16 @@
+{% extends 'restaurant/basedash.html' %}
+{% block content %}
+<div class="d-flex justify-content-center align-items-center mt-5">
+  <div class="card shadow p-4" style="max-width: 600px; width: 100%;">
+    <h4 class="text-center mb-4 text-orange fw-bold">Add Categories</h4>
+    <form method="post">
+      {% csrf_token %}
+      <div class="input-group mb-3">
+        {{ form.name|add_class:"form-control" }}
+        <button type="submit" class="btn btn-warning text-white fw-bold">Save</button>
+        <a href="{% url 'dashboard' %}" class="btn btn-danger fw-bold">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

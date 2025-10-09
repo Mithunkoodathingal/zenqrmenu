@@ -1,0 +1,45 @@
+{% extends 'restaurant/base.html' %}
+{% block content %}
+
+
+
+  
+  <!-- Top Action Buttons -->
+  <div class="d-flex justify-content-center mb-4">
+    <a href="{% url 'category_create' %}" class="btn btn-warning fw-bold text-white px-4 py-2 me-3">Add Categories</a>
+    <a href="{% url 'fooditem_create' %}" class="btn btn-warning fw-bold text-white px-4 py-2">Add Items</a>
+  </div>
+
+  <!-- Categories -->
+  {% for category in categories %}
+  <div class="card shadow-sm mb-4 border-orange">
+    <div class="card-body">
+      <h5 class="fw-bold text-orange mb-3">{{ category.name }}</h5>
+
+      <!-- Items inside category -->
+      {% for item in category.fooditem_set.all %}
+      <div class="d-flex justify-content-between align-items-center border p-2 mb-2 rounded">
+        <div>
+          <span class="fw-bold">{{ item.name }}</span>
+          <span class="text-muted ms-3">₹{{ item.price }}</span>
+        </div>
+        <div>
+          <a href="{% url 'edit_fooditem' item.id %}" class="btn btn-sm btn-warning text-white fw-bold me-2">
+            <i class="bi bi-pencil-square me-1"></i> Edit
+          </a>
+          <a href="{% url 'delete_fooditem' item.id %}" class="btn btn-sm btn-danger fw-bold">
+            <i class="bi bi-trash3 me-1"></i> Delete
+          </a>
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-muted">No items added in this category yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+  {% empty %}
+  <p class="text-center text-muted">No categories created yet. Use Add Categories above.</p>
+  {% endfor %}
+</div>
+
+{% endblock %}

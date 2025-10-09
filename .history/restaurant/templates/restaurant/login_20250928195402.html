@@ -1,0 +1,145 @@
+{% extends 'restaurant/base1.html' %}
+{% load static %}
+{% block title %}Log In — Zebra Menu{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* page-scoped styles (keeps base1 clean) */
+  .card-container { box-shadow: 0 4px 20px rgba(0,0,0,0.15); border-radius: 8px; overflow: hidden; }
+  .card-left { background: #f8f9fa; padding: 2rem; display:flex; justify-content:center; align-items:center; }
+  .card-right { background:#fff; padding:2rem 3rem; }
+
+  .form-title { font-weight: bold; color: #f97316; margin-bottom: 1.5rem; text-align:center; }
+  .btn-orange { background-color: #f97316; color: white; }
+  .btn-orange:hover { background-color: #ea580c; color: white; }
+  .btn-outline-orange { border: 2px solid #f97316; color: #f97316; }
+  .btn-outline-orange:hover { background: #f97316; color: #fff; }
+
+  .form-control { border: 2px solid #f97316; border-radius: 8px; height:44px; padding:.5rem .75rem; }
+  .form-control:focus { border-color: #ea580c; box-shadow: none; outline: none; }
+
+  .non-field-errors { background:#fff5f5; border:1px solid #f5c6cb; color:#a94442; padding:10px 12px; border-radius:6px; margin-bottom:1rem; }
+  .field-error { color: #d9534f; font-size:0.875rem; margin-top:0.35rem; }
+  .is-invalid { border-color: #d9534f !important; }
+
+  /* mobile tweak */
+  @media (max-width:420px) {
+    .card-left { display:none; }
+    .card-right { padding:1.25rem; }
+  }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center min-vh-100">
+  <div class="row card-container w-100" style="max-width: 850px;">
+    <!-- visual -->
+    <div class="col-md-6 d-none d-md-flex card-left">
+      <img src="{% static 'assets/images/login-placeholder.jpg' %}" alt="Login Illustration" class="img-fluid">
+    </div>
+
+    <div class="col-12 col-md-6 card-right">
+      <h4 class="form-title">Log In</h4>
+
+      {# Django messages (info/success) #}
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} py-2 mb-2">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      {# Show non-field errors (e.g. "Invalid credentials") #}
+      {% if form.non_field_errors %}
+        <div class="non-field-errors">
+          {% for err in form.non_field_errors %}
+            <div>{{ err }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="d-grid gap-2 mb-3">
+        {# show social buttons only if provider is configured via context processor #}
+        {% if 'facebook' in socialaccount_providers %}
+          {% load socialaccount %}
+          <a href="{% provider_login_url 'facebook' process='login' %}" class="btn btn-outline-orange">
+            <i class="bi bi-facebook me-1"></i> Continue with Facebook
+          </a>
+        {% endif %}
+        {% if 'google' in socialaccount_providers %}
+          {% load socialaccount %}
+          <a href="{% provider_login_url 'google' process='login' %}" class="btn btn-outline-orange">
+            <i class="bi bi-google me-1"></i> Continue with Google
+          </a>
+        {% endif %}
+
+        {# If no social providers configured, show disabled placeholders (optional) #}
+        {% if socialaccount_providers|length == 0 %}
+          <button class="btn btn-outline-orange" disabled>Continue with Facebook</button>
+          <button class="btn btn-outline-orange" disabled>Continue with Google</button>
+        {% endif %}
+      </div>
+
+      <div class="text-center my-2">OR</div>
+
+      <form method="post" action="{% url 'login' %}" novalidate>
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <input
+            type="text"
+            name="username"
+            id="id_username"
+            class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+            placeholder="User Name or Email"
+            value="{{ form.username.value|default:'' }}"
+            required
+            autocomplete="username"
+          >
+          {% if form.username.errors %}
+            {% for err in form.username.errors %}
+              <div class="field-error">{{ err }}</div>
+            {% endfor %}
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <input
+            type="password"
+            name="password"
+            id="id_password"
+            class="form-control {% if form.password.errors %}is-invalid{% endif %}"
+            placeholder="Password"
+            required
+            autocomplete="current-password"
+          >
+          {% if form.password.errors %}
+            {% for err in form.password.errors %}
+              <div class="field-error">{{ err }}</div>
+            {% endfor %}
+          {% endif %}
+        </div>
+
+        <div class="d-grid">
+          <button type="submit" class="btn btn-orange">Log In</button>
+        </div>
+      </form>
+
+      <div class="text-center mt-3">
+        <small>Don’t have an account ?</small>
+        <a href="{% url 'signup' %}" class="btn btn-orange btn-sm ms-2">Sign Up</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // focus first errored field for better UX on mobile
+  document.addEventListener('DOMContentLoaded', function(){
+    var firstErr = document.querySelector('.field-error');
+    if(firstErr){
+      var input = firstErr.closest('.mb-3').querySelector('input');
+      if(input) input.focus({preventScroll:true});
+    }
+  });
+</script>
+{% endblock content %}

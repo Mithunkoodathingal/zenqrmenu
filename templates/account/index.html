@@ -1,0 +1,10 @@
+{% extends "restaurant/base1.html" %}
+{% block title %}Account - Zen Menu{% endblock %}
+{% block content %}
+<div class="py-5 text-center">
+  <h1>Account</h1>
+  <p>Access login / signup / password reset:</p>
+  <a href="{% url 'account_login' %}" class="btn btn-outline-orange me-2">Login</a>
+  <a href="{% url 'account_signup' %}" class="btn btn-orange">Sign up</a>
+</div>
+{% endblock %}

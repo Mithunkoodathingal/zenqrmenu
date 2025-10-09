@@ -1,0 +1,27 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Choose a Subscription Plan</h2>
+    
+    <div class="row">
+        {% for plan in plans %}
+        <div class="col-md-4">
+            <div class="card shadow-lg p-3 mb-4">
+                <div class="card-body text-center">
+                    <h4 class="card-title">{{ plan.name }}</h4>
+                    <p class="card-text"><strong>Price:</strong> ₹{{ plan.price }}/month</p>
+                    <p class="card-text"><strong>Table Limit:</strong> {{ plan.table_limit }}</p>
+                    <p class="card-text"><strong>Duration:</strong> {{ plan.duration_days }} days</p>
+                    
+                    <a href="{% url 'create_subscription' plan.id %}" class="btn btn-primary">Subscribe Now</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+

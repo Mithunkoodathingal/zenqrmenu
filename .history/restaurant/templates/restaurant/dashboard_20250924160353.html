@@ -1,0 +1,141 @@
+{% comment %} restaurant/templates/restaurant/dasshboard.html {% endcomment %}
+
+{% comment %} {% extends 'restaurant/base.html' %} {% endcomment %}
+{% block content %}
+<div class="container mt-4">
+  {# restaurant/manage_menu.html - add near top of page #}
+<div class="mb-4 p-3 card shadow-sm">
+  {% if subscription and subscription_active %}
+    <h5>Subscription</h5>
+    <p><strong>Plan:</strong> {{ subscription.plan.name }} &nbsp; | &nbsp;
+       <strong>Valid until:</strong> {{ subscription.end_date|date:"d M Y" }}</p>
+    <p><strong>Allowed tables:</strong> {{ allowed_table_limit }} &nbsp; | &nbsp;
+       <strong>Tables created:</strong> {{ total_tables_created }} &nbsp; | &nbsp;
+       <strong>Scannable:</strong> {{ scannable_count }} &nbsp; | &nbsp;
+       <strong>Remaining slots:</strong> {{ remaining_slots }}</p>
+    <a href="{% url 'subscription_plans' %}" class="btn btn-outline-primary">Manage Subscription</a>
+  {% else %}
+    <h5>No Active Subscription</h5>
+    <p>You do not have an active subscription. <a href="{% url 'subscription_plans' %}">View plans</a>.</p>
+  {% endif %}
+</div>
+
+{# Then render tables list (example) #}
+<div class="row">
+  {% for table in tables %}
+    <div class="col-md-3 mb-3">
+      <div class="card {% if table.is_scannable %}border-success{% else %}border-secondary{% endif %}">
+        <div class="card-body">
+          <h6>Table {{ table.table_number }}</h6>
+          {% if table.is_scannable %}
+            <span class="badge bg-success">Scannable</span>
+          {% else %}
+            <span class="badge bg-secondary">Not scannable</span>
+          {% endif %}
+          <div class="mt-2">
+            <a href="{% url 'download_qr' table.id %}" class="btn btn-sm btn-outline-primary">Download QR</a>
+            {% if table.is_scannable %}
+              <small class="text-muted d-block mt-1">Active</small>
+            {% else %}
+              <small class="text-muted d-block mt-1">Requires upgrade</small>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <p>No tables yet. Create a table to generate QR codes.</p>
+  {% endfor %}
+</div>
+{% endblock %}
+
+
+
+
+
+{% comment %} {% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center mb-4">{{ restaurant.name }} Dashboard</h2>
+
+    <div class="row">
+        <!-- Tables Section -->
+        <div class="col-md-6">
+            <div class="card shadow-lg mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Tables</h5>
+                    <a href="{% url 'table_create' %}" class="btn btn-sm btn-success">Add Table</a>
+                </div>
+                <div class="card-body">
+                    {% for table in tables %}
+                        <div class="card mb-3 p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong>Table {{ table.table_number }}</strong>
+                                {% if table.qr_code %}
+                                    <img src="{{ table.qr_code.url }}" alt="QR Code" width='80'>
+                                    <a href="{% url 'download_qr' table.id %}" class="btn btn-primary btn-sm">
+                                        Download QR
+                                    </a>
+                                {% else %}
+                                    <p>No QR code available</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="text-muted">No tables created yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Menu Management Section -->
+        <div class="col-md-6">
+            <div class="card shadow-lg mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Menu Management</h5>
+                    <div>
+                        <a href="{% url 'category_create' %}" class="btn btn-sm btn-primary">Add Category</a>
+                        <a href="{% url 'fooditem_create' %}" class="btn btn-sm btn-info">Add Food Item</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if not has_subscription %}
+                        <div class="alert alert-warning text-center">
+                            <p>You don't have an active subscription. Subscribe now to use all features.</p>
+                            <a href="{% url 'subscription_plans' %}" class="btn btn-primary">Subscribe Now</a>
+                        </div>
+                    {% endif %}
+
+                    {% for category in categories %}
+                        <div class="card mb-3 p-3">
+                            <h5>{{ category.name }}</h5>
+                            <ul class="list-group">
+                                {% for item in category.fooditem_set.all %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ item.name }}</strong> - ₹{{ item.price }}
+                                            <p class="text-muted mb-0">{{ item.description }}</p>
+                                        </div>
+                                        <div>
+                                            <a href="{% url 'edit_fooditem' item.id %}" class="btn btn-warning btn-sm">Edit</a>
+                                            <a href="{% url 'delete_fooditem' item.id %}" class="btn btn-danger btn-sm">Delete</a>
+                                        </div>
+                                    </li>
+                                {% empty %}
+                                    <p class="text-muted">No food items added yet.</p>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% empty %}
+                        <p class="text-muted">No categories created yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} {% endcomment %}
+
+

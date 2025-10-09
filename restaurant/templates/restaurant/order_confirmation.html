@@ -1,0 +1,303 @@
+{# templates/restaurant/order_confirmation_standalone.html #}
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Order Confirmation — {{ order.id }}</title>
+
+  <!-- Bootstrap + your CSS -->
+  <link href="{% static 'assets/vendor/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="{% static 'assets/css/style.css' %}" rel="stylesheet">
+
+  <style>
+    body { background:#f8f9fa; }
+    .container { max-width: 940px; }
+    .list-group-item { align-items:center; }
+    .item-total { font-weight:700; }
+    #oc-feedback .alert { margin-bottom:8px; }
+  </style>
+</head>
+<body>
+  <div class="container my-5">
+    <h2 class="mb-4">Your Order — #{{ order.id }}</h2>
+
+    {# Back-to-menu form present so Django sets csrftoken cookie on page load #}
+    <form id="hidden-csrf-form" style="display:none;">
+      {% csrf_token %}
+    </form>
+
+    <ul class="list-group mb-4" id="order-items-list" role="list">
+      {% for item in order_items %}
+        <li class="list-group-item d-flex align-items-center justify-content-between"
+            data-order-item-id="{{ item.id }}"
+            data-delete-url="{% url 'delete_order_item_ajax' item.id %}">
+          <div class="d-flex align-items-center" style="gap:12px;">
+            <div style="width:72px; height:72px; overflow:hidden; border-radius:8px;">
+              {% if item.food_item.image %}
+                <img src="{{ item.food_item.image.url }}" alt="{{ item.food_item.name }}" style="width:100%;height:100%;object-fit:cover;">
+              {% else %}
+                <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ item.food_item.name }}" style="width:100%;height:100%;object-fit:cover;">
+              {% endif %}
+            </div>
+
+            <div>
+              <div><strong>{{ item.quantity }}x</strong> {{ item.food_item.name }}</div>
+              {% if item.selected_addons.all %}
+                <small class="text-muted">
+                  Add-ons:
+                  {% for addon in item.selected_addons.all %}
+                    {{ addon.name }} (+₹{{ addon.price }}){% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                </small>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center" style="gap:12px;">
+            <div style="min-width:90px; text-align:right; font-weight:700;">₹<span class="item-total">{{ item.item_total|floatformat:2 }}</span></div>
+
+            <!-- delete button -->
+            <button type="button" class="btn btn-outline-danger btn-sm js-delete-order-item" title="Remove item" aria-label="Remove item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zM8 5.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zM10.5 5.5A.5.5 0 0 1 11 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5z"/>
+                <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 1 1 0-2h3.5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1H14.5a1 1 0 0 1 1 1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM6.5 2a.5.5 0 0 0-.5.5V3h4v-.5a.5.5 0 0 0-.5-.5h-3z"/>
+              </svg>
+            </button>
+          </div>
+        </li>
+      {% empty %}
+        <li class="list-group-item text-muted">No items in this order.</li>
+      {% endfor %}
+    </ul>
+
+    <div class="d-flex justify-content-between fw-bold mb-3">
+      <span>Total</span>
+      <span>₹<span id="order-total">{{ total_price|floatformat:2 }}</span></span>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+      <form method="post" id="back-to-menu-form" action="{% url 'menu_view' order.restaurant.id order.table.id %}" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-secondary">← Back to Menu</button>
+      </form>
+
+      <button id="confirm-order-btn" class="btn btn-success"
+              data-confirm-url="{% url 'confirm_order_ajax' order.id %}"
+              type="button">
+        Confirm &amp; Send to Kitchen
+      </button>
+
+      <form method="post" action="{% url 'cancel_order' order.id %}" id="cancel-order-form" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Cancel Order</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- toast container -->
+  <div id="oc-feedback" style="position:fixed; right:18px; bottom:120px; z-index:2000;"></div>
+
+  <!-- JS (local assets) -->
+  <script src="{% static 'assets/js/jquery.min.js' %}"></script>
+  <script src="{% static 'assets/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+  <script>
+  (function(){
+    'use strict';
+    console.log('[OC DEBUG] order_confirmation_standalone script loaded');
+
+    // ---------------- CSRF helpers ----------------
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
+    // fallback: try to read the token from the hidden csrf input rendered by template
+    function fetchCsrfFromDomFallback() {
+      try {
+        const input = document.querySelector('#hidden-csrf-form input[name="csrfmiddlewaretoken"]');
+        if (input && input.value) return input.value;
+      } catch(e){}
+      return null;
+    }
+
+    const csrftoken = getCookie('csrftoken') || fetchCsrfFromDomFallback();
+    console.log('[OC DEBUG] csrftoken present?', !!csrftoken);
+
+    // small UI helpers
+    function showToast(message, type='success') {
+      const wrap = document.getElementById('oc-feedback');
+      if (!wrap) return;
+      const el = document.createElement('div');
+      el.className = 'alert ' + (type === 'error' ? 'alert-danger' : 'alert-success');
+      el.textContent = message;
+      el.style.minWidth = '220px';
+      wrap.appendChild(el);
+      setTimeout(()=> el.remove(), 2400);
+    }
+
+    function updateTotals(items_count, total_price) {
+      const totalEl = document.getElementById('order-total');
+      if (totalEl) totalEl.textContent = (parseFloat(total_price || 0)).toFixed(2);
+      // update mini-cart if available
+      try {
+        if (window.updateMiniCart && typeof window.updateMiniCart === 'function'){
+          window.updateMiniCart(items_count, total_price);
+        } else {
+          const c = document.getElementById('cart-count');
+          const t = document.getElementById('cart-total');
+          if (c) c.textContent = items_count || 0;
+          if (t) t.textContent = (parseFloat(total_price || 0)).toFixed(2);
+        }
+      } catch(e){ console.warn('updateTotals failed', e); }
+    }
+
+    // ---------- attach delete handler (delegated) ----------
+    (function attachDeleteHandler(){
+      const list = document.getElementById('order-items-list');
+      if (!list) {
+        console.warn('[OC DEBUG] order-items-list not found, delete handler not attached');
+        return;
+      }
+
+      list.addEventListener('click', async function(e){
+        const btn = e.target.closest && e.target.closest('.js-delete-order-item');
+        if (!btn) return;
+
+        const li = btn.closest('li[data-order-item-id]');
+        if (!li) { console.warn('List item container not found'); return; }
+
+        const deleteUrl = li.dataset.deleteUrl || li.getAttribute('data-delete-url');
+        if (!deleteUrl) { alert('Delete URL missing'); console.error('Missing data-delete-url on LI', li); return; }
+
+        if (!confirm('Remove this item from your order?')) return;
+
+        btn.disabled = true;
+        try {
+          const resp = await fetch(deleteUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'X-CSRFToken': csrftoken || '',
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'application/json'
+            },
+            body: new FormData()
+          });
+
+          const txt = await resp.text();
+          console.log('[OC DEBUG] delete raw response:', txt);
+          let data = null;
+          try { data = txt ? JSON.parse(txt) : null; } catch (err) {
+            console.error('Failed to parse JSON from delete response', err, txt);
+            showToast('Server returned invalid response', 'error');
+            return;
+          }
+
+          if (!resp.ok || !data || !data.success) {
+            console.error('Delete failed', resp.status, data);
+            showToast((data && data.message) ? data.message : 'Could not remove item', 'error');
+            return;
+          }
+
+          // Remove LI and update totals
+          li.remove();
+          updateTotals(data.items_count || 0, data.total_price || 0);
+          showToast('Item removed');
+          console.log('[OC DEBUG] delete successful', data);
+
+        } catch(err) {
+          console.error('Delete request error', err);
+          showToast('Delete request failed', 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      }, false);
+
+      console.log('[OC DEBUG] delete handler attached');
+    })();
+
+    // ---------- attach confirm handler ----------
+    (function attachConfirmHandler(){
+      const confirmBtn = document.getElementById('confirm-order-btn');
+      if (!confirmBtn) { console.warn('[OC DEBUG] confirm button not found'); return; }
+
+      confirmBtn.addEventListener('click', async function(e){
+        e.preventDefault();
+
+        if (!confirm('Confirm order and send to kitchen?')) return;
+
+        const url = confirmBtn.dataset.confirmUrl || confirmBtn.getAttribute('data-confirm-url');
+        if (!url) { alert('Confirm URL missing'); console.error('confirm URL missing attr on button'); return; }
+
+        confirmBtn.disabled = true;
+        const prevText = confirmBtn.textContent;
+        confirmBtn.textContent = 'Sending...';
+
+        try {
+          const resp = await fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'X-CSRFToken': csrftoken || '',
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'application/json'
+            },
+            body: new FormData()
+          });
+
+          const txt = await resp.text();
+          console.log('[OC DEBUG] confirm raw response:', txt);
+          let data = null;
+          try { data = txt ? JSON.parse(txt) : null; } catch(e) {
+            console.error('Invalid JSON from confirm', e, txt);
+            showToast('Invalid server response', 'error');
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = prevText;
+            return;
+          }
+
+          if (!resp.ok || !data || !data.success) {
+            console.error('Confirm failed', resp.status, data);
+            showToast((data && data.message) || 'Could not confirm order', 'error');
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = prevText;
+            return;
+          }
+
+          // Success: update UI
+          showToast('Order sent to kitchen');
+          updateTotals(data.items_count || 0, data.total_price || 0);
+          confirmBtn.textContent = 'Sent to kitchen';
+          confirmBtn.disabled = true;
+          console.log('[OC DEBUG] confirm successful', data);
+
+        } catch(err) {
+          console.error('Confirm request error', err);
+          showToast('Request failed — check console', 'error');
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = prevText;
+        }
+      }, false);
+
+      console.log('[OC DEBUG] confirm handler attached');
+    })();
+
+    // final notice
+    console.log('[OC DEBUG] handlers attached - click delete or confirm and watch Console & Network.');
+  })();
+  </script>
+</body>
+</html>

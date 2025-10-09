@@ -1,0 +1,19 @@
+# Environment files
+.env
+.env.*
+secrets.json
+
+
+# Django file uploads & runtime
+/media/
+/staticfiles/
+
+
+# IDE/editor
+.vscode/
+*.pyc
+__pycache__/
+
+
+# local sqlite (if used)
+db.sqlite3

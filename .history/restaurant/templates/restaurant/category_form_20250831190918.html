@@ -1,0 +1,24 @@
+{% extends 'restaurant/base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6">
+            <div class="custom-card">
+                <h5 class="text-center mb-4">Add Categories</h5>
+                <form method="post" class="d-flex align-items-center">
+                    {% csrf_token %}
+                    <div class="flex-grow-1 me-3">
+                        <label for="id_name" class="form-label visually-hidden">Name</label>
+                        <input type="text" name="name" class="form-control" placeholder="Name" required id="id_name">
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-orange">Save</button>
+                        <a href="{% url 'manage_menu' %}" class="btn btn-red">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

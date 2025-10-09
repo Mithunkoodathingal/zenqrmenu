@@ -1,0 +1,207 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>{{ restaurant.name }} — Menu</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<!-- Stylesheets (kept exactly as provided) -->
+	<link href="{% static 'assets/vendor/magnific-popup/magnific-popup.min.css' %}" rel="stylesheet">
+	<link href="{% static 'assets/vendor/swiper/swiper-bundle.min.css' %}" rel="stylesheet">
+	<link href="{% static 'assets/vendor/bootstrap-select/css/bootstrap-select.min.css' %}" rel="stylesheet">
+
+	<link rel="stylesheet" href="{% static 'assets/vendor/rangeslider/rangeslider.css' %}">
+	<link rel="stylesheet" href="{% static 'assets/vendor/nouislider/nouislider.min.css' %}">
+	<link rel="stylesheet" href="{% static 'assets/vendor/switcher/switcher.css' %}">
+	<link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+
+	<link rel="preconnect" href="https://fonts.googleapis.com/">
+	<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Lobster&family=Lobster+Two:ital,wght@0,400;0,700;1,400;1,700&family=Poppins:ital,wght@0,100;0,200;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+
+	<style>
+	/* --- keep your custom CSS (copied from your file) --- */
+	.quantity-box { display:flex; align-items:center; gap:10px; }
+	.quantity-btn { background:#ff9800; border:none; color:white; padding:5px 10px; font-size:16px; cursor:pointer; border-radius:5px; }
+	.quantity-btn:hover { background:#e68900; }
+	input[type="number"] { width:50px; text-align:center; border:1px solid #ddd; padding:5px; border-radius:5px; }
+
+	.dz-img-box.style-4 { height:350px; display:flex; flex-direction:column; justify-content:space-between; padding:15px; background:#fff; border-radius:10px; box-shadow:0px 4px 10px rgba(0,0,0,0.1); }
+	.menu-detail { flex-grow:1; text-align:center; }
+	.dz-media img { max-height:120px; width:auto; display:block; margin:0 auto; }
+	.menu-footer { text-align:center; margin-bottom:10px; }
+	.restaurant-banner { position:relative; width:100%; height:300px; overflow:hidden; }
+	.restaurant-cover { width:100%; height:100%; object-fit:cover; filter:brightness(0.7); }
+	.overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); }
+	.restaurant-info { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; text-align:center; padding:20px; width:90%; }
+	.restaurant-name { font-size:2.5rem; font-weight:bold; text-transform:uppercase; }
+	.restaurant-description { font-size:1.2rem; font-weight:300; max-width:600px; margin:0 auto; }
+	</style>
+</head>
+
+<body id="bg">
+<div class="page-content bg-white">
+
+	<!-- banner -->
+	<div class="dz-bnr-inr style-1 text-center bg-parallax">
+		<div class="container">
+			<div class="dz-bnr-inr-entry">
+				<div class="restaurant-banner position-relative">
+					{% if restaurant.cover_image %}
+						<img src="{{ restaurant.cover_image.url }}" class="img-fluid w-100 restaurant-cover" alt="Restaurant Cover">
+					{% else %}
+						<img src="{% static 'assets/images/banner/bnr4.jpg' %}" class="img-fluid w-100 restaurant-cover" alt="Banner">
+					{% endif %}
+					<div class="overlay"></div>
+					<div class="restaurant-info text-center">
+						<h1 class="restaurant-name">{{ restaurant.name }}</h1>
+						<p class="restaurant-description">
+							{{ restaurant.about|default:"Welcome to our restaurant!" }}
+						</p>
+					</div>
+
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Menu / Filters -->
+	<section class="content-inner">
+		<div class="container">
+			<div class="row">
+				<div class="col-xl-10 col-lg-9 col-md-12">
+					<div class="site-filters style-1 clearfix">
+						<ul class="filters" data-bs-toggle="buttons">
+							<li data-filter=".All" class="btn active"><a href="javascript:void(0);">ALL</a></li>
+							{% for category in categories %}
+								<li data-filter=".{{ category.name|lower|slugify }}" class="btn">
+									<a href="javascript:void(0);">{{ category.name }}</a>
+								</li>
+							{% endfor %}
+						</ul>
+					</div>
+				</div>
+			</div>
+
+			<!-- Bulk-order form (posts quantities to place_order view) -->
+			<form method="post" action="{% url 'place_order' table.id %}">
+				{% csrf_token %}
+				<ul id="masonry" class="row">
+					{% for category in categories %}
+						{% for item in category.fooditem_set.all %}
+						<li class="card-container col-xl-3 col-lg-4 col-md-6 m-b30 {{ category.name|lower|slugify }}">
+							<div class="dz-img-box style-4 box-hover">
+								<div class="menu-detail">
+									<div class="dz-media">
+										{% if item.image %}
+											<img src="{{ item.image.url }}" alt="{{ item.name }}">
+										{% else %}
+											<img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ item.name }}">
+										{% endif %}
+									</div>
+
+									<!-- clickable name / description: goes to product_detail page -->
+									<div class="dz-content">
+										<a href="{% url 'product_detail' restaurant.id table.id item.id %}" style="text-decoration:none;color:inherit;">
+											<h5 class="title">{{ item.name }}</h5>
+											<p>{{ item.description|truncatechars:120 }}</p>
+										</a>
+									</div>
+								</div>
+
+								<div class="menu-footer">
+									<span>Price</span>
+									<h5 class="price">₹{{ item.price }}</h5>
+								</div>
+
+								<!-- quantity controls for bulk ordering (kept) -->
+								<div class="quantity-box">
+									<button type="button" class="quantity-btn minus" onclick="decreaseQuantity('{{ item.id }}')">-</button>
+									<input type="number" name="quantity_{{ item.id }}" id="quantity_{{ item.id }}" min="0" value="0" readonly>
+									<button type="button" class="quantity-btn plus" onclick="increaseQuantity('{{ item.id }}')">+</button>
+								</div>
+							</div>
+						</li>
+						{% endfor %}
+					{% endfor %}
+				</ul>
+
+				<button type="submit" class="btn btn-primary mt-4">Place Order</button>
+			</form>
+		</div>
+	</section>
+</div>
+
+<!-- Product Detail Modal template (kept for possible future use) -->
+<div class="modal fade" id="productDetailModal" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog modal-xl modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-body p-0">
+				<div id="modalContent"></div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- JS (kept exactly as provided) -->
+<script src="{% static 'assets/js/jquery.min.js' %}"></script>
+<script src="{% static 'assets/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'assets/vendor/bootstrap-select/js/bootstrap-select.min.js' %}"></script>
+<script src="{% static 'assets/vendor/masonry/masonry-4.2.2.js' %}"></script>
+<script src="{% static 'assets/js/custom.min.js' %}"></script>
+<script>
+	function openProductModal(element) {
+    const name = element.dataset.name;
+    const description = element.dataset.description;
+    const image = element.dataset.image;
+
+    // Get the template and clone it
+    const template = document.getElementById('product-detail-template');
+    const clone = template.content.cloneNode(true);
+
+    // Set values
+    clone.getElementById('modal-product-name').textContent = name;
+    clone.getElementById('modal-product-description').textContent = description;
+    clone.getElementById('modal-product-image').src = image;
+
+    // Inject
+    const modalContent = document.getElementById('modalContent');
+    modalContent.innerHTML = '';
+    modalContent.appendChild(clone);
+
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('productDetailModal'));
+    modal.show();
+}
+
+</
+<script>
+function decreaseQuantity(itemId){
+	let inputField = document.getElementById(`quantity_${itemId}`);
+	let currentValue = parseInt(inputField.value,10);
+	if(currentValue>0) inputField.value = currentValue-1;
+}
+function increaseQuantity(itemId){
+	let inputField = document.getElementById(`quantity_${itemId}`);
+	let currentValue = parseInt(inputField.value,10);
+	inputField.value = currentValue+1;
+}
+
+$(document).ready(function(){
+	$(".filters li").on("click", function(){
+		$(".filters li").removeClass("active");
+		$(this).addClass("active");
+		let filterValue = $(this).attr("data-filter");
+		if(filterValue === ".All"){
+			$("#masonry .card-container").show();
+		}else{
+			$("#masonry .card-container").hide();
+			$(`${filterValue}`).show();
+		}
+	});
+});
+</script>
+
+</body>
+</html>

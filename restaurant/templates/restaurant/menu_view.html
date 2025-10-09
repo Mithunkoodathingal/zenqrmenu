@@ -1,0 +1,101 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+{% block title %}Our Menu{% endblock %}
+
+{% block content %}
+
+<!-- Banner -->
+<div class="dz-bnr-inr style-1 text-center bg-parallax" 
+     style="background-image:url('{% static 'assets/images/banner/bnr4.jpg' %}'); background-size:cover; background-position:center;">
+  <div class="container">
+    <div class="dz-bnr-inr-entry">
+      <h1>Our Menu 4</h1>
+      <!-- Breadcrumb Row -->
+      <nav aria-label="breadcrumb" class="breadcrumb-row">
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Our Menu 4</li>
+        </ul>
+      </nav>
+      <!-- Breadcrumb Row End -->
+    </div>
+  </div>
+</div>
+<!-- Banner End -->
+
+<!-- Our Menu -->
+<section class="content-inner">
+  <div class="container">
+    <div class="row">
+      <div class="col-xl-10 col-lg-9 col-md-12">
+        <div class="site-filters style-1 clearfix">
+          <ul class="filters" data-bs-toggle="buttons">
+            <li data-filter=".All" class="btn active">
+              <a href="javascript:void(0);"><span><i class="flaticon-fast-food"></i></span>ALL</a>
+            </li>
+            <li data-filter=".drink" class="btn"><a href="javascript:void(0);"><span><i class="flaticon-cocktail"></i></span>COLD DRINK</a></li>
+            <li data-filter=".pizza" class="btn"><a href="javascript:void(0);"><span><i class="flaticon-pizza-slice"></i></span>PIZZA</a></li>
+            <li data-filter=".salad" class="btn"><a href="javascript:void(0);"><span><i class="flaticon-salad"></i></span>SALAD</a></li>
+            <li data-filter=".sweet" class="btn"><a href="javascript:void(0);"><span><i class="flaticon-cupcake"></i></span>SWEETS</a></li>
+            <li data-filter=".spicy" class="btn"><a href="javascript:void(0);"><span><i class="flaticon-chili-pepper"></i></span>SPICY</a></li>
+            <li data-filter=".burger" class="btn"><a href="javascript:void(0);"><span><i class="flaticon-hamburger-1"></i></span>BURGER</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="col-xl-2 col-lg-3 col-md-12 text-lg-end mb-lg-0 m-b30 d-flex d-lg-block align-items-center justify-content-between">
+        <strong class="filter-item-show d-lg-none">51,740 items</strong>
+        <a data-bs-toggle="offcanvas" href="#offcanvasFilter" role="button" aria-controls="offcanvasFilter" 
+           class="btn btn-primary filter-btn btn-hover-2">
+          Filter <span><i class="icon-filter m-l5"></i></span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Menu Masonry Grid -->
+    <ul id="masonry" class="row">
+      <li class="card-container col-xl-3 col-lg-4 col-md-6 m-b30 All drink pizza burger">
+        <div class="dz-img-box style-4 box-hover">
+          <div class="menu-detail">
+            <div class="dz-media">
+              <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="/">
+            </div>
+            <div class="dz-content">
+              <h5 class="title"><a href="#">Burger</a></h5>
+              <p>Delicious and Spicy</p>
+            </div>
+          </div>
+          <div class="menu-footer">
+            <span>Regular Price</span>
+            <h5 class="price">$10.00</h5>
+          </div>
+          <a class="detail-btn" href="#"><i class="fa-solid fa-plus"></i></a>
+        </div>
+      </li>
+
+      <!-- ✅ Copy and paste the same structure for each menu item -->
+      <li class="card-container col-xl-3 col-lg-4 col-md-6 m-b30 All pizza sweet">
+        <div class="dz-img-box style-4 box-hover">
+          <div class="menu-detail">
+            <div class="dz-media">
+              <img src="{% static 'assets/images/menu-small/pic2.png' %}" alt="/">
+            </div>
+            <div class="dz-content">
+              <h5 class="title"><a href="#">Hot Rice</a></h5>
+              <p>Delicious and Spicy</p>
+            </div>
+          </div>
+          <div class="menu-footer">
+            <span>Regular Price</span>
+            <h5 class="price">$15.00</h5>
+          </div>
+          <a class="detail-btn" href="#"><i class="fa-solid fa-plus"></i></a>
+        </div>
+      </li>
+
+      <!-- continue all other menu items same as reference HTML -->
+    </ul>
+  </div>
+</section>
+<!-- Our Menu End -->
+
+{% endblock %}

@@ -1,0 +1,26 @@
+{% comment %} {% comment %} {% extends 'restaurant/base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h3 class="fw-bold text-center mb-4 text-orange">Created Tables</h3>
+  <div class="row justify-content-center">
+    {% for table in tables %}
+    <div class="col-md-4 col-sm-6 mb-4">
+      <div class="card shadow-lg text-center p-3">
+        <h5 class="fw-bold mb-3">Table - {{ table.table_number }}</h5>
+        {% if table.qr_code %}
+          <img src="{{ table.qr_code.url }}" alt="QR Code" class="img-fluid mb-3" style="max-width:150px;">
+          <a href="{% url 'download_qr' table.id %}" class="btn btn-warning fw-bold text-white">Download QR</a>
+        {% else %}
+          <p class="text-muted">QR not generated</p>
+        {% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center">
+      <p class="text-muted">No tables created yet</p>
+      <a href="{% url 'table_create' %}" class="btn btn-warning fw-bold text-white">Add First Table</a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %} {% endcomment %} {% endcomment %}

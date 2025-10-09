@@ -1,0 +1,222 @@
+{% extends 'restaurant/base.html' %}
+{% block title %}Kitchen - Orders{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3 class="fw-bold text-center mb-4 text-orange">Orders</h3>
+
+  <!-- this container will be replaced by poll when updates occur -->
+  <div class="orders-row row" id="orders-row">
+    {% for order in orders %}
+    <div class="col-md-6 col-lg-4 mb-4 order-card-col" data-order-id="{{ order.id }}">
+      <div class="card shadow-lg p-3 h-100 order-card" data-order-id="{{ order.id }}">
+        <h5 class="fw-bold mb-2">Order #{{ order.id }}</h5>
+        <p class="text-muted small mb-2">
+          Table: {{ order.table.table_number }} <br>
+          Time: {{ order.local_time|date:"d M Y, h:i A" }}
+        </p>
+        <ul class="list-group mb-3">
+          {% for item in order.order_items.all %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ item.food_item.name }}
+            <span class="badge bg-warning text-dark">x{{ item.quantity }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        <p class="fw-bold mb-3">Total: ₹{{ order.total_price|floatformat:2 }}</p>
+
+        <!-- AJAX-enabled form: class 'complete-order-form' intercepted by JS below -->
+        <form method="post" action="{% url 'complete_order' order.id %}" class="complete-order-form" data-order-id="{{ order.id }}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-warning text-white fw-bold w-100">
+            Mark as Completed
+          </button>
+        </form>
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center">
+      <p class="text-muted">No pending orders</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+/*
+  Kitchen page script:
+  - intercepts "Mark as Completed" forms and posts via fetch() so page doesn't reload
+  - polls the same page every 6 seconds and replaces .orders-row when server HTML differs
+  - provides small toast notifications and console logs for debugging
+*/
+
+(function(){
+  console.log('[kitchen] script loaded');
+
+  // CSRF helper
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const parts = document.cookie.split(';');
+      for (let i = 0; i < parts.length; i++) {
+        const c = parts[i].trim();
+        if (c.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(c.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  const csrftoken = getCookie('csrftoken');
+  console.log('[kitchen] csrftoken present?', !!csrftoken);
+
+  // tiny toast helper
+  function toast(msg, kind='success') {
+    const wrapId = 'kitchen-toast-wrap';
+    let wrap = document.getElementById(wrapId);
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.id = wrapId;
+      wrap.style.position = 'fixed';
+      wrap.style.right = '18px';
+      wrap.style.bottom = '20px';
+      wrap.style.zIndex = 3000;
+      document.body.appendChild(wrap);
+    }
+    const el = document.createElement('div');
+    el.className = 'alert ' + (kind === 'error' ? 'alert-danger' : 'alert-success');
+    el.textContent = msg;
+    el.style.marginTop = '8px';
+    wrap.appendChild(el);
+    setTimeout(()=> el.remove(), 2200);
+  }
+
+  // Utility to replace orders container HTML with new HTML (server-sent)
+  function replaceOrdersRowFromHtml(htmlText) {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, 'text/html');
+      const newRow = doc.querySelector('.orders-row');
+      const currentRow = document.querySelector('.orders-row');
+      if (!newRow || !currentRow) {
+        console.warn('[kitchen] replaceOrdersRow - missing nodes');
+        return false;
+      }
+
+      // quick equality check: if innerHTML matches, do nothing
+      if (newRow.innerHTML.trim() === currentRow.innerHTML.trim()) {
+        // nothing changed
+        return false;
+      }
+
+      // Replace innerHTML (simple approach)
+      currentRow.innerHTML = newRow.innerHTML;
+      console.log('[kitchen] orders-row updated from server');
+      return true;
+    } catch (err) {
+      console.error('[kitchen] replaceOrdersRowFromHtml error', err);
+      return false;
+    }
+  }
+
+  // Intercept submit for forms that mark complete
+  document.addEventListener('submit', async function(e){
+    const form = e.target;
+    if (!form || !form.classList || !form.classList.contains('complete-order-form')) return;
+    e.preventDefault();
+
+    const orderId = form.dataset.orderId || form.getAttribute('data-order-id');
+    if (!orderId) { console.error('complete-order: order id missing'); return; }
+
+    if (!confirm('Mark order #' + orderId + ' as completed?')) return;
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+      const resp = await fetch(form.action, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
+        },
+        body: new FormData(form)
+      });
+
+      // try parse JSON if server returns it
+      let data = null;
+      const txt = await resp.text();
+      try { data = txt ? JSON.parse(txt) : null; } catch(e){ /* not json */ }
+
+      if (!resp.ok) {
+        console.error('[kitchen] complete POST failed', resp.status, txt);
+        toast('Could not mark order completed (server error)', 'error');
+        return;
+      }
+
+      // Success – remove the corresponding card from DOM (optimistic)
+      const col = document.querySelector('.order-card-col[data-order-id="'+orderId+'"]');
+      if (col) col.remove();
+
+      // Try to update mini-cart or show message using server response (if provided)
+      if (data && data.success) {
+        toast('Order #' + orderId + ' marked completed');
+      } else {
+        toast('Order marked completed');
+      }
+
+    } catch (err) {
+      console.error('[kitchen] complete-order fetch error', err);
+      toast('Request failed', 'error');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+
+  }, false);
+
+  // Polling: fetch the same URL (GET) regularly and replace .orders-row if it changed
+  let lastPollHtmlSnapshot = null;
+  async function pollOrders() {
+    try {
+      const url = window.location.href;
+      const resp = await fetch(url, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+      });
+      if (!resp.ok) {
+        console.warn('[kitchen] poll failed status', resp.status);
+        return;
+      }
+      const txt = await resp.text();
+      // quick optimization: if the server returned the same content string as last poll, skip parse
+      if (lastPollHtmlSnapshot === txt) return;
+      const changed = replaceOrdersRowFromHtml(txt);
+      lastPollHtmlSnapshot = txt;
+      if (changed) {
+        console.log('[kitchen] UI updated by poll');
+      }
+    } catch (err) {
+      console.error('[kitchen] poll error', err);
+    }
+  }
+
+  // start polling every 6 seconds
+  const POLL_INTERVAL = 6000;
+  const pollHandle = setInterval(pollOrders, POLL_INTERVAL);
+  // Also run immediate first poll (but don't replace yellow UI if nothing changed)
+  pollOrders();
+
+  // Clean up on page hide/unload (optional)
+  window.addEventListener('beforeunload', function(){ clearInterval(pollHandle); });
+
+  console.log('[kitchen] ready — polling every', POLL_INTERVAL, 'ms');
+
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends 'restaurant/base.html' %}
+{% block content %}
+
+<div class="d-flex justify-content-center align-items-center mt-4">
+  <!-- Phone Mockup -->
+  <div class="shadow-lg" style="border: 14px solid #333; border-radius: 40px; width: 375px; height: 667px; background:#fff; position: relative;">
+    
+    <!-- Speaker / notch -->
+    <div style="width: 120px; height: 16px; background:#333; border-radius:10px; position:absolute; top:6px; left:50%; transform:translateX(-50%);"></div>
+    
+    <!-- Screen -->
+    <div class="p-3" style="margin-top:30px; height:620px; overflow-y:auto;">
+      <h5 class="fw-bold text-center mb-4">{{ restaurant.name }} Menu</h5>
+
+      {% for category in categories %}
+      <div class="mb-3">
+        <h6 class="fw-bold text-orange">{{ category.name }}</h6>
+        
+        {% for item in category.fooditem_set.all %}
+        <div class="card shadow-sm mb-2">
+          <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+              <span class="fw-bold">{{ item.name }}</span>  
+              <p class="small text-muted mb-1">₹{{ item.price }}</p>
+              {% if item.description %}
+              <p class="small text-muted">{{ item.description }}</p>
+              {% endif %}
+            </div>
+            <button class="btn btn-sm btn-warning text-white fw-bold">+ Add</button>
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-muted small">No items in this category</p>
+        {% endfor %}
+      </div>
+      {% empty %}
+      <p class="text-center text-muted">No categories added yet</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

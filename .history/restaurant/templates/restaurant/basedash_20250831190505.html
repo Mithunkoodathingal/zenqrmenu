@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zebra Menu Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+
+<div class="dashboard-wrapper">
+    <aside class="sidebar">
+        <div class="logo">
+            🦓 zebra menu
+        </div>
+        <ul class="nav-links">
+            <li><a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+            <li><a href="{% url 'manage_menu' %}" class="{% if request.resolver_match.url_name == 'manage_menu' or request.resolver_match.url_name == 'category_create' or request.resolver_match.url_name == 'fooditem_create' %}active{% endif %}"><i class="fas fa-list-alt"></i> Manage Menu</a></li>
+            <li><a href="{% url 'menu_preview' %}" class="{% if request.resolver_match.url_name == 'menu_preview' %}active{% endif %}"><i class="fas fa-mobile-alt"></i> Menu View</a></li>
+            <li><a href="{% url 'create_table_qr' %}" class="{% if request.resolver_match.url_name == 'create_table_qr' or request.resolver_match.url_name == 'table_create' %}active{% endif %}"><i class="fas fa-qrcode"></i> Create Table/QR</a></li>
+            <li><a href="{% url 'kitchen_interface' %}" class="{% if request.resolver_match.url_name == 'kitchen_interface' %}active{% endif %}"><i class="fas fa-receipt"></i> Orders</a></li>
+        </ul>
+        <div class="user-profile">
+            <i class="fas fa-user-cog fa-2x"></i>
+            <div class="user-name mt-2">{{ user.username|default:'User Name' }}</div>
+            <a href="#">Subscribe Now</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        {% block content %}
+        {% endblock %}
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

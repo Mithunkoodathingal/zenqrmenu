@@ -1,0 +1,136 @@
+name: CI/CD — Build → ECR → App Runner (with CloudWatch log capture)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  IMAGE_NAME: ${{ secrets.ECR_REPO }}         # e.g. my-qr-app
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    outputs:
+      test-result: ${{ steps.test-outcome.outputs.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with: python-version: 3.12
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run tests
+        id: test-outcome
+        run: |
+          set -o pipefail
+          pytest -q || echo "::set-output name=result::failed"
+          echo "::set-output name=result::ok"
+
+  build-and-deploy:
+    needs: tests
+    runs-on: ubuntu-latest
+    if: needs.tests.outputs.test-result == 'ok' || github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker image & push to ECR
+        id: build_and_push
+        run: |
+          set -e
+          IMAGE_TAG=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker build -t "$IMAGE_TAG" .
+          docker push "$IMAGE_TAG"
+          echo "image=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Trigger App Runner deployment
+        id: trigger_deploy
+        run: |
+          # This triggers App Runner to pull the new image if your service is connected to ECR repository.
+          aws apprunner start-deployment --service-arn ${{ secrets.APPRUNNER_SERVICE_ARN }}
+
+      - name: Wait for App Runner deployment to finish (healthy)
+        id: wait_deploy
+        run: |
+          set -e
+          SERVICE_ARN=${{ secrets.APPRUNNER_SERVICE_ARN }}
+          # Poll for up to 5 minutes (adjust timeout)
+          for i in $(seq 1 30); do
+            status=$(aws apprunner describe-service --service-arn $SERVICE_ARN --query "Service.Status" --output text)
+            latest=$(aws apprunner describe-service --service-arn $SERVICE_ARN --query "Service.DeploymentStatus" --output text)
+            echo "Service status=$status, deployment=$latest"
+            if [ "$status" = "RUNNING" ] && [ "$latest" = "SUCCEEDED" ]; then
+              echo "Deployment succeeded"
+              exit 0
+            fi
+            if [ "$latest" = "FAILED" ]; then
+              echo "Deployment FAILED"
+              exit 2
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for App Runner deployment"
+          exit 3
+
+      - name: Run DB migrations (optional)
+/* NOTE: choose a migration strategy described below; this step demonstrates one approach:
+   It runs a one-off docker container image and executes migrations.
+   For this to work, your RDS endpoint must be reachable from GitHub Actions (public RDS or via AWS Session).
+   Alternatively, prefer running migrations inside the App Runner container at startup (see notes). */
+        if: ${{ always() }}
+        run: |
+          if [ "${{ secrets.RUN_MIGRATIONS }}" = "true" ]; then
+            IMAGE=${{ steps.build_and_push.outputs.image }}
+            echo "Running migrations via a short-lived container"
+            # Create temporary container and run migrations; image must include manage.py, python environment, etc.
+            docker run --rm \
+              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              -e DJANGO_SETTINGS_MODULE="${{ secrets.DJANGO_SETTINGS_MODULE }}" \
+              $IMAGE python manage.py migrate --noinput
+          else
+            echo "MIGRATIONS SKIPPED (RUN_MIGRATIONS not set to true)"
+          fi
+
+      - name: Deployment succeeded - finish
+        if: ${{ success() }}
+        run: echo "App Runner deployment succeeded"
+
+      - name: On failure: collect last 200 CloudWatch log events and upload
+        if: ${{ failure() }}
+        env:
+          CW_LOG_GROUP: "/aws/apprunner/${{ secrets.APPRUNNER_SERVICE_NAME }}"
+        run: |
+          echo "Collecting CloudWatch logs from $CW_LOG_GROUP"
+          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          # last 30 minutes logs
+          START_TS=$(date -u -d '30 minutes ago' +"%Y-%m-%dT%H:%M:%SZ")
+          mkdir -p logs
+          aws logs filter-log-events --log-group-name "$CW_LOG_GROUP" --start-time $(date -d '30 minutes ago' +%s)000 --limit 1000 \
+            | jq -r '.events[] | "\(.timestamp) \(.message)"' > logs/apprunner_recent.log || true
+          tar czf apprunner_logs_${{ github.run_id }}.tgz logs || true
+          echo "Uploading logs as artifact"
+          gh release upload --clobber "deploy-logs-${{ github.run_id }}" apprunner_logs_${{ github.run_id }}.tgz || true
+          # Also upload as action artifact
+          mkdir -p artifact
+          mv apprunner_logs_${{ github.run_id }}.tgz artifact/
+        # Use actions/upload-artifact to upload logs
+      - name: Upload logs artifact
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: apprunner-logs-${{ github.run_id }}
+          path: artifact/apprunner_logs_${{ github.run_id }}.tgz

@@ -1,0 +1,178 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+{% load text_extras %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center mt-4">
+
+  <!-- Phone Mockup -->
+  <div class="shadow-lg"
+       style="border: 14px solid #333; border-radius: 40px; width: 375px; height: 667px; background:#fff; position: relative;">
+    <!-- Speaker / notch -->
+    <div style="width: 120px; height: 16px; background:#333; border-radius:10px; position:absolute; top:6px; left:50%; transform:translateX(-50%);"></div>
+
+    <!-- Screen -->
+    <div class="p-0" style="margin-top:30px; height:620px; overflow-y:auto; -webkit-overflow-scrolling: touch; background: #fff;">
+      {# COVER BANNER with overlayed details #}
+      <div style="position:relative; width:100%; height:160px; overflow:hidden; border-bottom: 1px solid #eee;">
+        {% if restaurant.cover_image %}
+          <div style="
+              background-image: url('{{ restaurant.cover_image.url }}');
+              background-size: cover;
+              background-position: center;
+              width:100%;
+              height:100%;
+              filter: brightness(0.9);
+          " aria-hidden="true"></div>
+        {% else %}
+          <div style="
+              background-image: url('{% static 'assets/images/cover-placeholder.jpg' %}');
+              background-size: cover;
+              background-position: center;
+              width:100%;
+              height:100%;
+              filter: brightness(0.9);
+          " aria-hidden="true"></div>
+        {% endif %}
+
+        <!-- gradient overlay for readability -->
+        <div style="
+            position:absolute;
+            left:0; right:0; top:0; bottom:0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0.0) 100%);
+            pointer-events: none;
+        "></div>
+
+        <!-- Details on top of cover -->
+        <div style="position:absolute; left:12px; right:12px; bottom:10px; color:#fff; z-index:5;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:56px; height:56px; border-radius:10px; overflow:hidden; border:2px solid rgba(255,255,255,0.85); background:#fff;">
+              {% if restaurant.cover_image %}
+                <img src="{{ restaurant.cover_image.url }}" alt="{{ restaurant.name }}" style="width:100%; height:100%; object-fit:cover;">
+              {% else %}
+                <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ restaurant.name }}" style="width:100%; height:100%; object-fit:cover;">
+              {% endif %}
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:700; font-size:1.05rem; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ restaurant.name }}</div>
+              <div style="font-size:0.82rem; color:rgba(255,255,255,0.9); max-height:2.4em; overflow:hidden; text-overflow:ellipsis;">
+                {{ restaurant.about|default:"Restaurant menu preview"|first_alpha:10 }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compact filter area -->
+      <div style="padding:10px 12px; border-bottom:1px solid #f1f1f1; background:#fff;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+          <button class="btn btn-sm btn-light active" data-filter="all" style="font-size:12px;">ALL</button>
+          {% for category in categories %}
+            <button class="btn btn-outline-secondary btn-sm" data-filter="cat-{{ category.id }}" style="font-size:12px;">{{ category.name }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# Menu list - uses same card markup as customer menu so preview matches #}
+      <div style="padding:12px;">
+        {% for category in categories %}
+          <div class="mb-3" data-preview-cat="cat-{{ category.id }}">
+            <h6 class="fw-bold" style="color:#ff7a45; margin:6px 0 8px;">{{ category.name }}</h6>
+
+            {% for item in category.fooditem_set.all %}
+              <div class="card shadow-sm mb-2 preview-card" data-cat="cat-{{ category.id }}" style="border-radius:10px; overflow:hidden;">
+                <div class="card-body d-flex justify-content-between align-items-center p-2" style="gap:12px;">
+                  <div style="display:flex; gap:12px; align-items:center;">
+                    <div style="flex:0 0 72px; height:72px; background:#fafafa; border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                      {% if item.image %}
+                        <img src="{{ item.image.url }}" alt="{{ item.name }}" style="width:100%;height:100%;object-fit:cover;">
+                      {% else %}
+                        <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ item.name }}" style="width:100%;height:100%;object-fit:cover;">
+                      {% endif %}
+                    </div>
+
+                    <div style="min-width:0;">
+                      <div style="font-weight:700; font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ item.name }}</div>
+                      <p class="small text-muted mb-0">₹{{ item.price }}</p>
+                      {% if item.description %}
+                        <p class="small text-muted mb-0" style="max-width:200px; overflow:hidden; text-overflow:ellipsis;">
+                          {{ item.description|first_alpha:10 }}
+                        </p>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="btn btn-sm btn-warning text-white fw-bold preview-add-btn" data-item-id="{{ item.id }}" style="padding:6px 10px;">
+                      + Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+            {% empty %}
+              <p class="text-muted small">No items in this category</p>
+            {% endfor %}
+          </div>
+        {% empty %}
+          <p class="text-center text-muted">No categories added yet</p>
+        {% endfor %}
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{# JS for preview interactions and category filter based on data-cat (uses category IDs) #}
+<script>
+(function(){
+  // Add button handler: open actual product page (fallback), or call page's modal loader if available
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest && e.target.closest('.preview-add-btn');
+    if (!btn) return;
+    e.preventDefault();
+    const itemId = btn.dataset.itemId;
+    if (!itemId) return;
+
+    if (typeof loadProductFragment === 'function') {
+      // If menu page's modal loader exists, use it (keeps parity)
+      loadProductFragment(itemId);
+      return;
+    }
+
+    // fallback: open customer-facing item detail in new tab
+    const restId = "{{ restaurant.id }}";
+    const tableId = "{{ table.id }}";
+    const url = `/menu/${restId}/${tableId}/item/${itemId}/`;
+    window.open(url, '_blank');
+  }, false);
+
+  // Category buttons filter
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest && e.target.closest('[data-filter]');
+    if (!btn) return;
+    const filter = btn.getAttribute('data-filter');
+
+    // toggle active classes
+    document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    // show/hide cards
+    const cards = document.querySelectorAll('.preview-card');
+    if (!cards) return;
+
+    if (filter === 'all') {
+      cards.forEach(c => c.style.display = '');
+      return;
+    }
+
+    cards.forEach(c => {
+      if (c.dataset.cat === filter) {
+        c.style.display = '';
+      } else {
+        c.style.display = 'none';
+      }
+    });
+  }, false);
+})();
+</script>
+{% endblock %}

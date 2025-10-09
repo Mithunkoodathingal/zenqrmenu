@@ -1,0 +1,526 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ restaurant.name }} - Menu</title>
+
+  <!-- original CSS files (kept) -->
+  <link href="{% static 'assets/vendor/magnific-popup/magnific-popup.min.css' %}" rel="stylesheet">
+  <link href="{% static 'assets/vendor/swiper/swiper-bundle.min.css' %}" rel="stylesheet">
+  <link href="{% static 'assets/vendor/bootstrap-select/css/bootstrap-select.min.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'assets/vendor/rangeslider/rangeslider.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/vendor/nouislider/nouislider.min.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/vendor/switcher/switcher.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+
+  <style>
+    /* ---------- BANNER (UPDATED: cover is full-width image; caption overlays bottom-left) ---------- */
+
+    /* Parent: allow caption to be positioned over the image.
+       No fixed height so image height is natural (no empty box). */
+    .restaurant-banner {
+      width: 100%;
+      position: relative;
+      overflow: visible;   /* allow shadow/thumbnail to overflow if necessary */
+      box-sizing: border-box;
+      background: transparent; /* remove any background "box" */
+    }
+
+    /* Cover image fills the horizontal space and keeps its aspect ratio.
+       This prevents empty gaps and removes forced cropping by a fixed-height container. */
+    .restaurant-banner .restaurant-cover {
+      display: block;
+      width: 100%;
+      height: auto;            /* natural height, prevents empty space */
+      object-fit: cover;       /* safe fallback; with height:auto it won't stretch */
+      vertical-align: middle;
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
+    }
+
+    /* overlay covers the image fully (same dimensions as the image) */
+    .restaurant-banner .overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      /* subtle darkening to ensure caption legibility on bright images */
+      background: linear-gradient(to bottom, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.12) 50%, rgba(0,0,0,0.18) 100%);
+    }
+
+    /* Caption group that sits on top of the cover in bottom-left.
+       Kept small and compact: thumbnail at left, name on the right. */
+    .banner-caption {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 5;
+      pointer-events: auto;
+      /* do not let caption expand past available width */
+      max-width: calc(100% - 32px);
+    }
+
+    .banner-caption .thumb {
+      width: 96px;
+      height: 96px;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+      border: 2px solid rgba(255,255,255,0.95);
+      background: #fafafa;
+      flex: 0 0 auto;
+    }
+    .banner-caption .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .banner-caption .restaurant-name {
+      color: #ffffff;
+      font-size: 1.3rem;
+      font-weight: 800;
+      line-height: 1.05;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: calc(100vw - 160px);
+    }
+
+    /* Smaller screens: scale down thumbnail & text so caption does not dominate */
+    @media (max-width: 768px) {
+      .banner-caption {
+        left: 12px;
+        bottom: 12px;
+        gap: 10px;
+      }
+      .banner-caption .thumb {
+        width: 64px;
+        height: 64px;
+        border-radius: 8px;
+      }
+      .banner-caption .restaurant-name {
+        font-size: 1.05rem;
+        max-width: calc(100vw - 120px);
+      }
+    }
+
+    /* ---------- (unchanged) other styles below - keep the rest of your existing CSS intact ---------- */
+    /* ... (the rest of your CSS for cards, modal, product details etc.) ... */
+  </style>
+</head>
+<body>
+
+<div class="page-content bg-white">
+
+  <!-- Banner (HTML left as-is by you) -->
+  <div class="dz-bnr-inr style-1 text-center">
+    <div class="container-fluid p-0">
+      <div class="restaurant-banner">
+        {% if restaurant.cover_image %}
+          <img class="restaurant-cover" src="{{ restaurant.cover_image.url }}" alt="{{ restaurant.name }}">
+        {% else %}
+          <img class="restaurant-cover" src="{% static 'assets/images/banner/bnr4.jpg' %}" alt="{{ restaurant.name }}">
+        {% endif %}
+        <div class="overlay"></div>
+
+        <div class="banner-caption" role="contentinfo" aria-label="Restaurant name and thumbnail">
+          <div class="thumb" aria-hidden="true">
+            {% if restaurant.cover_image %}
+              <img src="{{ restaurant.cover_image.url }}" alt="{{ restaurant.name }}">
+            {% else %}
+              <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ restaurant.name }}">
+            {% endif %}
+          </div>
+
+          <div class="restaurant-name">{{ restaurant.name }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- /Banner -->
+
+  <!-- rest of page unchanged -->
+
+  <!-- /Banner -->
+
+  <!-- Menu content -->
+  <section class="content-inner py-5">
+    <div class="container">
+      <div class="row mb-4">
+        <div class="col-12">
+          <ul class="filters list-inline text-center" style="gap:10px;">
+            <li class="list-inline-item"><button class="btn btn-light btn-sm active" data-filter=".All">ALL</button></li>
+            {% for category in categories %}
+              <li class="list-inline-item"><button class="btn btn-outline-secondary btn-sm" data-filter=".{{ category.name|lower|slugify }}">{{ category.name }}</button></li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <div class="row g-3" id="masonry">
+        {% for category in categories %}
+          {% for item in category.fooditem_set.all %}
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3 card-container {{ category.name|lower|slugify }}">
+              <!-- anchor href is explicit path; JS intercepts left-click to open modal -->
+              <a class="tile-link" href="/menu/{{ restaurant.id }}/{{ table.id }}/item/{{ item.id }}/">
+                <div class="menu-card" data-item-id="{{ item.id }}">
+                  <div class="img-wrap">
+                    {% if item.image %}
+                      <img src="{{ item.image.url }}" alt="{{ item.name }}">
+                    {% else %}
+                      <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ item.name }}">
+                    {% endif %}
+                  </div>
+
+                  <div class="content">
+					<div>
+					<h5 class="title">{{ item.name }}</h5>
+
+					<!-- on tablet: price-top will show where description used to be -->
+					<div class="price-top">₹{{ item.price }}</div>
+
+					<!-- description truncated to first 10 characters -->
+					<p class="desc">
+						{{ item.description|default:"Delicious and Spicy"|slice:":10" }}{% if item.description and item.description|length > 10 %}...{% endif %}
+					</p>
+					</div>
+
+
+                    <!-- meta kept for desktop/mobile price placement; price hidden on tablet to avoid duplication -->
+                    <div class="meta">
+                      <div class="price">₹{{ item.price }}</div>
+                    </div>
+
+                    <!-- card footer: shown only on tablet (CSS) to place + on right end below -->
+                    <div class="card-footer">
+                      <!-- on tablet this is the inline + button at right end. On other views it's hidden by CSS (display:none). -->
+                      <button type="button" class="plus-badge card-plus" aria-label="Add item">+</button>
+                    </div>
+                  </div>
+
+                  <!-- floating plus for desktop/mobile (kept for non-tablet views) -->
+                  <div class="plus-badge desktop-floating card-plus" aria-hidden="true">+</div>
+                </div>
+              </a>
+            </div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- MINI CART (floating). Action uses explicit path -->
+<div id="mini-cart" style="position: fixed; right: 18px; bottom: 18px; background: #fff; border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); padding:10px 12px; z-index:1200; width:220px;">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <div style="font-size:0.95rem;color:#666;">Items: <span id="cart-count">0</span></div>
+      <div style="font-weight:700; font-size:1rem;">Total: ₹<span id="cart-total">0.00</span></div>
+    </div>
+    <!-- Place order button: explicit action path -->
+    <form id="place-order-form" method="post" action="/menu/{{ restaurant.id }}/{{ table.id }}/cart/place/">
+      {% csrf_token %}
+      <button id="place-order-btn" type="submit" class="btn btn-sm btn-success" disabled style="margin-left:8px;">Order</button>
+    </form>
+  </div>
+</div>
+
+<!-- PRODUCT MODAL (Bootstrap 5). The server fragment will be injected into .modal-body -->
+<div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-body">
+        <!-- fragment HTML from product_detail_html endpoint will be injected here -->
+        <div style="display:flex;align-items:center;justify-content:center;padding:36px;color:#888;">
+          Click a product to view details...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- original JS files (kept) -->
+<script src="{% static 'assets/js/jquery.min.js' %}"></script>
+<script src="{% static 'assets/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'assets/vendor/bootstrap-select/js/bootstrap-select.min.js' %}"></script>
+<script src="{% static 'assets/vendor/masonry/masonry-4.2.2.js' %}"></script>
+<script src="{% static 'assets/js/custom.min.js' %}"></script>
+
+<script>
+/* ------------------- Helper utilities ------------------- */
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+/* Update mini-cart UI */
+function updateMiniCartUI(count, total) {
+  const c = document.getElementById('cart-count');
+  const t = document.getElementById('cart-total');
+  if (c) c.textContent = count;
+  if (t) t.textContent = parseFloat(total || 0).toFixed(2);
+  const btn = document.getElementById('place-order-btn');
+  if (btn) btn.disabled = (count === 0);
+}
+window.updateMiniCart = updateMiniCartUI;
+
+/* initial call to set visibility of plus badge buttons for tablet vs others */
+function updatePlusVisibility() {
+  const isTablet = window.innerWidth >= 577 && window.innerWidth <= 1024;
+  document.querySelectorAll('.desktop-floating').forEach(el => {
+    el.style.display = isTablet ? 'none' : 'flex';
+  });
+  document.querySelectorAll('.card-footer').forEach(el => {
+    el.style.display = isTablet ? 'flex' : 'none';
+  });
+}
+window.addEventListener('load', updatePlusVisibility);
+window.addEventListener('resize', updatePlusVisibility);
+
+/* initialize mini-cart by fetching server summary so totals persist */
+(function fetchCartSummary() {
+  const url = "/menu/{{ restaurant.id }}/{{ table.id }}/cart/summary/";
+  fetch(url, { credentials: 'same-origin' })
+    .then(resp => {
+      if (!resp.ok) throw new Error('cart_summary failed: ' + resp.status);
+      return resp.json();
+    })
+    .then(data => {
+      if (data && data.success) updateMiniCartUI(data.items_count || 0, data.total_price || 0);
+    })
+    .catch(err => {
+      console.warn('cart_summary error', err);
+    });
+})();
+
+/* ------------------- Fragment loader & modal wiring ------------------- */
+
+/* inject fragment HTML into modal and call initInjectedFragment */
+function injectFragmentHtml(html) {
+  const modalBody = document.querySelector('#productModal .modal-body');
+  if (!modalBody) return;
+  modalBody.innerHTML = html;
+  try { initInjectedFragment(modalBody); } catch(e){ console.error('initInjectedFragment error', e); }
+  const modalEl = document.getElementById('productModal');
+  const bs = new bootstrap.Modal(modalEl, {});
+  bs.show();
+}
+
+/* load fragment HTML from server for a given item id (explicit path template) */
+function loadProductFragment(itemId) {
+  const urlTemplate = "/menu/{{ restaurant.id }}/{{ table.id }}/item/99999/html/";
+  const url = urlTemplate.replace('99999', itemId);
+  const modalBody = document.querySelector('#productModal .modal-body');
+  if (modalBody) modalBody.innerHTML = '<div style="padding:36px;color:#888;">Loading...</div>';
+  fetch(url, { credentials: 'same-origin' })
+    .then(resp => {
+      if (!resp.ok) return resp.text().then(txt => { throw new Error(txt || 'Failed to load'); });
+      return resp.text();
+    })
+    .then(html => injectFragmentHtml(html))
+    .catch(err => {
+      console.error('[menu] load fragment failed', err);
+      const modalBody = document.querySelector('#productModal .modal-body');
+      if (modalBody) modalBody.innerHTML = '<div style="padding:18px;color:#b00;">Could not load product details. Check console/server logs.</div>';
+    });
+}
+
+/* find item id for a clicked element (robust) */
+function findItemIdFromElement(el) {
+  if (!el) return null;
+  if (el.classList && el.classList.contains && el.classList.contains('menu-card')) {
+    return el.getAttribute('data-item-id');
+  }
+  let card = el.closest && el.closest('.menu-card');
+  if (card) return card.getAttribute('data-item-id');
+  const anchor = el.closest && el.closest('a.tile-link');
+  if (anchor) {
+    const inner = anchor.querySelector && anchor.querySelector('.menu-card');
+    if (inner && inner.getAttribute('data-item-id')) return inner.getAttribute('data-item-id');
+    if (anchor.getAttribute('data-item-id')) return anchor.getAttribute('data-item-id');
+  }
+  const withAttr = el.closest && el.closest('[data-item-id]');
+  if (withAttr) return withAttr.getAttribute('data-item-id');
+  return null;
+}
+
+/* event delegation: intercept clicks on tile links and plus buttons */
+document.addEventListener('click', function (e) {
+  const tile = e.target.closest && e.target.closest('a.tile-link');
+  if (tile) {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    e.preventDefault();
+    const id = findItemIdFromElement(tile);
+    if (id) loadProductFragment(id);
+    return;
+  }
+
+  const plus = e.target.closest && e.target.closest('.card-plus');
+  if (plus) {
+    e.preventDefault();
+    const id = findItemIdFromElement(plus);
+    if (id) loadProductFragment(id);
+    return;
+  }
+}, false);
+
+/* ------------------- Filter logic for categories ------------------- */
+document.addEventListener('click', function(e) {
+  if (e.target && e.target.matches('[data-filter]')) {
+    const btn = e.target;
+    const filter = btn.getAttribute('data-filter');
+    document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    if (filter === '.All') {
+      document.querySelectorAll('#masonry .card-container').forEach(el => el.style.display = '');
+    } else {
+      const cls = filter.replace('.', '');
+      document.querySelectorAll('#masonry .card-container').forEach(el => {
+        if (el.classList.contains(cls)) el.style.display = '';
+        else el.style.display = 'none';
+      });
+    }
+  }
+}, false);
+
+/* ------------------- initInjectedFragment: wires fragment behavior ------------------- */
+function initInjectedFragment(root) {
+  if (!root) return;
+  const fragment = root;
+
+  const itemContainer = fragment.querySelector('.product-detail[data-item-id]') || fragment.querySelector('[data-item-id]');
+  const itemId = itemContainer ? itemContainer.getAttribute('data-item-id') : null;
+
+  const qtyInput = fragment.querySelector('.qty-input');
+  const inc = fragment.querySelector('.qty-increase');
+  const dec = fragment.querySelector('.qty-decrease');
+
+  const btnAdd = fragment.querySelector('.fragment-add') || fragment.querySelector('.fragment-add-back') || fragment.querySelector('.btn-add');
+  const btnCancel = fragment.querySelector('.fragment-cancel') || fragment.querySelector('.fragment-back-menu') || fragment.querySelector('.btn-buy');
+
+  const safeParseInt = (v, fallback = 1) => {
+    const n = parseInt(v, 10);
+    return (isNaN(n) || n < 1) ? fallback : n;
+  };
+
+  if (dec) dec.addEventListener('click', () => { if (!qtyInput) return; const v = safeParseInt(qtyInput.value,1); if (v>1) qtyInput.value = v-1; });
+  if (inc) inc.addEventListener('click', () => { if (!qtyInput) return; const v = safeParseInt(qtyInput.value,1); qtyInput.value = v+1; });
+
+  const collectAddonIds = () => Array.from(fragment.querySelectorAll('.addon-checkbox:checked')).map(i => i.value);
+
+  function postAddToCart({ redirectToConfirm = false, callerBtn = null } = {}) {
+    if (!itemId) { alert('Item ID missing'); return; }
+    const qty = qtyInput ? safeParseInt(qtyInput.value,1) : 1;
+    const addons = collectAddonIds();
+
+    const urlTemplate = "/menu/{{ restaurant.id }}/{{ table.id }}/cart/add/99999/";
+    const url = urlTemplate.replace('99999', itemId);
+
+    const fd = new FormData();
+    fd.append('quantity', qty);
+    addons.forEach(a => fd.append('addons[]', a));
+
+    if (callerBtn) {
+      callerBtn.disabled = true;
+      callerBtn.dataset.origText = callerBtn.textContent;
+      callerBtn.textContent = 'Adding...';
+    }
+
+    fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-CSRFToken': csrftoken,
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: fd
+    })
+    .then(async resp => {
+      const txt = await resp.text();
+      let data = null;
+      try { data = txt ? JSON.parse(txt) : null; } catch(e){ }
+      if (!resp.ok) {
+        console.error('add_to_cart_ajax server error', resp.status, txt, data);
+        alert('Server error adding to cart. See console.');
+        throw new Error('Server error');
+      }
+      if (!data || !data.success) {
+        console.error('Add to cart failed', data);
+        alert((data && data.message) || 'Could not add to cart');
+        throw new Error('Add failed');
+      }
+      try {
+        if (typeof updateMiniCart === 'function') updateMiniCart(data.items_count || 0, data.total_price || 0);
+        else updateMiniCartUI(data.items_count || 0, data.total_price || 0);
+      } catch(e) { console.warn('mini-cart update failed', e); }
+      const note = document.createElement('div');
+      note.className = 'alert alert-success position-fixed';
+      note.style.right = '18px';
+      note.style.bottom = '100px';
+      note.style.zIndex = 2000;
+      note.textContent = `Added • ₹${(data.line_total||0).toFixed(2)}`;
+      document.body.appendChild(note);
+      setTimeout(()=>note.remove(), 1400);
+      if (redirectToConfirm && data.order_id) {
+        window.location.href = "/order_confirmation/" + data.order_id + "/";
+        return;
+      }
+      const modalEl = document.getElementById('productModal');
+      const bs = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
+      if (bs) bs.hide();
+    })
+    .catch(err => {
+      console.error('postAddToCart error', err);
+    })
+    .finally(() => {
+      if (callerBtn) {
+        callerBtn.disabled = false;
+        if (callerBtn.dataset.origText) callerBtn.textContent = callerBtn.dataset.origText;
+      }
+    });
+  }
+
+  if (btnAdd) {
+    btnAdd.addEventListener('click', function(e) {
+      e.preventDefault();
+      postAddToCart({ redirectToConfirm: false, callerBtn: btnAdd });
+    });
+  }
+
+  if (btnCancel) {
+    btnCancel.addEventListener('click', function(e) {
+      e.preventDefault();
+      const modalEl = document.getElementById('productModal');
+      const bs = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
+      if (bs) {
+        bs.hide();
+        return;
+      }
+      window.location.href = "/menu/{{ restaurant.id }}/{{ table.id }}/";
+    });
+  }
+}
+
+/* end of initInjectedFragment */
+</script>
+</body>
+</html>

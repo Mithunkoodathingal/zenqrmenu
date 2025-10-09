@@ -1,0 +1,212 @@
+
+
+{% extends 'restaurant/base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="custom-card">
+                <h5 class="text-center mb-4">Add Food Item</h5>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Category</label>
+                        {{ form.category }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Address (Item Name)</label>
+                        {{ form.name }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Price ₹</label>
+                        {{ form.price }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        {{ form.description }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Upload Food Image</label>
+                        {{ form.image }}
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Type Add-Ons like "Cheese:10" and enter.</label>
+                        <input type="text" id="addon-input" class="form-control" placeholder="e.g., Extra Cheese:20">
+                        <div id="addon-tags" class="mt-2"></div>
+                        <input type="hidden" name="addon_data" id="addon-data">
+                    </div>
+
+                    <div class="d-flex justify-content-center">
+                        <button type="submit" class="btn btn-orange me-2">Save Item</button>
+                        <a href="{% url 'manage_menu' %}" class="btn btn-red">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add bootstrap classes to form fields rendered by Django
+    document.querySelectorAll('form select, form input, form textarea').forEach(field => {
+        if (field.type !== 'checkbox' && field.type !== 'hidden') {
+            field.classList.add('form-control');
+        }
+    });
+
+    // Add-on script
+    const input = document.getElementById("addon-input");
+    const tagContainer = document.getElementById("addon-tags");
+    const hiddenInput = document.getElementById("addon-data");
+    let addons = [];
+
+    input.addEventListener("keydown", function(e) {
+      if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault();
+        const value = input.value.trim();
+        if (value && value.includes(":")) {
+          addons.push(value);
+          renderTags();
+          input.value = "";
+          hiddenInput.value = JSON.stringify(addons);
+        }
+      }
+    });
+
+    function renderTags() {
+      tagContainer.innerHTML = "";
+      addons.forEach((addon, index) => {
+        const span = document.createElement("span");
+        span.className = "badge bg-info text-dark me-2 mb-2 p-2";
+        span.textContent = addon;
+        
+        const removeBtn = document.createElement("span");
+        removeBtn.innerHTML = " &times;";
+        removeBtn.style.cursor = "pointer";
+        removeBtn.style.marginLeft = "5px";
+
+        removeBtn.onclick = () => {
+          addons.splice(index, 1);
+          renderTags();
+          hiddenInput.value = JSON.stringify(addons);
+        };
+        span.appendChild(removeBtn);
+        tagContainer.appendChild(span);
+      });
+    }
+});
+</script>
+{% endblock %}
+
+
+{% comment %} {% extends 'restaurant/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Add New Food Item</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Category</label>
+                            {{ form.category }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Item Name</label>
+                            {{ form.name }}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Price (₹)</label>
+                                {{ form.price }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Description</label>
+                                {{ form.description }}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Upload Image</label>
+                            {{ form.image }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Add Add-Ons</label>
+                            {{ form.addon_input }}
+                            <div id="addon-tags" class="mt-2 d-flex flex-wrap"></div>
+                            <input type="hidden" name="addon_data" id="addon-data">
+                        </div>
+                        
+                        
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Item
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    const input = document.getElementById("addon-input");
+    const tagContainer = document.getElementById("addon-tags");
+    const hiddenInput = document.getElementById("addon-data");
+    let addons = [];
+  
+    input.addEventListener("keydown", function(e) {
+      if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault();
+        const value = input.value.trim();
+        if (value && value.includes(":")) {
+          addons.push(value);
+          renderTags();
+          input.value = "";
+          hiddenInput.value = JSON.stringify(addons);
+        }
+      }
+    });
+  
+    function renderTags() {
+      tagContainer.innerHTML = "";
+      addons.forEach((addon, index) => {
+        const span = document.createElement("span");
+        span.className = "badge bg-info text-dark me-2 mb-2";
+        span.textContent = addon;
+        span.style.cursor = "pointer";
+        span.title = "Click to remove";
+        span.onclick = () => {
+          addons.splice(index, 1);
+          renderTags();
+          hiddenInput.value = JSON.stringify(addons);
+        };
+        tagContainer.appendChild(span);
+      });
+    }
+  </script>
+  
+  
+
+<!-- Bootstrap Icons (if needed) -->
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script> {% endcomment %}
+{% comment %} {% endblock %} {% endcomment %}
+

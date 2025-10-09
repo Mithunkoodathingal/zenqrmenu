@@ -1,0 +1,36 @@
+
+
+{% extends 'restaurant/base.html' %}
+{% block content %}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg">
+                <div class="card-header text-center bg-warning text-white">
+                    <h4>Complete Your Payment</h4>
+                </div>
+                <div class="card-body text-center">
+                    <h5 class="mb-3">{{ plan.name }}</h5>
+                    <p><strong>Amount:</strong> ₹{{ amount }}</p>
+
+                    <form>
+                        <script src="https://checkout.razorpay.com/v1/checkout.js"
+                            data-key="{{ razorpay_key }}"
+                            data-amount="{{ amount }}"
+                            data-currency="INR"
+                            data-order_id="{{ order_id }}"
+                            data-name="Restaurant QR Subscription"
+                            data-description="QR Code Menu Subscription"
+                            data-callback_url="{% url 'payment_success' %}"
+                            data-methods.upi="true">  <!-- ✅ Enables UPI payments -->
+                        </script>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+

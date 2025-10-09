@@ -1,0 +1,13 @@
+{% extends 'restaurant/basedash.html' %}
+
+{% block content %}
+<h3 class="mb-4">Menu Preview</h3>
+<p class="text-muted">This is how your live menu will appear to customers on a mobile device when they scan a QR code.</p>
+<div class="d-flex justify-content-center align-items-center">
+    <div class="mobile-mockup">
+        <div class="mobile-mockup-content">
+           <iframe src="{% if tables.first %}{% url 'menu_view' restaurant.id tables.first.id %}{% endif %}" style="width:100%; height:100%; border:none;" title="Menu Preview"></iframe>
+        </div>
+    </div>
+</div>
+{% endblock %}

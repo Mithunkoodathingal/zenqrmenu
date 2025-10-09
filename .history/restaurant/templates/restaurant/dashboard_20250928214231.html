@@ -1,0 +1,126 @@
+{% extends 'restaurant/base.html' %}
+{% block content %}
+<div class="container mt-4">
+
+  <div class="card shadow-sm p-4 mb-4">
+    <div class="d-flex align-items-center justify-content-between">
+      <div>
+        <h2 class="fw-bold mb-1">Dashboard</h2>
+        <p class="text-muted mb-0">Welcome back, {{ request.user.username }} 👋</p>
+      </div>
+
+      <div>
+        {% if subscription and subscription_active %}
+          <div class="text-end">
+            <div><strong>{{ subscription.plan.name }}</strong></div>
+            <div class="text-muted">Valid until {{ subscription.end_date|date:"d M Y" }}</div>
+          </div>
+        {% else %}
+          <a href="{% url 'subscription_plans' %}" class="btn btn-warning fw-bold text-white">Subscribe</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    {% if subscription and subscription_active %}
+    <div class="row text-center gx-2 mb-3">
+      <div class="col-sm-3 mb-2">
+        <div class="p-3 bg-light rounded">
+          <div class="h6 mb-1">Allowed Tables</div>
+          <div class="fs-5 fw-bold">{{ allowed_table_limit }}</div>
+        </div>
+      </div>
+      <div class="col-sm-3 mb-2">
+        <div class="p-3 bg-light rounded">
+          <div class="h6 mb-1">Tables Created</div>
+          <div class="fs-5 fw-bold">{{ total_tables_created }}</div>
+        </div>
+      </div>
+      <div class="col-sm-3 mb-2">
+        <div class="p-3 bg-light rounded">
+          <div class="h6 mb-1">Scannable</div>
+          <div class="fs-5 fw-bold">{{ scannable_count }}</div>
+        </div>
+      </div>
+      <div class="col-sm-3 mb-2">
+        <div class="p-3 bg-light rounded">
+          <div class="h6 mb-1">Remaining Slots</div>
+          <div class="fs-5 fw-bold">{{ remaining_slots }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-3 d-flex gap-2">
+      
+      <a href="{% url 'manage_menu' %}" class="btn btn-outline-primary">Manage Menu</a>
+      <a href="{% url 'create_table_qr' %}" class="btn btn-outline-secondary">Create / Download QR</a>
+      <a href="{% url 'subscription_plans' %}" class="btn btn-warning text-white">Manage Subscription</a>
+    </div>
+    {% else %}
+    <div class="mt-3">
+      <p class="text-muted mb-2">You don't have an active subscription. View plans to get started.</p>
+      <a href="{% url 'subscription_plans' %}" class="btn btn-warning text-white">View Plans</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Scannable QRs section -->
+  <div class="card shadow-sm p-3 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0">Scannable QR Codes</h5>
+      <small class="text-muted">{{ scannable_count }} active</small>
+    </div>
+
+    {% if scannable_tables %}
+      <div class="row gx-3 gy-3">
+        {% for table in scannable_tables %}
+        <div class="col-6 col-md-4 col-lg-3">
+          <div class="card h-100">
+            <div class="p-3 d-flex flex-column align-items-center">
+              {% if table.qr_code %}
+                <a href="{{ table.qr_code.url }}" target="_blank" rel="noopener">
+                  <img src="{{ table.qr_code.url }}" alt="QR for table {{ table.table_number }}" style="width:120px; height:120px; object-fit:contain;" />
+                </a>
+              {% else %}
+                <div style="width:120px; height:120px; background:#f7f7f7; display:flex; align-items:center; justify-content:center; color:#999; border-radius:6px;">
+                  No QR
+                </div>
+              {% endif %}
+
+              <div class="mt-3 text-center">
+                <div class="fw-bold">Table {{ table.table_number }}</div>
+                <div class="text-muted small mb-2">Scannable</div>
+
+                <div class="d-flex gap-2 justify-content-center">
+                  {% if table.qr_code %}
+                    <a href="{% url 'download_qr' table.id %}" class="btn btn-sm btn-outline-primary">Download</a>
+                    <a href="{% url 'menu_view' table.restaurant.id table.id %}" class="btn btn-sm btn-primary" target="_blank">Open Menu</a>
+                  {% else %}
+                    <a href="{% url 'create_table_qr' %}" class="btn btn-sm btn-warning text-white">Generate QR</a>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-center py-4">
+        <p class="mb-2 text-muted">No scannable QR codes. Create tables to generate QR codes.</p>
+        <a href="{% url 'create_table_qr' %}" class="btn btn-outline-primary">Create Table / Generate QR</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Optionally show quick Manage Menu preview (small) -->
+  {% comment %} <div class="card shadow-sm p-3">
+    <h5 class="mb-3">Quick Manage</h5>
+    <a href="{% url 'manage_menu' %}" class="btn btn-sm btn-outline-primary me-2">Manage Menu</a>
+    <a href="{% url 'category_create' %}" class="btn btn-sm btn-warning text-white">Add Category</a>
+  </div> {% endcomment %}
+
+</div>
+
+{% endblock %}

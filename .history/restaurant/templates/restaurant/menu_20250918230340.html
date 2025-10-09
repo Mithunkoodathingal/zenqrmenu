@@ -1,0 +1,426 @@
+{% comment %} <!DOCTYPE html>
+<html lang="en">
+	{% load static %}
+<!-- Mirrored from swigo.dexignzone.com/django/xhtml/our-menu-4.html by HTTrack Website Copier/3.x [XR&CO'2014], Thu, 13 Feb 2025 09:17:54 GMT -->
+<head>
+	<style>
+		.quantity-box {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+		
+		.quantity-btn {
+			background: #ff9800;
+			border: none;
+			color: white;
+			padding: 5px 10px;
+			font-size: 16px;
+			cursor: pointer;
+			border-radius: 5px;
+		}
+		
+		.quantity-btn:hover {
+			background: #e68900;
+		}
+		
+		input[type="number"] {
+			width: 50px;
+			text-align: center;
+			border: 1px solid #ddd;
+			padding: 5px;
+			border-radius: 5px;
+		}
+	
+		.dz-img-box.style-4 {
+    height: 350px; /* Increase height */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 15px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.menu-detail {
+    flex-grow: 1; /* Allow content to expand */
+    text-align: center;
+}
+
+.dz-media img {
+    max-height: 120px; /* Adjust image size */
+    width: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+.menu-footer {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.quantity-box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.quantity-btn {
+    background: #ff9800;
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.quantity-btn:hover {
+    background: #e68900;
+}
+
+input[type="number"] {
+    width: 50px;
+    text-align: center;
+    border: 1px solid #ddd;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+.restaurant-banner {
+    position: relative;
+    width: 100%;
+    height: 300px; /* Adjust height as needed */
+    overflow: hidden;
+}
+
+.restaurant-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(0.7);
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Dark overlay */
+}
+
+.restaurant-info {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    text-align: center;
+    padding: 20px;
+    width: 90%;
+}
+
+.restaurant-name {
+    font-size: 2.5rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.restaurant-description {
+    font-size: 1.2rem;
+    font-weight: 300;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.restaurant-banner {
+    position: relative;
+    width: 100%;
+    height: 300px; /* Adjust height as needed */
+    overflow: hidden;
+}
+
+.restaurant-banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Ensures the image fits properly */
+}
+
+
+	</style>
+	
+	<!-- Title -->
+	<title>Restaurant Menu</title>
+	
+	<!-- Meta -->
+
+	
+	<!-- Mobile Specific -->
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+    
+	<!-- Favicon icon -->
+    <link rel="icon" type="image/png" href="assets/images/favicon.png">
+    
+	<!-- Stylesheet -->
+    <link href="{% static 'assets/vendor/magnific-popup/magnific-popup.min.css' %}" rel="stylesheet">
+	<link href="{% static  'assets/vendor/swiper/swiper-bundle.min.css' %}" rel="stylesheet">
+	<link href="{%  static 'assets/vendor/bootstrap-select/css/bootstrap-select.min.css' %}" rel="stylesheet">
+	
+	<!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="{%  static 'assets/vendor/rangeslider/rangeslider.css' %}">
+	<link rel="stylesheet" href="{%  static 'assets/vendor/nouislider/nouislider.min.css' %}">
+    <link rel="stylesheet" href="{%  static 'assets/vendor/switcher/switcher.css' %}">
+    <link rel="stylesheet" href="{%  static 'assets/css/style.css' %}">
+
+	<!-- Google Fonts -->
+	<link rel="preconnect" href="https://fonts.googleapis.com/">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lobster&amp;family=Lobster+Two:ital,wght@0,400;0,700;1,400;1,700&amp;family=Poppins:ital,wght@0,100;0,200;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&amp;display=swap" rel="stylesheet">
+
+</head>
+<script>
+	function decreaseQuantity(itemId) {
+		let inputField = document.getElementById(`quantity_${itemId}`);
+		let currentValue = parseInt(inputField.value, 10);
+		
+		if (currentValue > 0) { // Prevents negative values
+			inputField.value = currentValue - 1;
+		}
+	}
+	
+	function increaseQuantity(itemId) {
+		let inputField = document.getElementById(`quantity_${itemId}`);
+		let currentValue = parseInt(inputField.value, 10);
+		
+		inputField.value = currentValue + 1;
+	}
+	
+	
+</script>
+<body id="bg">
+<div class="page-wraper">
+	
+	<!-- Header -->
+	
+	<!-- Header -->
+	
+	<!-- Offcanvas Form Start -->
+	
+	<!-- Offcanvas Form End -->
+	
+	<div class="page-content bg-white">
+		<!-- Banner  -->
+		<div class="dz-bnr-inr style-1 text-center bg-parallax" style="background-image:url('assets/images/banner/bnr4.jpg'); background-size:cover; background-position:center;">
+			<div class="container">
+				<div class="dz-bnr-inr-entry">
+					<div class="restaurant-banner position-relative">
+						<img src="{{ restaurant.cover_image.url }}" class="img-fluid w-100 restaurant-cover" alt="Restaurant Cover">
+						<div class="overlay"></div>
+						<div class="restaurant-info text-center">
+							<h1 class="restaurant-name">{{ restaurant.name }}</h1>
+							<p class="restaurant-description">{{ restaurant.description }}</p>
+						</div>
+					</div>
+					<!-- Breadcrumb Row End -->
+				</div>
+			</div>
+		</div>
+		 <!-- Restaurant Banner -->		
+		<!-- Banner End -->
+		
+		<!-- Our Menu-->
+		<section class="content-inner">
+			<div class="container">
+				<div class="row">
+					<div class="col-xl-10 col-lg-9 col-md-12">
+						<div class="site-filters style-1 clearfix">
+							<ul class="filters" data-bs-toggle="buttons">
+								<li data-filter=".All" class="btn active"><a href="javascript:void(0);">ALL</a></li>
+								{% for category in categories %}
+									<li data-filter=".{{ category.name|lower|slugify }}" class="btn">
+										<a href="javascript:void(0);">{{ category.name }}</a>
+									</li>
+								{% endfor %}
+							</ul>
+							
+						</div>
+					</div>
+					
+				</div>
+				<form method="post" action="{% url 'place_order' table.id %}">
+					{% csrf_token %}
+				<ul id="masonry" class="row">
+					{% for category in categories %}
+						{% for item in category.fooditem_set.all %}
+							<li class="card-container col-xl-3 col-lg-4 col-md-6 m-b30 {{ category.name|lower|slugify }}">
+								<div class="dz-img-box style-4 box-hover">
+									<div class="menu-detail">
+										<div class="dz-media">
+											{% if item.image %}
+											<img src="{{ item.image.url }}" alt="{{ item.name }}" >
+											{% else %}
+											<img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="/">
+											{% endif %}
+										</div>
+										<div class="dz-content"
+											onclick="openProductModal(this)"
+											data-name="{{ item.name }}"
+											data-description="{{ item.description }}"
+											data-image="{% if item.image %}{{ item.image.url }}{% else %}{% static 'assets/images/menu-small/pic1.png' %}{% endif %}">
+											<h5 class="title">{{ item.name }}</h5>
+											<p>{{ item.description }}</p>
+										</div>
+
+									</div>
+									<div class="menu-footer">
+										<span>Price</span>
+										<h5 class="price">₹{{ item.price }}</h5>
+									</div>
+									<div class="quantity-box">
+										<button type="button" class="quantity-btn minus" onclick="decreaseQuantity('{{ item.id }}')">-</button>
+										<input type="number" name="quantity_{{ item.id }}" id="quantity_{{ item.id }}" min="0" value="0" readonly>
+										<button type="button" class="quantity-btn plus" onclick="increaseQuantity('{{ item.id }}')">+</button>
+									</div>
+									
+								</div>
+							</li>
+						{% endfor %}
+					{% endfor %}
+				</ul>
+					<button type="submit" class="btn btn-primary mt-4">Place Order</button>
+				</form>
+			</div>
+		</section>
+		<!-- Our Menu-->
+		
+	</div>
+	<!-- Product Detail Modal -->
+	<div class="modal fade" id="productDetailModal" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog modal-xl modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-body p-0">
+			<!-- Dynamic Content will be injected here -->
+			<div id="modalContent"></div>
+			</div>
+		</div>
+		</div>
+	</div>
+	<template id="product-detail-template">
+		<section class="content-inner-1 overflow-hidden">
+		  <div class="container">
+			<div class="row product-detail">
+			  <div class="col-lg-4 col-md-5">
+				<div class="detail-media m-b30">
+				  <img id="modal-product-image" src="{{ item.image.url }}" alt="Product Image" class="img-fluid w-100">
+				</div>
+			  </div>
+			  <div class="col-lg-8 col-md-7">
+				<div class="detail-info">
+				  <div class="dz-head">
+					<h2 class="title" id="modal-product-name">Product Name</h2>
+				  </div>
+				  <p class="text" id="modal-product-description">Product description goes here...</p>
+								<ul class="detail-list">
+									{% for addon in item.addons.all %}
+									<li>
+										<div class="mini-modal">
+											<div class="dz-media">
+												<img src="{% static 'assets/images/modal/mini/pic1.jpg' %}" alt="{{ addon.name }}">
+											</div>
+											<div class="dz-content">
+												<p class="title">{{ addon.name }} (+₹{{ addon.price }})</p>
+												<div class="form-check search-content">
+													<input type="checkbox"
+														class="form-check-input addon-checkbox"
+														name="addons_{{ item.id }}"
+														value="{{ addon.id }}"
+														data-price="{{ addon.price }}">
+												</div>
+											</div>
+										</div>
+									</li>
+									{% endfor %}
+
+								</ul>
+								<div class="d-lg-flex justify-content-between">
+									<ul class="modal-btn-group">
+										<li><a href="shop-cart.html" class="btn btn-primary btn-hover-1"><span>Add To Cart <i class="flaticon-shopping-bag-1 m-l10"></i></span></a></li>
+										<li><a href="shop-checkout.html" class="btn btn-outline-secondary btn-hover-1"><span>Buy Now <i class="flaticon-shopping-cart m-l10"></i></a></span></li>
+									</ul>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+		</section>
+	</template>
+	  
+  
+	<!--Footer-->
+	
+	<!--Footer-->
+	
+{% comment %} </div> 
+<!-- JAVASCRIPT FILES ========================================= -->
+
+<script src="{% static 'assets/js/jquery.min.js' %}"></script><!-- JQUERY.MIN JS -->
+<script src="{% static 'assets/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script><!-- BOOTSTRAP.MIN JS -->
+<script src="{% static 'assets/vendor/bootstrap-select/js/bootstrap-select.min.js' %}"></script><!-- BOOTSTRAP SELEECT -->
+{% comment %} <script src="{% static 'assets/vendor/magnific-popup/magnific-popup.js' %}"></script><!-- MAGNIFIC POPUP JS --> {% endcomment %}
+<script src="{% static 'assets/vendor/masonry/masonry-4.2.2.js' %}"></script><!-- MASONRY -->
+<script src="{% static 'assets/js/custom.min.js' %}"></script><!-- CUSTOM JS -->
+<script src="{% static 'assets/js/jquery.min.js' %}"></script>
+<script>
+	$(document).ready(function () {
+		$(".filters li").on("click", function () {
+			$(".filters li").removeClass("active");
+			$(this).addClass("active");
+	
+			let filterValue = $(this).attr("data-filter");
+	
+			if (filterValue === ".All") {
+				$("#masonry .card-container").show();
+			} else {
+				$("#masonry .card-container").hide();
+				$(`${filterValue}`).show();
+			}
+		});
+	});
+	</script>
+
+	<script>
+		function openProductModal(element) {
+			const name = element.dataset.name;
+			const description = element.dataset.description;
+			const image = element.dataset.image;
+		
+			// Get the template and clone it
+			const template = document.getElementById('product-detail-template');
+			const clone = template.content.cloneNode(true);
+		
+			// Set values inside the modal
+			clone.getElementById('modal-product-name').textContent = name;
+			clone.getElementById('modal-product-description').textContent = description;
+			clone.getElementById('modal-product-image').src = image;
+		
+			// Inject into modal
+			const modalContent = document.getElementById('modalContent');
+			modalContent.innerHTML = ''; // Clear previous
+			modalContent.appendChild(clone);
+		
+			// Show the modal (Bootstrap 5)
+			const modal = new bootstrap.Modal(document.getElementById('productDetailModal'));
+			modal.show();
+		}
+		</script>
+		
+	  
+	
+</body>
+
+<!-- Mirrored from swigo.dexignzone.com/django/xhtml/our-menu-4.html by HTTrack Website Copier/3.x [XR&CO'2014], Thu, 13 Feb 2025 09:17:56 GMT -->
+</html> {% endcomment %}

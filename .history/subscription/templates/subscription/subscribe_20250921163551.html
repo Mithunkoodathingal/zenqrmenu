@@ -1,0 +1,11 @@
+subscription/templates/subscription/subscription.html
+
+{% extends 'restaurant/base.html' %}
+{% block content %}
+<h2>Subscribe to a Plan</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Subscribe</button>
+</form>
+{% endblock %}

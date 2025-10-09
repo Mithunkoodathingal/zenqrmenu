@@ -1,0 +1,34 @@
+# Environment files
+.env
+.env.*
+secrets.json
+
+
+# History
+.history
+
+# Django file uploads & runtime
+/media/
+/staticfiles/
+
+# Python
+__pycache__/
+*.pyc
+
+# Django
+*.log
+db.sqlite3
+/media/
+
+# Virtual Environment
+env/
+venv/
+.venv/
+
+# Editor/OS specific
+.vscode/
+.idea/
+.DS_Store
+
+# Environment variables
+.env

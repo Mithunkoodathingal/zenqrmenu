@@ -1,0 +1,90 @@
+{% extends 'restaurant/base1.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+  .setup-card {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    background: #fff;
+    padding: 2rem;
+  }
+  .form-title {
+    color: #f97316;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+  }
+  .form-control {
+    border: 2px solid #f97316;
+    border-radius: 8px;
+  }
+  .form-control:focus {
+    border-color: #ea580c;
+    box-shadow: none;
+  }
+  .btn-orange {
+    background-color: #f97316;
+    color: white;
+    font-weight: bold;
+    border-radius: 6px;
+    padding: 0.6rem 1.2rem;
+  }
+  .btn-orange:hover {
+    background-color: #ea580c;
+    color: #fff;
+  }
+  .btn-outline-orange {
+    border: 2px solid #f97316;
+    color: #f97316;
+    font-weight: bold;
+    border-radius: 6px;
+    padding: 0.6rem 1.2rem;
+  }
+  .btn-outline-orange:hover {
+    background: #f97316;
+    color: #fff;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+
+  <!-- Flexbox: stack on mobile, row on desktop -->
+  <div class="d-flex flex-column flex-md-row gap-4 justify-content-center">
+
+    <!-- Left: Image Card -->
+    <div class="setup-card text-center flex-fill">
+      <img src="{% static 'assets/images/login-placeholder.jpg' %}" 
+           alt="Restaurant Image" class="img-fluid">
+    </div>
+
+    <!-- Right: Form Card -->
+    <div class="setup-card flex-fill">
+      <h5 class="form-title text-center">Setup Your Restaurant</h5>
+      <form method="post" enctype="multipart/form-data" action="{% url 'create_restaurant' %}">
+        {% csrf_token %}
+        <div class="mb-3">
+          <input type="text" name="name" class="form-control" placeholder="Restaurant Name" required>
+        </div>
+        <div class="mb-3">
+          <input type="text" name="address" class="form-control" placeholder="Address" required>
+        </div>
+        <div class="mb-3">
+          <textarea name="about" class="form-control" rows="3" placeholder="About your restaurant..."></textarea>
+        </div>
+        <div class="mb-3">
+          <label for="cover_image" class="form-label">Cover Image</label>
+          <input type="file" name="cover_image" id="cover_image" class="form-control">
+        </div>
+        <div class="d-flex justify-content-between">
+          <button type="submit" class="btn btn-orange">Create Restaurant</button>
+          <a href="{% url 'dashboard' %}" class="btn btn-outline-orange">Cancel</a>
+        </div>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,256 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+/* --- Mobile-first variables & resets --- */
+:root{
+  --card-radius: 12px;
+  --container-max: 1150px;
+  --gap: 18px;
+  --shadow-sm: 0 6px 12px rgba(0,0,0,0.10);
+  --shadow-lg: 0 12px 22px rgba(0,0,0,0.14);
+  --accent-border: rgba(235,130,63,0.12);
+  --text-dark: #111;
+  --muted: #666;
+}
+
+/* make layout sizing predictable */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+/* Container & big card */
+.pricing-container {
+  max-width: var(--container-max);
+  margin: 28px auto;
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  border: 2px solid var(--accent-border);
+}
+
+/* Title */
+.pricing-title {
+  text-align: center;
+  font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1.4rem;
+  color: #b92b2b;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+/* Grid layout: responsive columns */
+/* default: 1 column (mobile) */
+.plans-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gap);
+  align-items: start;
+  justify-items: center;
+  width: 100%;
+}
+
+/* small tablet: 2 columns */
+@media (min-width: 640px) {
+  .plans-row {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+}
+
+/* medium screens: 3 columns */
+@media (min-width: 900px) {
+  .plans-row {
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+  }
+}
+
+/* large screens: 4 columns */
+@media (min-width: 1100px) {
+  .plans-row {
+    grid-template-columns: repeat(4, minmax(220px, 1fr));
+  }
+}
+
+/* Small plan card */
+.plan-card {
+  width: 100%;
+  border-radius: var(--card-radius);
+  padding: 20px;
+  box-shadow: var(--shadow-lg);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  min-height: 220px;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+
+/* Hover / focus lift on larger devices only */
+@media (hover: hover) {
+  .plan-card:hover, .plan-card:focus-within {
+    transform: translateY(-6px);
+    box-shadow: 0 18px 30px rgba(0,0,0,0.16);
+  }
+}
+
+/* subtle inner rounded offset */
+.plan-card::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--card-radius);
+  pointer-events: none;
+  box-shadow: inset 0 -8px 0 rgba(0,0,0,0.03);
+}
+
+/* Title, price and list */
+.plan-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.plan-price {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 4px 0 12px;
+  text-align: center;
+}
+
+/* Feature list */
+.features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px;
+  display: grid;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.features li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* check icon circle */
+.features li .chk {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: rgba(255,255,255,0.98);
+}
+
+/* Subscribe button style (touch-friendly) */
+.subscribe-btn {
+  display: inline-block;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1rem;
+  border: 2px solid rgba(255,255,255,0.36);
+  background: transparent;
+  color: #fff;
+  text-decoration: none;
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+  cursor: pointer;
+}
+
+/* stronger touch feedback on mobile */
+.subscribe-btn:active {
+  transform: translateY(0);
+  opacity: 0.95;
+}
+
+/* filled style (useful for active or emphasized) */
+.subscribe-btn.filled {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border-color: rgba(255,255,255,0.16);
+}
+
+/* accessible focus */
+.subscribe-btn:focus {
+  outline: 3px solid rgba(255,255,255,0.18);
+  outline-offset: 2px;
+}
+
+/* Color themes (kept from your original) */
+.plan-0 { background: linear-gradient(180deg,#f6a07f,#ee8667); }
+.plan-1 { background: linear-gradient(180deg,#f6bb2b,#f0a021); }
+.plan-2 { background: linear-gradient(180deg,#f69b3f,#f07b2a); }
+.plan-3 { background: linear-gradient(180deg,#b73a34,#b83030); }
+
+/* Active plan styling (clear visible state) */
+.plan-card.active {
+  box-shadow: 0 20px 36px rgba(0,0,0,0.22), inset 0 2px 0 rgba(255,255,255,0.06);
+  transform: translateY(-6px);
+  border: 2px solid rgba(255,255,255,0.18);
+}
+
+/* Small-screen tweaks */
+@media (max-width: 480px){
+  :root { --gap: 14px; }
+  .pricing-container { padding: 14px; margin: 12px; border-radius: 8px; }
+  .plan-card { padding: 18px; min-height: 200px; }
+  .plan-name { font-size: 1rem; }
+  .plan-price { font-size: 1rem; }
+  .features { font-size: 0.95rem; }
+}
+
+/* Typography & utility */
+.text-muted { color: var(--muted); font-size: 0.92rem; }
+
+/* ensure subscribe button is visible when plan is active (useful if you show "Active Plan") */
+.subscribe-btn.disabled {
+  opacity: 0.9;
+  cursor: default;
+  pointer-events: none;
+  background: rgba(255,255,255,0.14);
+}
+</style>
+
+<div class="pricing-container" role="region" aria-labelledby="pricing-heading">
+  <h2 id="pricing-heading" class="pricing-title">Choose Your Favorite Plan</h2>
+
+  <div class="plans-row" role="list">
+    {# Render up to 4 plans. If you pass exactly 4, their order will be used. #}
+    {% for plan in plans|slice:":4" %}
+    <article class="plan-card plan-{{ forloop.counter0 }} {% if subscription and subscription.plan.id == plan.id and subscription.is_active %}active{% endif %}" role="listitem" aria-labelledby="plan-{{ plan.id }}-name">
+      <div>
+        <div id="plan-{{ plan.id }}-name" class="plan-name">{{ plan.name }}</div>
+        <div class="plan-price">₹{{ plan.price }} <span class="text-muted" style="font-weight:600;">/ {{ plan.duration_days }} days</span></div>
+
+        <ul class="features" aria-hidden="false">
+          <li><span class="chk" aria-hidden="true">✓</span> <span>Table Limit: <strong>{{ plan.table_limit }}</strong></span></li>
+          <li><span class="chk" aria-hidden="true">✓</span> <span>Unlimited Scans</span></li>
+          <li><span class="chk" aria-hidden="true">✓</span> <span>Unlimited Categories & Items</span></li>
+          <li><span class="chk" aria-hidden="true">✓</span> <span>{{ plan.duration_days }} days validity</span></li>
+        </ul>
+      </div>
+
+      {% if subscription and subscription.plan.id == plan.id and subscription.is_active %}
+        <button class="subscribe-btn disabled" aria-disabled="true">Active Plan</button>
+      {% else %}
+        <a href="{% url 'create_subscription' plan.id %}" class="subscribe-btn" title="Subscribe to {{ plan.name }}">Subscribe</a>
+      {% endif %}
+    </article>
+    {% empty %}
+    <div style="color:var(--muted); padding:16px;">No plans available.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

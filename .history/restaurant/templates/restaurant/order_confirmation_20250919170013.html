@@ -1,0 +1,156 @@
+{% comment %} {% extends 'restaurant/base1.html' %}
+{% load static %}
+
+{% block title %}Order Confirmation{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <h2 class="mb-4">Your Order</h2>
+
+  <ul class="list-group mb-4">
+    {% for item in order_items %}
+      <li class="list-group-item">
+        <div class="d-flex justify-content-between">
+          <span><strong>{{ item.quantity }}x</strong> {{ item.food_item.name }}</span>
+          <span>₹{{ item.item_total }}</span>
+        </div>
+
+        {% if item.selected_addons.all %}
+          <small class="text-muted">Add-ons:
+            {% for addon in item.selected_addons.all %}
+              {{ addon.name }} (+₹{{ addon.price }}){% if not forloop.last %}, {% endif %}
+            {% endfor %}
+          </small>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+
+  <div class="d-flex justify-content-between fw-bold">
+    <span>Total</span>
+    <span>₹{{ total_price }}</span>
+  </div>
+
+  <div class="mt-4 d-flex gap-2">
+    <!-- Back to Menu remains the same (server-handled) -->
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-orange">← Back to Menu</button>
+    </form>
+
+    <!-- AJAX Cancel button (primary UX) -->
+    <button id="ajax-cancel-order" class="btn btn-danger">Cancel Order</button>
+
+    <!-- Non-JS fallback: a simple POST form to cancel_order (only used when JS disabled) -->
+    <noscript>
+      <form method="post" action="{% url 'cancel_order' order.id %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Cancel Order</button>
+      </form>
+    </noscript>
+  </div>
+</div>
+
+{# --- JS: AJAX cancel, clear mini-cart UI, redirect --- #}
+<script>
+(function(){
+  // Helper: get CSRF cookie (Django)
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  // Defensive helper to update mini-cart UI (menu page defines updateMiniCart)
+  function clearMiniCartUI() {
+    try {
+      if (typeof updateMiniCart === 'function') {
+        updateMiniCart(0, 0.00);
+        return;
+      }
+    } catch (err) {
+      // ignore
+    }
+    // Fallback: clear known DOM nodes if present
+    try {
+      const c = document.getElementById('cart-count');
+      const t = document.getElementById('cart-total');
+      if (c) c.textContent = '0';
+      if (t) t.textContent = '0.00';
+    } catch (e) { /* ignore */ }
+  }
+
+  const btn = document.getElementById('ajax-cancel-order');
+  if (!btn) return;
+
+  btn.addEventListener('click', function (e) {
+    if (!confirm('Are you sure you want to cancel the order?')) return;
+
+    btn.disabled = true;
+    const origText = btn.textContent;
+    btn.textContent = 'Cancelling...';
+
+    fetch("{% url 'cancel_order' order.id %}", {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-CSRFToken': csrftoken,
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'application/json'
+      },
+      // no body required here
+    })
+    .then(response => {
+      if (!response.ok) {
+        // If server responds with redirect or html (non-AJAX view), fallback to full redirect.
+        throw new Error('Server error: ' + response.status);
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data && data.success) {
+        // clear UI immediately
+        clearMiniCartUI();
+
+        // redirect to provided URL (menu view), fallback to computed URL below
+        if (data.redirect_url) {
+          window.location.href = data.redirect_url;
+          return;
+        }
+        // fallback redirect (template-built menu URL)
+        window.location.href = "{% url 'menu_view' order.restaurant.id order.table.id %}";
+      } else {
+        throw new Error('Cancel failed');
+      }
+    })
+    .catch(err => {
+      console.error('Cancel order failed', err);
+      // As a fallback, submit a standard form (full page) to keep previous behaviour:
+      // create and submit a hidden form that posts to cancel_order.
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = "{% url 'cancel_order' order.id %}";
+      // Add CSRF token input
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'csrfmiddlewaretoken';
+      csrfInput.value = csrftoken;
+      form.appendChild(csrfInput);
+      document.body.appendChild(form);
+      form.submit();
+    });
+  });
+})();
+</script>
+
+{% endblock %} {% endcomment %}

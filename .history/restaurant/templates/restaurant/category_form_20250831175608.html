@@ -1,0 +1,19 @@
+{% extends 'restaurant/basedash.html' %}
+
+{% block content %}
+<div class="form-container">
+    <div class="custom-card text-center">
+        <h4 class="mb-4">Add Categories</h4>
+        <form method="post" class="d-flex justify-content-center align-items-center">
+            {% csrf_token %}
+            <div class="mb-3 me-3 flex-grow-1">
+                <input type="text" name="name" class="form-control" placeholder="Name" required id="id_name">
+            </div>
+            <div>
+                <button type="submit" class="btn btn-orange">Save</button>
+                <a href="{% url 'manage_menu' %}" class="btn btn-red">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

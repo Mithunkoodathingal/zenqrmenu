@@ -1,0 +1,155 @@
+{% extends 'restaurant/base1.html' %}
+{% load static %}
+{% block title %}Sign Up — Zebra Menu{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Small, focused styles only for signup page (keeps base clean) */
+:root{ --orange:#f97316; --orange-dark:#ea580c; --error:#d9534f; --card-shadow:0 6px 26px rgba(0,0,0,0.12); --radius:10px; }
+
+.auth-card { display:grid; grid-template-columns:1fr 1fr; gap:0; max-width:980px; width:100%; border-radius:var(--radius); overflow:hidden; background:#fff; box-shadow:var(--card-shadow); }
+.auth-card__visual{ padding:2.25rem; display:flex; align-items:center; justify-content:center; min-height:320px; background:linear-gradient(180deg,#fffafa 0%,#fff 100%); }
+.auth-illustration{ width:100%; max-width:420px; height:auto; object-fit:contain; display:block; }
+.auth-card__form{ padding:2.75rem; display:flex; flex-direction:column; justify-content:center; }
+
+.form-title{ color:var(--orange); font-weight:700; font-size:1.35rem; margin-bottom:1.25rem; text-align:center; }
+.btn-orange{ background:var(--orange); color:#fff; border:0; padding:.7rem .9rem; border-radius:10px; font-weight:600; }
+.btn-orange:hover{ background:var(--orange-dark); color:#fff; }
+.btn-outline-orange{ border:2px solid var(--orange); color:var(--orange); background:transparent; padding:.6rem .9rem; border-radius:10px; font-weight:600; }
+
+.form-control{ border:2px solid var(--orange); border-radius:8px; height:44px; padding:.6rem .75rem; box-shadow:none; }
+.form-control:focus{ outline:none; border-color:var(--orange-dark); box-shadow:0 0 0 3px rgba(249,115,22,0.06); }
+.field-error{ color:var(--error); font-size:.86rem; margin-top:.35rem; }
+.non-field-errors{ background:#fff5f5; border:1px solid #f5c6cb; color:#a94442; padding:9px 12px; border-radius:8px; margin-bottom:1rem; font-size:.95rem; }
+.is-invalid{ border-color:var(--error) !important; box-shadow:none; }
+
+@media (max-width:1024px){ .auth-card{ max-width:760px; grid-template-columns:1fr 1fr; } .auth-card__visual{ padding:1.75rem; min-height:300px; } .auth-card__form{ padding:2rem; } }
+@media (max-width:600px){ .auth-card{ grid-template-columns:1fr; border-radius:12px; } .auth-card__visual{ order:-1; padding:1rem 1rem 0 1rem; min-height:150px; justify-content:flex-start; } .auth-illustration{ max-width:280px; } .auth-card__form{ padding:1.25rem; } .auth-card__visual img{ display:none; } .form-title{ font-size:1.15rem; margin-bottom:.9rem; } }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="auth-card mx-auto">
+  <!-- Illustration -->
+  <div class="auth-card__visual">
+    <img src="{% static 'assets/images/signup-placeholder.jpg' %}" alt="Signup illustration" class="auth-illustration">
+  </div>
+
+  <!-- Form -->
+  <div class="auth-card__form">
+    <h3 class="form-title">Create your account</h3>
+    <p class="small-sub text-muted mb-3">Sign up to manage your restaurant menu & QR tables.</p>
+
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} py-2" role="alert">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+
+    {% if form.non_field_errors %}
+      <div class="non-field-errors mb-2">
+        {% for err in form.non_field_errors %}
+          <div>{{ err }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'signup' %}" novalidate>
+      {% csrf_token %}
+
+      <div class="mb-3">
+        <label class="visually-hidden" for="id_username">Username</label>
+        <input id="id_username" type="text" name="username"
+               class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+               placeholder="User Name"
+               value="{{ form.username.value|default:'' }}" required autocomplete="username">
+        {% if form.username.errors %}
+          {% for err in form.username.errors %}
+            <div class="field-error">{{ err }}</div>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="visually-hidden" for="id_email">Email</label>
+        <input id="id_email" type="email" name="email"
+               class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+               placeholder="Email"
+               value="{{ form.email.value|default:'' }}" required autocomplete="email">
+        {% if form.email.errors %}
+          {% for err in form.email.errors %}
+            <div class="field-error">{{ err }}</div>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="visually-hidden" for="id_password1">Password</label>
+        <input id="id_password1" type="password" name="password1"
+               class="form-control {% if form.password1.errors %}is-invalid{% endif %}"
+               placeholder="Password" required autocomplete="new-password">
+        {% if form.password1.errors %}
+          {% for err in form.password1.errors %}
+            <div class="field-error">{{ err }}</div>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="visually-hidden" for="id_password2">Confirm password</label>
+        <input id="id_password2" type="password" name="password2"
+               class="form-control {% if form.password2.errors %}is-invalid{% endif %}"
+               placeholder="Re-write Password" required autocomplete="new-password">
+        {% if form.password2.errors %}
+          {% for err in form.password2.errors %}
+            <div class="field-error">{{ err }}</div>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="d-grid gap-2 mb-3">
+        <button type="submit" class="btn btn-orange">Sign Up</button>
+
+        <div class="d-flex gap-2 justify-content-center mt-1 flex-wrap">
+          {% comment %} show social buttons only if provider configured (context processor sets socialaccount_providers) {% endcomment %}
+          {% if 'facebook' in socialaccount_providers %}
+          {% endif %}
+          {% if 'google' in socialaccount_providers %}
+            <a href="{% provider_login_url 'google' process='login' %}" class="btn btn-outline-orange">Continue with Google</a>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center">
+        <a href="{% url 'password_reset' %}" class="text-muted small">Forgot password?</a>
+        <div class="small">Already have an account? <a href="{% url 'login' %}">Log in</a></div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Small inline script: focus first error (good UX on mobile) -->
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var firstError = document.querySelector('.field-error');
+  if(firstError){
+    var parent = firstError.closest('.mb-3');
+    if(parent){
+      var input = parent.querySelector('input, textarea, select');
+      if(input) input.focus({preventScroll:true});
+    }
+  }
+});
+</script>
+{% endblock content %}
+
+
+        <div class="d-flex gap-2 justify-content-center mt-1 flex-wrap">
+          {% comment %} show social buttons only if provider configured (context processor sets socialaccount_providers) {% endcomment %}
+          {% if 'facebook' in socialaccount_providers %}
+            <a href="{% provider_login_url 'facebook' process='login' %}" class="btn btn-outline-orange">Continue with Facebook</a>
+          {% endif %}
+          {% if 'google' in socialaccount_providers %}
+            <a href="{% provider_login_url 'google' process='login' %}" class="btn btn-outline-orange">Continue with Google</a>
+          {% endif %}
+        </div>

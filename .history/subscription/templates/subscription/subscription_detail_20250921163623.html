@@ -1,0 +1,12 @@
+subscription/templates/subscription/subscription_detail.html
+
+{% extends 'restaurant/base.html' %}
+{% block content %}
+<h2>Subscription Details</h2>
+<p>Plan: {{ subscription.plan }}</p>
+<p>Status: {{ subscription.payment_status }}</p>
+<form method="post" action="{% url 'subscription_cancel' subscription.pk %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Cancel Subscription</button>
+</form>
+{% endblock %}

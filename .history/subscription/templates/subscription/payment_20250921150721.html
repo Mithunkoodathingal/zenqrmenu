@@ -1,0 +1,71 @@
+{% extends 'restaurant/base.html' %}
+{% block content %}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg">
+                <div class="card-header text-center bg-warning text-white">
+                    <h4>Complete Your Payment</h4>
+                </div>
+                <div class="card-body text-center">
+                    <h5 class="mb-3">{{ plan.name }}</h5>
+                    <p><strong>Amount:</strong> ₹{{ plan.price }}</p>
+
+                    <!-- 1. This is our new custom button. You can style it however you want. -->
+                    <button id="pay-btn" class="btn btn-primary btn-lg mt-3">Pay Now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. We still need the main Razorpay script -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<!-- 3. This new JavaScript block initializes Razorpay with our custom options -->
+<script>
+    // Get the button element by its ID
+    const payBtn = document.getElementById('pay-btn');
+
+    // Define the options for the Razorpay checkout
+    const options = {
+        "key": "{{ razorpay_key }}", // Your Razorpay Key ID
+        "amount": "{{ amount }}", // Amount in the smallest currency unit (e.g., 50000 for ₹500.00)
+        "currency": "INR",
+        "name": "Restaurant QR Subscription", // Your business name
+        "description": "QR Code Menu Subscription for {{ plan.name }}",
+        "order_id": "{{ order_id }}", // This is a sample order ID. You should generate a new one for each transaction.
+        "callback_url": "{% url 'payment_success' %}",
+        "prefill": {
+            // We recommend using the prefill parameter to auto-fill customer's contact information.
+            "name": "{{ user.get_full_name|default:'' }}",
+            "email": "{{ user.email|default:'' }}",
+            "contact": "" // You can prefill this from your user's profile
+        },
+        "notes": {
+            "plan_name": "{{ plan.name }}",
+            "user_id": "{{ user.id }}"
+        },
+        "theme": {
+            "color": "#F37254" // ✅ Set your custom theme color here (e.g., a shade of orange)
+        },
+        "methods": {
+            "upi": true // Explicitly enable UPI payments
+        }
+    };
+
+    // Add a click event listener to our custom button
+    payBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        
+        // Create a new Razorpay instance with our options
+        const rzp = new Razorpay(options);
+
+        // Open the Razorpay checkout modal
+        rzp.open();
+    });
+</script>
+
+{% endblock %}
+

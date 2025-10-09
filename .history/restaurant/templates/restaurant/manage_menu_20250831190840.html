@@ -1,0 +1,29 @@
+{% extends 'restaurant/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-end align-items-center mb-4">
+    <a href="{% url 'category_create' %}" class="btn btn-orange me-2">Add Categories</a>
+    <a href="{% url 'fooditem_create' %}" class="btn btn-orange">Add Items</a>
+</div>
+
+{% for category in categories %}
+<div class="custom-card menu-category">
+    <h5>{{ category.name }}</h5>
+    {% for item in category.fooditem_set.all %}
+    <div class="menu-item">
+        <span>{{ item.name }} — ₹{{ item.price }}</span>
+        <div>
+            <a href="{% url 'edit_fooditem' item.pk %}" class="btn btn-sm btn-edit">Edit</a>
+            <a href="{% url 'delete_fooditem' item.pk %}" class="btn btn-sm btn-red">Delete</a>
+        </div>
+    </div>
+    {% empty %}
+    <p class="text-muted small">No items in this category yet.</p>
+    {% endfor %}
+</div>
+{% empty %}
+<div class="custom-card text-center">
+    <p class="text-muted">No categories created yet. Click 'Add Categories' to start building your menu.</p>
+</div>
+{% endfor %}
+{% endblock %}

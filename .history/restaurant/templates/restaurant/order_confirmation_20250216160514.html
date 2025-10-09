@@ -1,0 +1,80 @@
+
+{% load static %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation</title>
+    <link rel="stylesheet" href="{% static 'css/confirm.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="card mt-5 mb-5 p-4 shadow-lg">
+    <div class="col d-flex">
+        <span class="text-muted" id="orderno">Order #{{ order.id }}</span>
+    </div>
+    
+    <div class="text-center">
+        <h2 class="title">Thank you for your order!</h2>
+    </div>
+
+    <div class="main">
+        <span id="sub-title">
+            <p><b>Payment Summary</b></p>
+        </span>
+
+        {% for item in order_items %}
+        <div class="row row-main align-items-center mb-3">
+            <div class="col-3">
+                <img class="img-fluid rounded"
+                {% if item.food_item.image %}
+                    src="{{ item.food_item.image.url }}"
+                {% else %}
+                    src="{% static 'assets/images/menu-small/pic1.png' %}"
+                {% endif %}
+                alt="{{ item.food_item.name }}"
+                style="width: 80px; height: 80px; object-fit: cover;">
+            </div>
+            <div class="col-6">
+                <div class="row">
+                    <p><b>{{ item.food_item.name }}</b></p>
+                </div>
+                <div class="row text-muted">
+                    <p>Quantity: {{ item.quantity }}</p>
+                </div>
+            </div>
+            <div class="col-3 d-flex justify-content-end">
+                <p><b>₹{{ item.food_item.price }}</b></p>
+            </div>
+        </div>
+        {% endfor %}
+
+        <hr>
+        <div class="total">
+            <div class="row">
+                <div class="col"> <b>Total:</b> </div>
+                <div class="col d-flex justify-content-end"> <b>₹{{ total_price }}</b> </div>
+            </div> 
+        </div>
+        
+    </div>
+    <div class="text-center mt-1 p-0">
+        <form method="post" class="text-center mt-1">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">Back to Menu</button>
+        </form>
+        <form method="post" action="{% url 'cancel_order' order.id %}" >
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Cancel Order</button>
+        </form>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+{% endblock %}
+
+
+

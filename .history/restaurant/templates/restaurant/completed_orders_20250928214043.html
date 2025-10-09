@@ -1,0 +1,109 @@
+{% extends "restaurant/base.html" %}
+{% load static %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Completed Orders</h3>
+    <a href="{% url 'kitchen_interface' %}" class="btn btn-outline-primary">Back to Kitchen</a>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-auto">
+      <label class="form-label small mb-1">Search</label>
+      <input name="q" value="{{ filters.q }}" placeholder="order id, table no, item name" class="form-control form-control-sm" />
+    </div>
+    <div class="col-auto">
+      <label class="form-label small mb-1">From</label>
+      <input type="date" name="date_from" value="{{ filters.date_from }}" class="form-control form-control-sm" />
+    </div>
+    <div class="col-auto">
+      <label class="form-label small mb-1">To</label>
+      <input type="date" name="date_to" value="{{ filters.date_to }}" class="form-control form-control-sm" />
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+      <a href="{% url 'completed_orders' %}" class="btn btn-sm btn-outline-secondary">Reset</a>
+    </div>
+  </form>
+
+  <!-- Daily totals (for the filtered set) -->
+  <div class="mb-3">
+    <h5 class="mb-2">Totals by day</h5>
+    {% if daily_totals %}
+      <div class="list-group mb-2">
+        {% for date, amount in daily_totals.items %}
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div>{{ date }}</div>
+            <div class="fw-bold">₹{{ amount }}</div>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="text-end">
+        <span class="fw-bold">Grand total: ₹{{ grand_total }}</span>
+      </div>
+    {% else %}
+      <div class="text-muted small">No completed orders for the selected filters.</div>
+    {% endif %}
+  </div>
+
+  {% if orders %}
+    <div class="list-group">
+      {% for order in orders %}
+        <div class="list-group-item">
+          <div class="d-flex justify-content-between align-items-start">
+            <div style="min-width:0;">
+              <strong>Order #{{ order.id }}</strong>
+              <div class="text-muted small">
+                Table: {% if order.table %}{{ order.table.table_number }}{% else %}—{% endif %}
+                &nbsp;•&nbsp; Placed: {{ order.local_time|date:"Y-m-d H:i" }}
+              </div>
+
+              <div class="mt-2">
+                <ul class="mb-0 ps-3">
+                  {% for li in order._item_lines %}
+                    <li>
+                      {{ li.quantity }} × {{ li.name }}
+                      {% if li.addons %}
+                        <small class="text-muted">(+{% for a in li.addons %}{{ a.name }}{% if not forloop.last %}, {% endif %}{% endfor %})</small>
+                      {% endif %}
+                      <span class="float-end">₹{{ li.line_total|floatformat:2 }}</span>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+
+            <div class="text-end ms-3" style="min-width:120px;">
+              <div class="fw-bold">₹{{ order._computed_total|floatformat:2 }}</div>
+              <div class="small text-muted">Items: {{ order.order_items.count }}</div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    <nav aria-label="Completed orders pages" class="mt-3">
+      <ul class="pagination">
+        {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filters.q %}&q={{ filters.q|urlencode }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}">Previous</a></li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
+
+        <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span></li>
+
+        {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filters.q %}&q={{ filters.q|urlencode }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}">Next</a></li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Next</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+
+  {% else %}
+    <div class="alert alert-info">No completed orders found.</div>
+  {% endif %}
+</div>
+{% endblock %}

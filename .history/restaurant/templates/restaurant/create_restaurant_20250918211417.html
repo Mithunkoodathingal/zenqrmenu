@@ -1,0 +1,190 @@
+ {% extends 'restaurant/base1.html' %}
+ {% load static %}
+
+
+
+{% block head %}
+  <style>
+  <title>Zebra Menu - Setup Restaurant</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body {
+      background: #fff;
+      font-family: Arial, sans-serif;
+    }
+    /* Navbar */
+    .navbar {
+      background: #fff;
+      border-bottom: 2px solid #eee;
+      padding: 0.75rem 2rem;
+    }
+    .navbar-brand {
+      font-size: 1.75rem;
+      font-weight: bold;
+      color: #f97316 !important;
+      display: flex;
+      align-items: center;
+    }
+    .navbar-nav .nav-link {
+      color: #f97316 !important;
+      font-weight: 500;
+      margin: 0 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .navbar-toggler {
+      border: none;
+      color: #f97316;
+      font-size: 1.5rem;
+    }
+    /* Cards */
+    .setup-card {
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      background: #fff;
+      padding: 2rem;
+    }
+    .form-title {
+      color: #f97316;
+      font-weight: bold;
+      margin-bottom: 1.5rem;
+    }
+    .form-control {
+      border: 2px solid #f97316;
+      border-radius: 8px;
+    }
+    .form-control:focus {
+      border-color: #ea580c;
+      box-shadow: none;
+    }
+    .btn-orange {
+      background-color: #f97316;
+      color: white;
+      font-weight: bold;
+      border-radius: 6px;
+      padding: 0.6rem 1.2rem;
+    }
+    .btn-orange:hover {
+      background-color: #ea580c;
+      color: #fff;
+    }
+    .btn-outline-orange {
+      border: 2px solid #f97316;
+      color: #f97316;
+      font-weight: bold;
+      border-radius: 6px;
+      padding: 0.6rem 1.2rem;
+    }
+    .btn-outline-orange:hover {
+      background: #f97316;
+      color: #fff;
+    }
+    .upload-group input[type="file"] {
+      display: none;
+    }
+    .upload-group label {
+      background-color: #f97316;
+      color: #fff;
+      border-radius: 6px;
+      padding: 0.55rem 1rem;
+      margin-left: 0.5rem;
+      cursor: pointer;
+      font-weight: bold;
+    }
+  </style>
+{% endblock %}
+<body>
+
+
+{% block content %}
+  <!-- Main Content -->
+  <div class="container my-5">
+    <div class="row g-4 justify-content-center">
+      
+      <!-- Left Image Placeholder -->
+      <div class="col-12 col-md-6">
+        <div class="setup-card text-center">
+          <img src="{% static 'assets/images/login-placeholder.jpg' %}" alt="Restaurant Image" class="img-fluid">
+        </div>
+      </div>
+
+      <!-- Right Form -->
+      <div class="col-12 col-md-6">
+        <div class="setup-card">
+          <h5 class="form-title text-center">Setup Your Restaurant</h5>
+          <form method="post" enctype="multipart/form-data" action="{% url 'create_restaurant' %}">
+            {% csrf_token %}
+            <div class="mb-3">
+              <input type="text" name="name" class="form-control" placeholder="Restaurant Name" required>
+            </div>
+            <div class="mb-3">
+              <input type="text" name="address" class="form-control" placeholder="Address" required>
+            </div>
+            <div class="mb-3">
+              <textarea name="about" class="form-control" rows="3" placeholder="About your restaurant..."></textarea>
+            </div>
+                                 <!-- Cover Image -->
+              <div class="mb-3">
+                <label for="cover_image" class="form-label">Cover Image</label>
+                <input type="file" name="cover_image" id="cover_image" class="form-control">
+              </div>
+            <div class="d-flex justify-content-between">
+              <button type="submit" class="btn btn-orange">Create Restaurant</button>
+              <a href="#" class="btn btn-outline-orange">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}
+
+
+
+
+{% comment %} {% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Setup Your Restaurant</h2>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% url 'create_restaurant' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- Restaurant Name -->
+            <div class="mb-3">
+                <label class="form-label">Restaurant Name</label>
+                <input type="text" name="name" class="form-control" required>
+            </div>
+
+            <!-- Address -->
+            <div class="mb-3">
+                <label class="form-label">Address</label>
+                <textarea name="address" class="form-control" rows="3" required></textarea>
+            </div>
+
+            <!-- About / Description -->
+            <div class="mb-3">
+                <label class="form-label">About Your Restaurant</label>
+                <textarea name="description" class="form-control" rows="4" placeholder="Write something about your restaurant..." required></textarea>
+            </div>
+
+            <!-- Cover Image Upload -->
+            <div class="mb-3">
+                <label class="form-label">Upload Cover Image</label>
+                <input type="file" name="cover_image" class="form-control" accept="image/*" required>
+            </div>
+
+            <!-- Submit & Cancel -->
+            <button type="submit" class="btn btn-primary">Create Restaurant</button>
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %} {% endcomment %}
