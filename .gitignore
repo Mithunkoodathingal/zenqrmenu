@@ -2,33 +2,19 @@
 .env
 .env.*
 secrets.json
-
-
-# History
 .history
+
 
 # Django file uploads & runtime
 /media/
 /staticfiles/
 
-# Python
-__pycache__/
-*.pyc
 
-# Django
-*.log
-db.sqlite3
-/media/
-
-# Virtual Environment
-env/
-venv/
-.venv/
-
-# Editor/OS specific
+# IDE/editor
 .vscode/
-.idea/
-.DS_Store
+*.pyc
+__pycache__/
 
-# Environment variables
-.env
+
+# local sqlite (if used)
+db.sqlite3

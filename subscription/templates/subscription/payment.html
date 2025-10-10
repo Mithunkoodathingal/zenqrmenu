@@ -1,0 +1,40 @@
+{# subscription/templates/subscription/payment.html #}
+{% extends 'restaurant/base.html' %}
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow-lg">
+        <div class="card-header text-center bg-warning text-white">
+          <h4>Complete Your Payment</h4>
+        </div>
+        <div class="card-body text-center">
+          <h5 class="mb-3">{{ plan.name }}</h5>
+          <p><strong>Amount:</strong> ₹{{ amount_paisa|floatformat:-2|divisibleby:100 }}</p>
+
+          <form method="post" action="{% url 'payment_success' %}">
+            {% csrf_token %}
+            <script src="https://checkout.razorpay.com/v1/checkout.js"
+              data-key="{{ razorpay_key }}"
+              data-amount="{{ amount_paisa }}"
+              data-currency="INR"
+              data-order_id="{{ order_id }}"
+              data-buttontext="Pay with Razorpay"
+              data-name="Restaurant QR Subscription"
+              data-description="QR Code Menu Subscription"
+              data-image=""  <!-- optional -->
+              data-prefill.name="{{ request.user.get_full_name }}"
+              data-prefill.email="{{ request.user.email }}"
+              data-theme.color="#ff6600"
+            ></script>
+
+            <noscript>
+              <button type="submit" class="btn btn-primary">Complete Payment</button>
+            </noscript>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

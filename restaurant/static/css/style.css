@@ -1,0 +1,201 @@
+/* --- General Body & Fonts --- */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* --- Main Layout --- */
+.dashboard-wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* --- Sidebar Styling --- */
+.sidebar {
+    width: 250px;
+    background-color: #F7931E; /* Primary orange */
+    color: #fff;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar .logo {
+    padding: 20px;
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: white;
+}
+
+.sidebar .nav-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+}
+
+.sidebar .nav-links a {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    color: white;
+    text-decoration: none;
+    transition: background-color 0.3s;
+    font-weight: 500;
+}
+
+.sidebar .nav-links a i {
+    margin-right: 15px;
+    font-size: 1.2rem;
+    width: 20px;
+    text-align: center;
+}
+
+.sidebar .nav-links a:hover,
+.sidebar .nav-links a.active {
+    background-color: #DC3545; /* Red for active/hover */
+}
+
+.sidebar .user-profile {
+    padding: 20px;
+    background-color: #FFC107; /* Yellow */
+    color: #333;
+    text-align: center;
+}
+.sidebar .user-profile .user-name {
+    font-weight: bold;
+}
+.sidebar .user-profile a {
+    color: #DC3545;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* --- Main Content Area --- */
+.main-content {
+    flex-grow: 1;
+    padding: 30px;
+    overflow-y: auto;
+}
+
+/* --- Custom Card Styles --- */
+.custom-card {
+    background-color: #fff;
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+    padding: 20px;
+}
+
+/* --- Button Styles --- */
+.btn-orange {
+    background-color: #F7931E;
+    color: white;
+    border: none;
+}
+.btn-orange:hover {
+    background-color: #e68a0d;
+    color: white;
+}
+
+.btn-red {
+    background-color: #DC3545;
+    color: white;
+    border: none;
+}
+.btn-red:hover {
+    background-color: #c82333;
+    color: white;
+}
+
+.btn-edit {
+     background-color: #F7931E;
+     color: white;
+}
+
+
+/* --- Specific Page Styles --- */
+.menu-category h5 {
+    font-weight: 600;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+.menu-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+/* Orders Page */
+.order-card {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.order-card .order-header {
+    font-size: 1rem;
+    font-weight: 600;
+}
+.order-card .order-time {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+.order-card .order-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.2rem;
+    border-bottom: 1px solid #f5f5f5;
+}
+.order-card .order-item:last-child {
+    border-bottom: none;
+}
+.order-card .item-qty {
+    background-color: #F7931E;
+    color: white;
+    padding: 2px 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+.order-card .total-price {
+    font-weight: bold;
+    font-size: 1rem;
+    margin-top: 1rem;
+}
+
+/* Mobile Mockup */
+.mobile-mockup {
+    width: 320px;
+    height: 650px;
+    margin: 2rem auto;
+    border: 12px solid #2b2b2b;
+    border-radius: 30px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    padding: 15px;
+    background: #fff;
+}
+.mobile-mockup-content {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    background: #f9f9f9;
+}
+
+/* --- Responsive Design --- */
+@media (max-width: 768px) {
+    .dashboard-wrapper { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; }
+    .main-content { padding: 15px; }
+}
