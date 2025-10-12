@@ -1,0 +1,9 @@
+# enforce LF in repo, allow OS-specific line endings in working tree
+* text=auto eol=lf
+
+# ensure these files are always LF
+*.py text eol=lf
+*.sh text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf

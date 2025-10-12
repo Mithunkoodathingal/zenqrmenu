@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.facebook',
+    'storages',
 
     # sites (required by allauth)
     'django.contrib.sites',
@@ -119,39 +120,64 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'restaurant_qr.wsgi.application'
 
-# -------------------------
-# Database (PostgreSQL via DATABASE_URL)
-# -------------------------
-# Set DATABASE_URL in your .env, e.g.:
-# DATABASE_URL=postgres://username:password@hostname:5432/dbname
-DATABASE_URL = config('DATABASE_URL', default='').strip()
-if DATABASE_URL:
-    try:
-        import dj_database_url
 
-        DATABASES = {
-            'default': dj_database_url.parse(
-                DATABASE_URL,
-                conn_max_age=config('DB_CONN_MAX_AGE', default=600, cast=int),
-                ssl_require=config('DB_SSL_REQUIRE', default=True, cast=bool),
-            )
+# -------------------------
+# Database (PostgreSQL via DATABASE_URL or Cloud SQL socket)
+# -------------------------
+# Preferred order:
+# 1) If CLOUD_SQL_INSTANCE is set (Cloud Run attached Cloud SQL), use unix socket
+# 2) Else if DATABASE_URL provided, use dj_database_url
+# 3) Else fall back to sqlite for local dev
+
+CLOUD_SQL_INSTANCE = config('CLOUD_SQL_INSTANCE', default='').strip()
+DB_NAME = config('DB_NAME', default='').strip()
+DB_USER = config('DB_USER', default='').strip()
+DB_PASS = config('DB_PASS', default='').strip()
+DB_CONN_MAX_AGE = config('DB_CONN_MAX_AGE', default=600, cast=int)
+DB_SSL_REQUIRE = config('DB_SSL_REQUIRE', default=True, cast=bool)
+
+if CLOUD_SQL_INSTANCE and DB_NAME and DB_USER and DB_PASS:
+    # Use Cloud Run's mounted unix socket at /cloudsql/<INSTANCE>
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': DB_NAME,
+            'USER': DB_USER,
+            'PASSWORD': DB_PASS,
+            'HOST': os.path.join('/cloudsql', CLOUD_SQL_INSTANCE),
+            'PORT': '',  # unix socket
+            'CONN_MAX_AGE': DB_CONN_MAX_AGE,
         }
-    except Exception:
-        # Fallback safe sqlite (shouldn't be used in production)
+    }
+else:
+    # If DATABASE_URL present use dj_database_url
+    DATABASE_URL = config('DATABASE_URL', default='').strip()
+    if DATABASE_URL:
+        try:
+            import dj_database_url
+            DATABASES = {
+                'default': dj_database_url.parse(
+                    DATABASE_URL,
+                    conn_max_age=DB_CONN_MAX_AGE,
+                    ssl_require=DB_SSL_REQUIRE,
+                )
+            }
+        except Exception:
+            DATABASES = {
+                'default': {
+                    'ENGINE': 'django.db.backends.sqlite3',
+                    'NAME': BASE_DIR / 'db.sqlite3',
+                }
+            }
+    else:
+        # local/dev fallback sqlite
         DATABASES = {
             'default': {
                 'ENGINE': 'django.db.backends.sqlite3',
                 'NAME': BASE_DIR / 'db.sqlite3',
             }
         }
-else:
-    # local/development fallback
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+
 
 # -------------------------
 # Password validators
@@ -171,19 +197,76 @@ TIME_ZONE = config('TIME_ZONE', default='Asia/Kolkata')
 USE_I18N = True
 USE_TZ = True
 
+
 # -------------------------
 # Static & media (WhiteNoise + collectstatic)
 # -------------------------
 STATIC_URL = config('STATIC_URL', default='/static/')
 STATIC_ROOT = config('STATIC_ROOT', default=os.path.join(BASE_DIR, 'staticfiles'))
 STATICFILES_DIRS = [BASE_DIR / "restaurant" / "static"]
-STATICFILES_STORAGE = config('STATICFILES_STORAGE',
-                             default='whitenoise.storage.CompressedManifestStaticFilesStorage')
+# NOTE: Do NOT set STATICFILES_STORAGE here when using the STORAGES dict below.
 
 MEDIA_URL = config('MEDIA_URL', default='/media/')
 MEDIA_ROOT = config('MEDIA_ROOT', default=os.path.join(BASE_DIR, 'media'))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+#-----------------------------
+#  AWS
+#-----------------------------
+
+# --- S3 / static & media configuration (Django 5 STORAGES style) ---
+USE_S3 = config('USE_S3', default=False, cast=bool)
+
+if USE_S3:
+    AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-1')
+    AWS_S3_CUSTOM_DOMAIN = config('AWS_S3_CUSTOM_DOMAIN', default='')
+
+    STATICFILES_LOCATION = config('STATICFILES_LOCATION', default='static')
+    MEDIAFILES_LOCATION = config('MEDIAFILES_LOCATION', default='media')
+
+    AWS_DEFAULT_ACL = None
+    AWS_S3_FILE_OVERWRITE = config('AWS_S3_FILE_OVERWRITE', default=False, cast=bool)
+    AWS_QUERYSTRING_AUTH = False
+    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+
+    # STORAGES mapping — Django will use these instead of STATICFILES_STORAGE/DEFAULT_FILE_STORAGE
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {"client_kwargs": {"region_name": AWS_S3_REGION_NAME}},
+        },
+        "staticfiles": {
+            "BACKEND": "restaurant.storages.StaticS3Storage",
+            "OPTIONS": {"location": STATICFILES_LOCATION},
+        },
+        "media": {
+            "BACKEND": "restaurant.storages.MediaS3Storage",
+            "OPTIONS": {"location": MEDIAFILES_LOCATION},
+        },
+    }
+
+    if AWS_S3_CUSTOM_DOMAIN:
+        STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{STATICFILES_LOCATION}/'
+        MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{MEDIAFILES_LOCATION}/'
+    else:
+        STATIC_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{STATICFILES_LOCATION}/'
+        MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{MEDIAFILES_LOCATION}/'
+else:
+    # Local fallback
+    STATIC_URL = config('STATIC_URL', default='/static/')
+    STATIC_ROOT = config('STATIC_ROOT', default=os.path.join(BASE_DIR, 'staticfiles'))
+    STATICFILES_DIRS = [BASE_DIR / "restaurant" / "static"]
+
+    MEDIA_URL = config('MEDIA_URL', default='/media/')
+    MEDIA_ROOT = config('MEDIA_ROOT', default=os.path.join(BASE_DIR, 'media'))
+# --- end S3 / static & media config ---
+
+
 
 # -------------------------
 # Sites / allauth / Email
