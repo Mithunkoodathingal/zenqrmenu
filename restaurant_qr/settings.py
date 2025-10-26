@@ -275,20 +275,17 @@ else:
 
 INSTALLED_APPS += ["anymail"]
 
-# Use config(...) so values come from your .env (python-decouple)
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='anymail.backends.brevo.EmailBackend')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Zebra Menu <hello@zenqrmenu.com>')
-SERVER_EMAIL = config("SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
-
 ANYMAIL = {
-    # Newer Anymail naming
-    "BREVO_API_KEY": config('BREVO_API_KEY', default=None),
-    # Keep a fallback for older Anymail versions that use Sendinblue naming
-    "SENDINBLUE_API_KEY": config('SENDINBLUE_API_KEY', default=None),
+    "BREVO_API_KEY": os.environ.get("BREVO_API_KEY"),
 }
 
-
+EMAIL_BACKEND = "anymail.backends.brevo.EmailBackend"
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Zebra Menu <hello@zenqrmenu.com>')
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+
+
+
 
 EMAIL_HOST = config('EMAIL_HOST', default='')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
