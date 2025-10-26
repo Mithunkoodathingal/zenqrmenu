@@ -962,7 +962,7 @@ def generate_qr_code(table):
         if not table.restaurant or not table.restaurant.id:
             raise ValueError("Table must be associated with a valid restaurant.")
 
-        local_url = f"http://localhost:8000/menu/{table.restaurant.id}/{table.id}/"
+        local_url = f"https://zenqrmenu.onrender.com/menu/{table.restaurant.id}/{table.id}/"
         qr.add_data(local_url)
         qr.make(fit=True)
         img = qr.make_image(fill='black', back_color='white')
