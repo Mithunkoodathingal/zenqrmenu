@@ -2,7 +2,6 @@ aiosmtpd==1.4.6
 asgiref==3.9.2
 atpublic==6.0.2
 attrs==25.4.0
-django-storages[boto3]==1.14.6
 boto3==1.40.50
 botocore==1.40.50
 certifi==2024.2.2
@@ -18,7 +17,7 @@ django-allauth==65.11.2
 django-anymail==13.1
 django-cors-headers==4.7.0
 django-environ==0.11.2
-django-storages==1.14.6
+django-storages[boto3]==1.14.6
 django-widget-tweaks==1.5.0
 djangorestframework==3.14.0
 djangorestframework-simplejwt==5.3.1
