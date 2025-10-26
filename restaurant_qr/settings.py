@@ -303,13 +303,30 @@ else:
 
 INSTALLED_APPS += ["anymail"]
 
+
+# Anymail / Brevo config
+EMAIL_BACKEND = "anymail.backends.brevo.EmailBackend"
+
+# Top-level compatibility keys (some anymail versions look here)
+BREVO_API_KEY = config("BREVO_API_KEY")            # top-level key
+ANYMAIL_BREVO_API_KEY = BREVO_API_KEY              # legacy name anymail may check
+
+# Primary ANYMAIL dict (keep this — modern shape)
 ANYMAIL = {
-    "BREVO_API_KEY": os.environ.get("BREVO_API_KEY"),
+    "BREVO": {
+        "API_KEY": BREVO_API_KEY,
+    },
 }
 
-EMAIL_BACKEND = "anymail.backends.brevo.EmailBackend"
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Zebra Menu <hello@zenqrmenu.com>')
+# make DEFAULT_FROM_EMAIL include a display name and fall back to this string
+DEFAULT_FROM_EMAIL = config(
+    "DEFAULT_FROM_EMAIL",
+    default="Zen QR Menu <hello@zenqrmenu.com>"
+)
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+EMAIL_TIMEOUT = int(config("EMAIL_TIMEOUT", default=5))
+
 
 
 
