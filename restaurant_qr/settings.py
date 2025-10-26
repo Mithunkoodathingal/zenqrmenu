@@ -271,10 +271,24 @@ else:
 # -------------------------
 # Sites / allauth / Email
 # -------------------------
-ACCOUNT_EMAIL_VERIFICATION = 'optional'   # or 'none'
 
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Zebra Menu <no-reply@localhost>')
+
+INSTALLED_APPS += ["anymail"]
+
+# Use config(...) so values come from your .env (python-decouple)
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='anymail.backends.brevo.EmailBackend')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Zebra Menu <hello@zenqrmenu.com>')
+SERVER_EMAIL = config("SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
+
+ANYMAIL = {
+    # Newer Anymail naming
+    "BREVO_API_KEY": config('BREVO_API_KEY', default=None),
+    # Keep a fallback for older Anymail versions that use Sendinblue naming
+    "SENDINBLUE_API_KEY": config('SENDINBLUE_API_KEY', default=None),
+}
+
+
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Zebra Menu <hello@zenqrmenu.com>')
 
 EMAIL_HOST = config('EMAIL_HOST', default='')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
