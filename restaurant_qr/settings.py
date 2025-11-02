@@ -431,11 +431,14 @@ CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
 # -------------------------
 
 
-# # --- DEBUG: Check installed package versions in Render logs ---
-# try:
-#     import storages, boto3, anymail
-#     import logging
-#     logger = logging.getLogger(__name__)
-#     logger.warning(f"[Render Check] django-storages={storages.__version__}, boto3={boto3.__version__}, anymail={anymail.__version__}")
-# except Exception as e:
-#     print("[Render Check Error]", e)
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "loggers": {
+        "anymail": {"handlers": ["console"], "level": "DEBUG"},
+        "urllib3": {"handlers": ["console"], "level": "DEBUG"},
+        "requests": {"handlers": ["console"], "level": "DEBUG"},
+    },
+}
+
