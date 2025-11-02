@@ -299,52 +299,72 @@ else:
 # -------------------------
 # Sites / allauth / Email
 # -------------------------
-
+import os
 
 INSTALLED_APPS += ["anymail"]
 
+# ----- helper: sanitize DEFAULT_FROM_EMAIL from env (remove quotes/newlines/extra spaces)
+def _clean_env_from_email(value, *, default="Zen QR Menu <hello@zenqrmenu.com>"):
+    """
+    Normalize DEFAULT_FROM_EMAIL loaded from environment:
+    - return default if value is None or empty after cleaning
+    - strip surrounding single/double quotes, whitespace and newlines
+    - collapse internal newlines into spaces
+    """
+    if not value:
+        return default
+    # Trim whitespace, remove surrounding quotes, collapse newlines
+    v = value.strip().strip('"').strip("'")
+    v = " ".join(v.splitlines())  # collapse newlines
+    v = v.strip()
+    return v or default
 
-# Anymail / Brevo config
+# Anymail / Brevo config (use API via Anymail)
 EMAIL_BACKEND = "anymail.backends.brevo.EmailBackend"
 
 # Top-level compatibility keys (some anymail versions look here)
 BREVO_API_KEY = config("BREVO_API_KEY")            # top-level key
 ANYMAIL_BREVO_API_KEY = BREVO_API_KEY              # legacy name anymail may check
 
-# Primary ANYMAIL dict (keep this — modern shape)
+# Primary ANYMAIL dict (modern shape)
 ANYMAIL = {
     "BREVO": {
         "API_KEY": BREVO_API_KEY,
     },
 }
 
-# make DEFAULT_FROM_EMAIL include a display name and fall back to this string
-DEFAULT_FROM_EMAIL = config(
-    "DEFAULT_FROM_EMAIL",
-    default="Zen QR Menu <hello@zenqrmenu.com>"
-)
+# DEFAULT_FROM_EMAIL: read raw env and sanitize
+# Use os.getenv to read the raw environment value so we can clean it safely.
+_raw_default_from = os.getenv("DEFAULT_FROM_EMAIL") or ""
+DEFAULT_FROM_EMAIL = _clean_env_from_email(_raw_default_from, default="Zen QR Menu <hello@zenqrmenu.com>")
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
+# Timeout for email operations
 EMAIL_TIMEOUT = int(config("EMAIL_TIMEOUT", default=5))
 
+# Optional: If you're also providing SMTP fallback values in env, keep them,
+# but with safe casting/parsing.
+EMAIL_HOST = config("EMAIL_HOST", default="")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+# support both boolean-like strings and proper bools from decouple
+try:
+    EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+except Exception:
+    EMAIL_USE_TLS = str(os.getenv("EMAIL_USE_TLS", "True")).lower() in ("1", "true", "yes")
 
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 
-
-
-
-EMAIL_HOST = config('EMAIL_HOST', default='')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-
-ACCOUNT_ADAPTER = 'restaurant.adapters.NoPrefixAccountAdapter'
-EMAIL_SUBJECT_PREFIX = ''
-ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
+# Keep your allauth/account settings
+ACCOUNT_ADAPTER = "restaurant.adapters.NoPrefixAccountAdapter"
+EMAIL_SUBJECT_PREFIX = ""
+ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
 
 ACCOUNT_FORMS = {
-    'signup': 'restaurant.forms.SignupForm',
+    "signup": "restaurant.forms.SignupForm",
 }
+
+
 
 # allauth configuration
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
