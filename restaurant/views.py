@@ -363,32 +363,39 @@ def _user_has_verified_email(user):
 
 def login_view(request):
     """
-    Robust login: accepts both 'username' (Django) and 'login' (allauth).
-    If an account exists with unverified email, set 'unverified_email' to show
-    the resend UI on the login page. Always re-render the same form instance
-    on errors so template shows errors.
+    Robust login view:
+    - Accepts both 'username' (Django) and 'login' (allauth) as input names.
+    - Shows resend confirmation UI when an unverified email exists.
+    - Uses session 'signup_email' safely so templates can show resend UI.
     """
     COOLDOWN_SECONDS = 300
 
+    # Always pull signup_email from session safely so templates can reference it
+    signup_email = request.session.get("signup_email")
+    # ensure unverified_email exists (may be set later)
+    unverified_email = None
+
     # GET -> show blank form; pass any session signup_email so the template can show resend UI
-    if request.method != 'POST':
+    if request.method != "POST":
         form = AuthenticationForm(request=request)
         # prefer explicit unverified email saved in session from signup flow
-        unverified_email = request.session.get('signup_email') or None
-        return render(request, 'account/login.html', {'form': form, 'unverified_email': unverified_email})
+        unverified_email = signup_email or None
+        return render(
+            request,
+            "account/login.html",
+            {"form": form, "unverified_email": unverified_email, "signup_email": signup_email},
+        )
 
     # POST branch
     form = AuthenticationForm(request=request, data=request.POST)
 
     # support both names used in templates
-    username_or_email = (
-        request.POST.get('username') or request.POST.get('login') or ''
-    ).strip()
-    password = request.POST.get('password', '')
+    username_or_email = (request.POST.get("username") or request.POST.get("login") or "").strip()
+    password = request.POST.get("password", "")
 
     if not username_or_email:
-        form.add_error('username', _("Please enter your username or email."))
-        return render(request, 'account/login.html', {'form': form})
+        form.add_error("username", _("Please enter your username or email."))
+        return render(request, "account/login.html", {"form": form, "signup_email": signup_email, "unverified_email": unverified_email})
 
     # First try normal authenticate (this returns a user if allowed by backends)
     user = authenticate(request, username=username_or_email, password=password)
@@ -411,18 +418,18 @@ def login_view(request):
         # If we found a user and password matches, we'll handle unverified/inactive cases
         if possible_user and not possible_user.check_password(password):
             # wrong password
-            form.add_error('password', _("Incorrect password. Please try again."))
-            return render(request, 'account/login.html', {'form': form})
+            form.add_error("password", _("Incorrect password. Please try again."))
+            return render(request, "account/login.html", {"form": form, "signup_email": signup_email, "unverified_email": unverified_email})
 
         if not possible_user:
-            form.add_error('username', _("No account found with this username or email."))
-            return render(request, 'account/login.html', {'form': form})
+            form.add_error("username", _("No account found with this username or email."))
+            return render(request, "account/login.html", {"form": form, "signup_email": signup_email, "unverified_email": unverified_email})
 
     # If user is None but possible_user exists and password matched -> handle unverified email
     if user is None and possible_user:
         # If email is not verified -> resend (throttled) and present the resend UI
         if not _user_has_verified_email(possible_user):
-            ea = EmailAddress.objects.filter(user=possible_user).order_by('-primary').first()
+            ea = EmailAddress.objects.filter(user=possible_user).order_by("-primary").first()
             unverified_email = ea.email if ea else possible_user.email
             session_key = f"last_confirmation_sent:{unverified_email.lower()}"
             last_sent = request.session.get(session_key, 0)
@@ -434,8 +441,9 @@ def login_view(request):
                         ea.send_confirmation(request)
                     else:
                         ea, created = EmailAddress.objects.get_or_create(
-                            user=possible_user, email=possible_user.email,
-                            defaults={'verified': False, 'primary': True}
+                            user=possible_user,
+                            email=possible_user.email,
+                            defaults={"verified": False, "primary": True},
                         )
                         if ea:
                             try:
@@ -450,17 +458,17 @@ def login_view(request):
                     messages.info(request, _("If an account exists with that email, a confirmation was (attempted) sent."))
             else:
                 wait = COOLDOWN_SECONDS - (now - last_sent)
-                messages.info(request, _("A confirmation email was recently sent. Please wait %(seconds)d seconds.") % {'seconds': wait})
+                messages.info(request, _("A confirmation email was recently sent. Please wait %(seconds)d seconds.") % {"seconds": wait})
 
             form.add_error(None, _("Your email address is not verified. Please check your email for the confirmation link."))
-            form.add_error('username', _("Account exists but email not verified."))
-            # pass unverified_email so template shows the resend UI
-            return render(request, 'account/login.html', {'form': form, 'unverified_email': unverified_email})
+            form.add_error("username", _("Account exists but email not verified."))
+            # pass unverified_email and signup_email so template shows the resend UI
+            return render(request, "account/login.html", {"form": form, "unverified_email": unverified_email, "signup_email": signup_email})
 
         # If email verified but user inactive -> activate and retry authenticate
         if not possible_user.is_active and _user_has_verified_email(possible_user):
             possible_user.is_active = True
-            possible_user.save(update_fields=['is_active'])
+            possible_user.save(update_fields=["is_active"])
             # attempt authenticate again
             user = authenticate(request, username=possible_user.username, password=password)
 
@@ -468,25 +476,26 @@ def login_view(request):
     if user is not None:
         if not user.is_active:
             form.add_error(None, _("Account is inactive."))
-            return render(request, 'account/login.html', {'form': form})
+            return render(request, "account/login.html", {"form": form, "signup_email": signup_email, "unverified_email": unverified_email})
         login(request, user)
         messages.success(request, _("Logged in successfully."))
-        next_url = request.POST.get('next') or request.GET.get('next') or reverse_lazy('dashboard')
+        next_url = request.POST.get("next") or request.GET.get("next") or reverse_lazy("dashboard")
         return redirect(next_url)
 
     # fallback — invalid credentials
     form.add_error(None, _("Invalid credentials. Please try again."))
-    return render(request, 'account/login.html', {'form': form})
+    return render(request, "account/login.html", {"form": form, "signup_email": signup_email, "unverified_email": unverified_email})
+
 
 class CustomLogoutView(View):
+    """Simple logout view that supports GET and POST and redirects to login."""
     def post(self, request):
         logout(request)
-        return redirect('login')
+        return redirect("login")
 
     def get(self, request):
         logout(request)
-        return redirect('login')
-
+        return redirect("login")
 
 # -----------------------
 # Restaurant / table CRUD
