@@ -5,6 +5,7 @@ from django.urls import reverse_lazy
 from django.conf import settings
 from django.conf.urls.static import static
 from . import debug_views
+from . import views
 
 from .views import (
     dashboard,
@@ -113,6 +114,7 @@ urlpatterns = [
             template_name='registration/password_reset_complete.html'
         ), name='password_reset_complete'),
     path("__debug/diagnostic/", debug_views.diagnostic, name="diagnostic"),
+    path('test-email/', views.test_email, name='test_email'),
 
 ]
 

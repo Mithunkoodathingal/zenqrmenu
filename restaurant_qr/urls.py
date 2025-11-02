@@ -40,6 +40,7 @@ urlpatterns = [
     # 4) Your app routes (example - adjust if your project root differs)
     path('', include('restaurant.urls')),   # ensure you have this file
     path('subscription/', include('subscription.urls')),  # if present
+    
 ]
 
 # Serve media files in development mode

@@ -1729,3 +1729,33 @@ def orders_json(request):
 #     order.is_completed = True
 #     order.save()
 #     return JsonResponse({'success': True, 'order_id': order.id})
+
+
+# restaurant/views.py
+from django.core.mail import send_mail
+from django.http import JsonResponse
+from django.conf import settings
+import traceback
+
+def test_email(request):
+    try:
+        result = send_mail(
+            subject="Zen QR Menu - Render Email Test",
+            message="If you received this, Brevo + Anymail works fine!",
+            from_email=None,  # Uses DEFAULT_FROM_EMAIL
+            recipient_list=["yourpersonalemail@gmail.com"],  # Replace with your inbox
+            fail_silently=False,
+        )
+        return JsonResponse({
+            "status": "success",
+            "send_mail_result": result,
+            "backend": settings.EMAIL_BACKEND,
+            "from_email": settings.DEFAULT_FROM_EMAIL,
+        })
+    except Exception as e:
+        return JsonResponse({
+            "status": "error",
+            "error_type": str(type(e).__name__),
+            "error_message": str(e),
+            "traceback": traceback.format_exc(),
+        }, status=500)
