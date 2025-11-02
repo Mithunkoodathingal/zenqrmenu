@@ -361,12 +361,13 @@ def _user_has_verified_email(user):
         return False
     return EmailAddress.objects.filter(user=user, verified=True).exists()
 
+# paste this whole function (replace the existing login_view)
 def login_view(request):
     """
     Robust login view:
-    - Accepts both 'username' (Django) and 'login' (allauth) as input names.
+    - Accepts both 'username' (Django) and 'login' (allauth).
     - Shows resend confirmation UI when an unverified email exists.
-    - Uses session 'signup_email' safely so templates can show resend UI.
+    - Always provides `signup_email` and `unverified_email` in template context to avoid VariableDoesNotExist.
     """
     COOLDOWN_SECONDS = 300
 
@@ -375,16 +376,19 @@ def login_view(request):
     # ensure unverified_email exists (may be set later)
     unverified_email = None
 
+    # helper to render with the guaranteed context
+    def safe_render(template_name, extra_context=None, status=200):
+        ctx = {"signup_email": signup_email, "unverified_email": unverified_email}
+        if extra_context:
+            ctx.update(extra_context)
+        return render(request, template_name, ctx, status=status)
+
     # GET -> show blank form; pass any session signup_email so the template can show resend UI
     if request.method != "POST":
         form = AuthenticationForm(request=request)
         # prefer explicit unverified email saved in session from signup flow
         unverified_email = signup_email or None
-        return render(
-            request,
-            "account/login.html",
-            {"form": form, "unverified_email": unverified_email, "signup_email": signup_email},
-        )
+        return safe_render("account/login.html", {"form": form})
 
     # POST branch
     form = AuthenticationForm(request=request, data=request.POST)
@@ -395,7 +399,7 @@ def login_view(request):
 
     if not username_or_email:
         form.add_error("username", _("Please enter your username or email."))
-        return render(request, "account/login.html", {"form": form, "signup_email": signup_email, "unverified_email": unverified_email})
+        return safe_render("account/login.html", {"form": form})
 
     # First try normal authenticate (this returns a user if allowed by backends)
     user = authenticate(request, username=username_or_email, password=password)
@@ -419,11 +423,11 @@ def login_view(request):
         if possible_user and not possible_user.check_password(password):
             # wrong password
             form.add_error("password", _("Incorrect password. Please try again."))
-            return render(request, "account/login.html", {"form": form, "signup_email": signup_email, "unverified_email": unverified_email})
+            return safe_render("account/login.html", {"form": form})
 
         if not possible_user:
             form.add_error("username", _("No account found with this username or email."))
-            return render(request, "account/login.html", {"form": form, "signup_email": signup_email, "unverified_email": unverified_email})
+            return safe_render("account/login.html", {"form": form})
 
     # If user is None but possible_user exists and password matched -> handle unverified email
     if user is None and possible_user:
@@ -463,7 +467,7 @@ def login_view(request):
             form.add_error(None, _("Your email address is not verified. Please check your email for the confirmation link."))
             form.add_error("username", _("Account exists but email not verified."))
             # pass unverified_email and signup_email so template shows the resend UI
-            return render(request, "account/login.html", {"form": form, "unverified_email": unverified_email, "signup_email": signup_email})
+            return safe_render("account/login.html", {"form": form})
 
         # If email verified but user inactive -> activate and retry authenticate
         if not possible_user.is_active and _user_has_verified_email(possible_user):
@@ -476,7 +480,7 @@ def login_view(request):
     if user is not None:
         if not user.is_active:
             form.add_error(None, _("Account is inactive."))
-            return render(request, "account/login.html", {"form": form, "signup_email": signup_email, "unverified_email": unverified_email})
+            return safe_render("account/login.html", {"form": form})
         login(request, user)
         messages.success(request, _("Logged in successfully."))
         next_url = request.POST.get("next") or request.GET.get("next") or reverse_lazy("dashboard")
@@ -484,7 +488,7 @@ def login_view(request):
 
     # fallback — invalid credentials
     form.add_error(None, _("Invalid credentials. Please try again."))
-    return render(request, "account/login.html", {"form": form, "signup_email": signup_email, "unverified_email": unverified_email})
+    return safe_render("account/login.html", {"form": form})
 
 
 class CustomLogoutView(View):

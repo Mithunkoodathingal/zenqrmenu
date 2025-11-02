@@ -84,22 +84,22 @@
         <div class="mt-1 text-center "><small><a href="{% url 'account_reset_password' %}">Forgot password?</a></small></div>
       </form>
       
-      {# Resend confirmation: show if either unverified_email or signup_email is present #}
-      {# Use signup_email variable (provided by view) — fall back safely if not present #}
-      {% if unverified_email or signup_email|default:"" %}
-        {% with resend_email=unverified_email|default:signup_email|default:"" %}
-          {% if resend_email %}
-            <div class="alert alert-warning mt-3">
-              We sent a confirmation link to <strong>{{ resend_email }}</strong>. Didn't get it?
-              <form method="post" action="{% url 'resend_confirmation_by_email' %}" class="d-inline ms-2">
-                {% csrf_token %}
-                <input type="hidden" name="email" value="{{ resend_email }}">
-                <button type="submit" class="btn btn-link p-0">Resend confirmation</button>
-              </form>
-            </div>
-          {% endif %}
-        {% endwith %}
-      {% endif %}
+        {# Resend confirmation: show if either unverified_email or signup_email is present #}
+        {% if unverified_email or signup_email|default:"" %}
+          {% with resend_email=unverified_email|default:signup_email|default:"" %}
+            {% if resend_email %}
+              <div class="alert alert-warning mt-3">
+                We sent a confirmation link to <strong>{{ resend_email }}</strong>. Didn't get it?
+                <form method="post" action="{% url 'resend_confirmation_by_email' %}" class="d-inline ms-2">
+                  {% csrf_token %}
+                  <input type="hidden" name="email" value="{{ resend_email }}">
+                  <button type="submit" class="btn btn-link p-0">Resend confirmation</button>
+                </form>
+              </div>
+            {% endif %}
+          {% endwith %}
+        {% endif %}
+
 
       <div class="text-center mt-3">
         <small>Don’t have an account ?</small>
