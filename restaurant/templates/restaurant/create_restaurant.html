@@ -3,6 +3,14 @@
 
 {% block extra_css %}
 <style>
+  .text-orange {
+  color: #f97316;
+}
+.text-orange:hover {
+  color: #ea580c;
+  text-decoration: underline;
+}
+
   .setup-card {
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     border: 1px solid #e5e5e5;
@@ -87,7 +95,12 @@
             <label for="cover_image" class="form-label">Cover Image</label>
             <input type="file" name="cover_image" id="cover_image" class="form-control" accept="image/*">
           </div>
-          <div class="d-flex justify-content-between">
+          <!-- Terms acknowledgment -->
+          <div class="text-center mt-3 small text-muted">
+            By creating a restaurant, you agree to our <br>
+            <a href="{% url 'terms_conditions' %}" class="text-decoration-none text-orange fw-bold">Terms &amp; Conditions</a>.
+          </div>
+          <div class="d-flex justify-content-between mt-4">
             <button type="submit" class="btn btn-orange">Create Restaurant</button>
             <a href="{% url 'dashboard' %}" class="btn btn-outline-orange">Cancel</a>
           </div>

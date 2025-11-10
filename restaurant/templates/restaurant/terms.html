@@ -1,0 +1,40 @@
+{% extends 'restaurant/base1.html' %}
+{% load static %}
+
+{% block title %}Terms & Conditions{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <div class="setup-card">
+    <h4 class="form-title text-center mb-4">Terms &amp; Conditions</h4>
+
+    <p class="mb-3">
+      Welcome to <strong>ZenQRMenu</strong>. By creating a restaurant profile, you agree to the following terms and conditions.
+    </p>
+
+    <h6 class="mt-4 text-orange">1. Account Responsibility</h6>
+    <p>
+      You are responsible for maintaining the confidentiality of your login credentials and all activity occurring under your account.
+    </p>
+
+    <h6 class="mt-4 text-orange">2. Content Ownership</h6>
+    <p>
+      All restaurant information, logos, and images you upload remain your property. However, by uploading, you grant ZenQRMenu the right to display them on your QR menu and related interfaces.
+    </p>
+
+    <h6 class="mt-4 text-orange">3. Compliance & Usage</h6>
+    <p>
+      You agree to use ZenQRMenu in compliance with local laws and regulations. We reserve the right to remove content or suspend access in cases of misuse.
+    </p>
+
+    <h6 class="mt-4 text-orange">4. Service Modifications</h6>
+    <p>
+      ZenQRMenu may update, suspend, or modify features periodically to improve the service experience.
+    </p>
+
+    <div class="text-center mt-4">
+      <a href="{% url 'create_restaurant' %}" class="btn btn-orange px-4">Back to Setup</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

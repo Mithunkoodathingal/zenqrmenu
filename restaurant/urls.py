@@ -53,6 +53,7 @@ urlpatterns = [
     path('resend-confirmation/', resend_confirmation, name='resend_confirmation'),
     # public resend-by-email (matches templates that post to 'resend_confirmation_by_email')
     path('resend-by-email/', resend_confirmation_by_email, name='resend_confirmation_by_email'),
+    path('terms-and-conditions/', views.terms_conditions, name='terms_conditions'),
 
     # Dashboard / menu management
     path('dashboard/', dashboard, name='dashboard'),

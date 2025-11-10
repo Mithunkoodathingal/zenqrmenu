@@ -353,6 +353,11 @@ def signup_thankyou(request):
     return render(request, 'account/signup_thankyou.html', {'signup_email': signup_email})
 
 
+def terms_conditions(request):
+    return render(request, 'restaurant/terms.html')
+
+
+
 # -----------------------
 # Authentication helpers (login/logout)
 # -----------------------
