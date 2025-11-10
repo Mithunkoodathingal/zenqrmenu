@@ -17,12 +17,32 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('DJANGO_SECRET_KEY', default='django-insecure-placeholder-change-me')
 DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
 
+# after DEBUG = config(...) line
+# Force local sqlite for dev when DJANGO_DEBUG/DJANGO_ENV indicates debug mode
+if DEBUG and not os.getenv("FORCE_POSTGRES", ""):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+
+
 # Site
 SITE_NAME = config('SITE_NAME', default='Zen Menu')
 SITE_ID = config('SITE_ID', default=1, cast=int)
 
 # Hosts (comma-separated in .env). In production set ALLOWED_HOSTS to your domain(s).
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='http://localhost:8000/', cast=Csv())  # e.g. "example.com,www.example.com"
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "https://zenqrmenu.onrender.com",
+    "https://www.zenqrmenu.com",
+    "https://zenqrmenu.com",
+]
+
+
 
 # When behind a reverse proxy (Heroku, AWS ALB, etc.), enable:
 USE_X_FORWARDED_HOST = config('USE_X_FORWARDED_HOST', default=False, cast=bool)
@@ -228,14 +248,15 @@ if USE_S3:
     AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY")
     AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME")
 
-    AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="us-east-1")
+    AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME') or None
     AWS_S3_CUSTOM_DOMAIN = config("AWS_S3_CUSTOM_DOMAIN", default="")  # optional
-    AWS_S3_ENDPOINT_URL = config("AWS_S3_ENDPOINT_URL", default="")  # optional for R2/Wasabi/etc.
+    AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL') or None
 
     AWS_DEFAULT_ACL = None
     AWS_S3_FILE_OVERWRITE = config("AWS_S3_FILE_OVERWRITE", default=False, cast=bool)
     AWS_QUERYSTRING_AUTH = False
     AWS_S3_SIGNATURE_VERSION = config("AWS_S3_SIGNATURE_VERSION", default="s3v4")
+    AWS_S3_OBJECT_PARAMETERS = {}
 
     # Backward-compatible OPTIONS
     _default_options = {}
@@ -452,13 +473,17 @@ CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
 
 
 LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "loggers": {
-        "anymail": {"handlers": ["console"], "level": "DEBUG"},
-        "urllib3": {"handlers": ["console"], "level": "DEBUG"},
-        "requests": {"handlers": ["console"], "level": "DEBUG"},
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',   # Change to DEBUG for detailed info
     },
 }
+
 

@@ -10,31 +10,71 @@
         </div>
         <div class="card-body text-center">
           <h5 class="mb-3">{{ plan.name }}</h5>
-          <p><strong>Amount:</strong> ₹{{ amount_paisa|floatformat:-2|divisibleby:100 }}</p>
+          <p><strong>Amount:</strong> ₹{{ amount_display }}</p>
 
-          <form method="post" action="{% url 'payment_success' %}">
+          {# This form will be submitted by JS after Razorpay Checkout succeeds #}
+          <form id="rzp-return" method="post" action="{% url 'payment_success' %}">
             {% csrf_token %}
-            <script src="https://checkout.razorpay.com/v1/checkout.js"
-              data-key="{{ razorpay_key }}"
-              data-amount="{{ amount_paisa }}"
-              data-currency="INR"
-              data-order_id="{{ order_id }}"
-              data-buttontext="Pay with Razorpay"
-              data-name="Restaurant QR Subscription"
-              data-description="QR Code Menu Subscription"
-              data-image=""  <!-- optional -->
-              data-prefill.name="{{ request.user.get_full_name }}"
-              data-prefill.email="{{ request.user.email }}"
-              data-theme.color="#ff6600"
-            ></script>
+            <input type="hidden" name="razorpay_order_id" id="rzp_order_id_field" value="{{ order_id }}" />
+            <input type="hidden" name="razorpay_payment_id" id="rzp_payment_id_field" value="" />
+            <input type="hidden" name="razorpay_signature" id="rzp_signature_field" value="" />
 
-            <noscript>
-              <button type="submit" class="btn btn-primary">Complete Payment</button>
-            </noscript>
+            <!-- visible trigger button for checkout -->
+            <button id="rzp-pay-btn" type="button" class="btn btn-primary btn-lg">
+              Pay ₹{{ amount_display }}
+            </button>
           </form>
+
         </div>
       </div>
     </div>
   </div>
 </div>
+
+{# Razorpay Checkout script + JS handler #}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+  (function() {
+    const razorpayKey = "{{ razorpay_key }}";
+    const orderId = "{{ order_id }}";
+    const amount = "{{ amount_paisa }}"; // paisa as integer string
+    const userName = "{{ request.user.get_full_name|escapejs }}";
+    const userEmail = "{{ request.user.email|escapejs }}";
+
+    const options = {
+      "key": razorpayKey,
+      "amount": amount,
+      "currency": "INR",
+      "order_id": orderId,
+      "handler": function (response) {
+        // Fill hidden fields and submit the form to your server-side success view
+        document.getElementById('rzp_payment_id_field').value = response.razorpay_payment_id;
+        document.getElementById('rzp_signature_field').value = response.razorpay_signature;
+        // ensure order id set (we prefilled it)
+        document.getElementById('rzp_order_id_field').value = response.razorpay_order_id || orderId;
+        // Submit (this will POST to the view that verifies signature and activates subscription)
+        document.getElementById('rzp-return').submit();
+      },
+      "prefill": {
+        "name": userName,
+        "email": userEmail
+      },
+      "theme": {
+        "color": "#ff6600"
+      }
+    };
+
+    const rzp = new Razorpay(options);
+
+    document.getElementById('rzp-pay-btn').addEventListener('click', function(e) {
+      e.preventDefault();
+      rzp.open();
+    });
+
+    // Optional: handle failures (log them or show message)
+    rzp.on('payment.failed', function (response){
+      alert('Payment failed: ' + (response.error && response.error.description ? response.error.description : 'Unknown'));
+    });
+  })();
+</script>
 {% endblock %}

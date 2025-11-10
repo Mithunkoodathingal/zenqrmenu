@@ -1,28 +1,34 @@
 # subscription/views.py
-import razorpay
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.conf import settings
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from .models import SubscriptionPlan, Subscription
-from django.views.generic import CreateView, DetailView, View
-from django.urls import reverse_lazy
-from restaurant.models import Restaurant
+import json
+import logging
 from decimal import Decimal
+from django.db import transaction
+import traceback
+import razorpay
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.http import HttpResponse, HttpResponseBadRequest
+from django.shortcuts import get_object_or_404, render, redirect
+from django.urls import reverse
+from django.utils import timezone
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.views.decorators.http import require_POST
+from django.views.generic import DetailView
 
-# initialize client
+from .models import SubscriptionPlan, Subscription, PaymentTransaction
+from restaurant.models import Restaurant
+
+logger = logging.getLogger(__name__)
+
+# initialize razorpay client
 razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
 
 @login_required
 def subscription_plans(request):
-    """
-    Ensure four default plans exist (editable in admin) and render plans page.
-    Uses get_or_create by name to avoid MultipleObjectsReturned when admins
-    create rows with same price.
-    """
     default_plans = [
         {"name": "Free", "price": Decimal("0.00"), "duration_days": 30, "table_limit": 1,
          "features": "Unlimited scans, unlimited categories & items"},
@@ -34,9 +40,7 @@ def subscription_plans(request):
          "features": "Ideal for hotels, unlimited scans, categories & items"},
     ]
 
-    # Create missing default plans by name (safe against duplicates by price)
     for p in default_plans:
-        # use name as the unique key for seeding defaults
         SubscriptionPlan.objects.get_or_create(name=p["name"], defaults={
             "price": p["price"],
             "duration_days": p["duration_days"],
@@ -44,162 +48,328 @@ def subscription_plans(request):
             "features": p["features"],
         })
 
-    # Fetch plans to show on page — order by price for user-friendly display
     plans = SubscriptionPlan.objects.all().order_by('price', 'id')
     return render(request, 'subscription/subscription_plans.html', {'plans': plans})
+
 
 @login_required
 def create_subscription(request, plan_id):
     """
-    Create a subscription order. For free plans (price == 0) bypass payment and activate immediately.
-    Only the restaurant owner may create a subscription for their restaurant.
+    Create a subscription order. For free plans activate immediately.
+    For paid plans:
+      - create a Subscription record (not active yet)
+      - create a Razorpay order
+      - create a PaymentTransaction linked to the Subscription
+      - render payment page (JS will call /subscription/payment-success/ on checkout success)
     """
     plan = get_object_or_404(SubscriptionPlan, id=plan_id)
-
-    # Ensure restaurant ownership
     restaurant = get_object_or_404(Restaurant, owner=request.user)
+    auto_renew = bool(request.POST.get('auto_renew', False))
 
-    # If free plan -> directly create/replace subscription and activate
+    # Free plan -> immediate activation
     if plan.price == Decimal("0.00"):
-        subscription, created = Subscription.objects.get_or_create(restaurant=restaurant)
+        previous_free = False
+        if hasattr(Subscription, 'was_free_trial'):
+            previous_free = Subscription.objects.filter(restaurant=restaurant, was_free_trial=True).exists()
+        else:
+            previous_free = Subscription.objects.filter(restaurant=restaurant, plan__price=Decimal("0.00")).exists()
+
+        if previous_free:
+            messages.error(request, "Free plan already used for this restaurant. Choose a paid plan or contact support.")
+            return redirect('subscription:subscription_plans')
+
+        subscription, _ = Subscription.objects.get_or_create(restaurant=restaurant)
         subscription.plan = plan
-        subscription.activate()
+        if hasattr(subscription, 'auto_renew'):
+            subscription.auto_renew = auto_renew
+        if hasattr(subscription, 'was_free_trial'):
+            subscription.was_free_trial = True
+
+        if hasattr(subscription, 'activate'):
+            subscription.activate(mark_free_trial=True)
+        else:
+            now = timezone.now()
+            subscription.start_date = now
+            subscription.end_date = now + timezone.timedelta(days=getattr(plan, 'duration_days', 30))
+            subscription.is_active = True
+            subscription.save()
+
         messages.success(request, f"Free plan activated. Valid until {subscription.end_date.date()}")
         return redirect('dashboard')
 
-    # For paid plans -> create Razorpay order
-    order_amount_paisa = int(plan.price * Decimal(100))  # paisa (int)
+    # Paid plan -> create/prepare subscription record and Razorpay order
+    # Ensure we have a Subscription object to link the PaymentTransaction to
+    subscription, created = Subscription.objects.get_or_create(restaurant=restaurant)
+    subscription.plan = plan
+    if hasattr(subscription, 'auto_renew'):
+        subscription.auto_renew = auto_renew
+    subscription.save()  # save now; activation will happen after payment
+
+    # Build Razorpay order
+    order_amount_paisa = int(plan.price * Decimal(100))
     order_currency = 'INR'
     order_data = {
         "amount": order_amount_paisa,
         "currency": order_currency,
         "payment_capture": 1,
     }
+    logger.debug("Creating Razorpay order: %s", order_data)
     order = razorpay_client.order.create(data=order_data)
+    order_id = order.get('id')
 
-    # store minimal verification context in session
+    # Persist PaymentTransaction
+    amount_decimal = (Decimal(order_amount_paisa) / Decimal(100)).quantize(Decimal("0.01"))
+    tx = PaymentTransaction.objects.create(
+        subscription=subscription,
+        razorpay_order_id=order_id,
+        amount=amount_decimal,
+        currency=order_currency,
+        status='created'
+    )
+
+    # Store minimal context in session (fallback, used by the browser-return)
     request.session['subscription_order'] = {
-        'order_id': order['id'],
+        'order_id': order_id,
+        'payment_tx_id': tx.id,
         'plan_id': plan.id,
         'restaurant_id': restaurant.id,
+        'auto_renew': auto_renew,
     }
 
-    # allow user to opt-in auto_renew on frontend (persisting auto_renew needs a model change)
-    # We'll read POST param if sent (or default False)
-    auto_renew = bool(request.POST.get('auto_renew', False))
-    request.session['subscription_order']['auto_renew'] = auto_renew
+    # amount_paisa is an int (paisa). Prepare a visible rupee string for template.
+    amount_display = f"{(order_amount_paisa / 100):.2f}"  # e.g. 15000 -> "150.00"
 
-    # Render payment page. We pass amount in paisa (fixes previous mismatch)
     return render(request, 'subscription/payment.html', {
         'plan': plan,
-        'order_id': order['id'],
+        'order_id': order_id,
         'amount_paisa': order_amount_paisa,
-        'razorpay_key': settings.RAZORPAY_KEY_ID,
+        'amount_display': amount_display,
+        'razorpay_key': getattr(settings, 'RAZORPAY_KEY_ID', None),
     })
 
 
-@require_POST
-@login_required
-def payment_success(request):
+@csrf_exempt
+def payment_success_webhook(request):
     """
-    Razorpay posts back (callback_url) with razorpay_payment_id, razorpay_order_id, razorpay_signature.
-    We verify the signature server-side and then activate/replace subscription.
+    Webhook: verify signature if secret configured, find PaymentTransaction and
+    activate subscription idempotently. Logs exceptions in detail for debugging.
     """
-    payload = request.POST
-    razorpay_payment_id = payload.get('razorpay_payment_id')
-    razorpay_order_id = payload.get('razorpay_order_id')
-    razorpay_signature = payload.get('razorpay_signature')
+    payload = request.body.decode('utf-8') or ''
+    signature = request.META.get('HTTP_X_RAZORPAY_SIGNATURE')
+    webhook_secret = getattr(settings, 'RAZORPAY_WEBHOOK_SECRET', None)
 
-    session_info = request.session.get('subscription_order')
-    if not session_info:
-        messages.error(request, "Missing payment session. Try again.")
-        return redirect('subscription_plans')
-
-    expected_order_id = session_info.get('order_id')
-    plan_id = session_info.get('plan_id')
-    restaurant_id = session_info.get('restaurant_id')
-
-    # Basic checks
-    if expected_order_id != razorpay_order_id:
-        messages.error(request, "Order mismatch. Payment not verified.")
-        return redirect('subscription_plans')
+    if webhook_secret:
+        try:
+            razorpay_client.utility.verify_webhook_signature(payload, signature, webhook_secret)
+        except Exception as e:
+            logger.warning("Webhook signature verification failed: %s", e)
+            return HttpResponseBadRequest("invalid signature")
 
     try:
-        # Server-side signature verification (raises exception on mismatch)
+        data = json.loads(payload)
+    except Exception:
+        data = {}
+
+    # Try to extract order_id robustly
+    order_id = None
+    try:
+        # common nested location for payment object
+        order_id = (data.get('payload', {}).get('payment', {}).get('entity', {}).get('order_id'))
+    except Exception:
+        order_id = None
+    if not order_id:
+        order_id = data.get('order_id') or data.get('payload', {}).get('order', {}).get('entity', {}).get('id')
+
+    if not order_id:
+        logger.info("Webhook received with no order_id; payload: %s", payload[:200])
+        return HttpResponse("ok")
+
+    try:
+        tx = PaymentTransaction.objects.filter(razorpay_order_id=order_id).select_related('subscription').first()
+        if not tx:
+            logger.warning("Webhook: no PaymentTransaction found for order %s", order_id)
+            return HttpResponse("ok")
+
+        if tx.status == 'paid':
+            logger.info("Webhook: transaction %s already paid", order_id)
+            return HttpResponse("ok")
+
+        # Optionally get payment id
+        payment_id = data.get('payload', {}).get('payment', {}).get('entity', {}).get('id')
+        if payment_id:
+            tx.razorpay_payment_id = payment_id
+
+        # Activate subscription in a transaction
+        with transaction.atomic():
+            subscription = tx.subscription
+            if not subscription:
+                logger.error("Webhook: transaction %s has no linked subscription", order_id)
+                tx.status = 'failed'
+                tx.save()
+                return HttpResponse("ok")
+
+            # ensure plan exists on subscription; if missing, try to fallback to subscription.plan or tx info
+            plan = subscription.plan
+            if not plan:
+                logger.warning("Webhook: subscription %s has no plan. Cannot compute duration.", subscription.id)
+                # mark tx but don't crash; return 200 so webhook won't be retried
+                tx.status = 'failed'
+                tx.save()
+                return HttpResponse("ok")
+
+            # Activate
+            if hasattr(subscription, 'activate'):
+                subscription.activate(mark_free_trial=False)
+            else:
+                now = timezone.now()
+                subscription.start_date = now
+                subscription.end_date = now + timezone.timedelta(days=getattr(plan, 'duration_days', 30))
+                subscription.is_active = True
+                subscription.save()
+
+            tx.status = 'paid'
+            if hasattr(tx, 'processed_at'):
+                tx.processed_at = timezone.now()
+            tx.save()
+
+        logger.info("Webhook: activated subscription %s for order %s", subscription.id, order_id)
+        return HttpResponse("ok")
+
+    except Exception as exc:
+        # Very detailed logging for debugging
+        logger.exception("Webhook processing error for order %s: %s\n%s", order_id, exc, traceback.format_exc())
+        return HttpResponseBadRequest("processing error")
+
+
+@require_POST
+@csrf_protect
+def payment_success_return(request):
+    """
+    Client-return: verify signature, find tx, mark paid, activate subscription.
+    Robustly handles Subscription.activate() variants (with/without mark_free_trial).
+    """
+    razorpay_order_id = request.POST.get('razorpay_order_id')
+    razorpay_payment_id = request.POST.get('razorpay_payment_id')
+    razorpay_signature = request.POST.get('razorpay_signature')
+
+    logger.debug("payment_success_return POST: order=%s payment=%s", razorpay_order_id, razorpay_payment_id)
+
+    if not (razorpay_order_id and razorpay_payment_id and razorpay_signature):
+        logger.warning("payment_success_return missing fields: %s", request.POST.dict())
+        return HttpResponseBadRequest("missing payment fields")
+
+    # Verify Razorpay signature for checkout
+    try:
         razorpay_client.utility.verify_payment_signature({
             'razorpay_order_id': razorpay_order_id,
             'razorpay_payment_id': razorpay_payment_id,
             'razorpay_signature': razorpay_signature
         })
     except Exception as e:
-        # Log and return error (don't activate subscription)
-        messages.error(request, "Payment verification failed. Contact support.")
-        # optional: logger.exception(e)
-        return redirect('subscription_plans')
+        logger.warning("Payment signature verification failed: %s", e)
+        return HttpResponseBadRequest("invalid signature")
 
-    # Validated payment -> activate subscription
-    plan = get_object_or_404(SubscriptionPlan, id=plan_id)
-    restaurant = get_object_or_404(Restaurant, id=restaurant_id, owner=request.user)
+    # Find PaymentTransaction via session or order id
+    order_ctx = request.session.get('subscription_order', {})
+    tx = None
+    if order_ctx.get('payment_tx_id'):
+        tx = PaymentTransaction.objects.filter(id=order_ctx['payment_tx_id']).select_related('subscription').first()
+    if not tx:
+        tx = PaymentTransaction.objects.filter(razorpay_order_id=razorpay_order_id).select_related('subscription').first()
 
-    # Replace existing subscription or create new
-    subscription, created = Subscription.objects.get_or_create(restaurant=restaurant)
-    subscription.plan = plan
-    subscription.activate()  # sets start/end/is_active
-    subscription.save()
+    if not tx:
+        logger.error("payment_success_return: no PaymentTransaction for order %s session=%s", razorpay_order_id, order_ctx)
+        return HttpResponseBadRequest("order mapping missing")
 
-    # NOTE: We verify but do not persist detailed payment metadata because models are unchanged.
-    # If you want to persist payment_id/order_id/signature, see recommended addition below.
+    # If already paid, show success
+    if tx.status == 'paid':
+        subscription = tx.subscription
+        return render(request, 'subscription/success.html', {
+            'subscription': subscription,
+            'payment_id': tx.razorpay_payment_id or razorpay_payment_id,
+            'order_id': tx.razorpay_order_id or razorpay_order_id,
+        })
 
-    # Clear session
+    # Update tx and activate subscription
+    try:
+        with transaction.atomic():
+            tx.razorpay_payment_id = razorpay_payment_id
+            tx.razorpay_signature = razorpay_signature
+            tx.status = 'paid'
+            tx.save()
+
+            subscription = tx.subscription
+            if not subscription:
+                logger.error("payment_success_return: tx has no subscription: tx=%s", tx.id)
+                return HttpResponseBadRequest("no subscription linked to transaction")
+
+            plan = subscription.plan
+            if not plan:
+                logger.error("payment_success_return: subscription %s has no plan; tx=%s", subscription.id, tx.id)
+                return HttpResponseBadRequest("subscription has no plan")
+
+            # Try calling activate with mark_free_trial if supported, otherwise call without args
+            try:
+                subscription.activate(mark_free_trial=False)
+            except TypeError:
+                # activate() doesn't accept mark_free_trial — call without it
+                subscription.activate()
+            except AttributeError:
+                # No activate method — do manual activation
+                now = timezone.now()
+                subscription.start_date = now
+                subscription.end_date = now + timezone.timedelta(days=getattr(plan, 'duration_days', 30))
+                subscription.is_active = True
+                subscription.save()
+
+    except Exception as exc:
+        # Log stacktrace, show friendly error template
+        logger.exception("payment_success_return activation failed for order %s: %s", razorpay_order_id, exc)
+        messages.error(request, "Payment received but activation failed. Our team has been notified; please contact support.")
+        return render(request, 'subscription/error_activation.html', {
+            'reason': str(exc),
+            'order_id': razorpay_order_id,
+            'payment_id': razorpay_payment_id,
+        })
+
+    # Clear session mapping
     try:
         del request.session['subscription_order']
     except KeyError:
         pass
 
-    messages.success(request, f"Subscription activated! Valid until {subscription.end_date.date()}")
-    return redirect('dashboard')
-
-
-# Class-based views (small fixes)
-class SubscriptionCreateView(CreateView):
-    model = Subscription
-    fields = ['plan']  # removed payment_status field because model doesn't have it
-    template_name = 'subscription/subscribe.html'
-    success_url = reverse_lazy('dashboard')
-
-    def form_valid(self, form):
-        # enforce restaurant ownership
-        form.instance.restaurant = get_object_or_404(Restaurant, owner=self.request.user)
-        return super().form_valid(form)
+    return render(request, 'subscription/success.html', {
+        'subscription': subscription,
+        'payment_id': razorpay_payment_id,
+        'order_id': razorpay_order_id,
+    })
 
 
 class SubscriptionDetailView(DetailView):
     model = Subscription
     template_name = 'subscription/subscription_detail.html'
-    context_object_name = 'subscription'  # so template can use 'subscription'
+    context_object_name = 'subscription'
 
 
 class SubscriptionCancelView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """
-    Only the restaurant owner may cancel their subscription.
-    Expects POST. Redirects to dashboard with a message.
-    """
-
     def test_func(self):
-        # Ensure the logged-in user owns the restaurant for this subscription
         pk = self.kwargs.get('pk')
         subscription = get_object_or_404(Subscription, pk=pk)
-        # subscription.restaurant.owner must match request.user
         return subscription.restaurant.owner == self.request.user
 
     def post(self, request, pk):
         subscription = get_object_or_404(Subscription, pk=pk, restaurant__owner=request.user)
-        subscription.is_active = False
+        now = timezone.now()
+        if hasattr(subscription, 'is_cancelled'):
+            subscription.is_cancelled = True
+        if hasattr(subscription, 'auto_renew'):
+            subscription.auto_renew = False
+        if hasattr(subscription, 'cancelled_at'):
+            subscription.cancelled_at = now
         subscription.save()
-        messages.success(request, "Subscription cancelled.")
+        messages.success(request, "Subscription cancelled. Access will continue until period end.")
         return redirect('dashboard')
 
-    # Optional: deny GET to avoid accidental access
     def get(self, request, *args, **kwargs):
         messages.error(request, "Invalid request method.")
         return redirect('dashboard')

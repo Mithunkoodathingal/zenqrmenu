@@ -22,10 +22,20 @@ class Subscription(models.Model):
     is_active = models.BooleanField(default=False)
     auto_renew = models.BooleanField(default=False)  # <-- NEW
 
-    def activate(self):
-        self.start_date = timezone.now()
-        self.end_date = self.start_date + timedelta(days=self.plan.duration_days)
+    was_free_trial = models.BooleanField(default=False)   # was this subscription the free-trial for this restaurant?
+    is_cancelled = models.BooleanField(default=False)     # user hit "cancel" (prevents future renewals)
+    cancelled_at = models.DateTimeField(null=True, blank=True)  # when cancellation was requested
+
+
+    def activate(self, mark_free_trial=False, from_time=None):
+        now = from_time if from_time is not None else timezone.now()
+        self.start_date = now
+        self.end_date = now + timezone.timedelta(days=self.plan.duration_days)
         self.is_active = True
+        if mark_free_trial:
+            self.was_free_trial = True
+        self.is_cancelled = False
+        self.cancelled_at = None
         self.save()
 
     # subscription/models.py (inside Subscription class)

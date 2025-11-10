@@ -1,0 +1,24 @@
+{% extends 'restaurant/base.html' %}
+{% block content %}
+  <div class="container mt-5">
+    <div class="card">
+      <div class="card-header bg-danger text-white">
+        <h4>Activation error</h4>
+      </div>
+      <div class="card-body">
+        <p>We received your payment but activating the subscription failed.</p>
+        <p>Please contact support and provide this information:</p>
+        <ul>
+          <li><strong>Order ID:</strong> {{ order_id }}</li>
+          <li><strong>Payment ID:</strong> {{ payment_id }}</li>
+        </ul>
+        {% if reason %}
+          <div class="alert alert-warning">
+            <strong>Details:</strong> {{ reason }}
+          </div>
+        {% endif %}
+        <a class="btn btn-primary" href="{% url 'dashboard' %}">Back to dashboard</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}
