@@ -80,21 +80,16 @@ def create_subscription(request, plan_id):
             messages.error(request, "Free plan already used for this restaurant. Choose a paid plan or contact support.")
             return redirect('subscription:subscription_plans')
 
-        subscription, _ = Subscription.objects.get_or_create(restaurant=restaurant)
-        subscription.plan = plan
+        subscription, created = Subscription.objects.get_or_create(restaurant=restaurant)
+        # Ensure stale plan doesn't stay on the subscription (could be from an earlier try).
+        # We will only attach the plan after successful payment (tx.plan is authoritative).
+        if subscription.plan is not None:
+            subscription.plan = None
+            subscription.save()
+        # Do NOT assign subscription.plan yet — wait until payment successful
         if hasattr(subscription, 'auto_renew'):
             subscription.auto_renew = auto_renew
-        if hasattr(subscription, 'was_free_trial'):
-            subscription.was_free_trial = True
 
-        if hasattr(subscription, 'activate'):
-            subscription.activate(mark_free_trial=True)
-        else:
-            now = timezone.now()
-            subscription.start_date = now
-            subscription.end_date = now + timezone.timedelta(days=getattr(plan, 'duration_days', 30))
-            subscription.is_active = True
-            subscription.save()
 
         messages.success(request, f"Free plan activated. Valid until {subscription.end_date.date()}")
         return redirect('dashboard')
@@ -211,19 +206,19 @@ def payment_success_webhook(request):
                 return HttpResponse("ok")
 
             # ensure plan exists on subscription; if missing, try to fallback to tx.plan
-            plan = subscription.plan
-            if not plan:
-                logger.info("Webhook: subscription %s has no plan. Falling back to tx.plan.", subscription.id)
-                plan = tx.plan
-                if plan:
-                    # attach the chosen plan to the subscription now that payment succeeded
-                    subscription.plan = plan
-                    subscription.save()
-                else:
-                    logger.warning("Webhook: no plan on subscription or tx. Cannot compute duration.")
-                    tx.status = 'failed'
-                    tx.save()
-                    return HttpResponse("ok")
+        # Prefer the plan stored on the transaction (this reflects what was paid)
+        plan = tx.plan or subscription.plan
+        if not plan:
+            logger.warning("Webhook: no plan on transaction or subscription. Cannot compute duration.")
+            tx.status = 'failed'
+            tx.save()
+            return HttpResponse("ok")
+
+        # Attach the chosen (paid) plan to the subscription if not already set
+        if subscription.plan != plan:
+            subscription.plan = plan
+            subscription.save()
+
 
             # Activate
             if hasattr(subscription, 'activate'):
@@ -319,16 +314,17 @@ def payment_success_return(request):
                 logger.error("payment_success_return: tx has no subscription: tx=%s", tx.id)
                 return HttpResponseBadRequest("no subscription linked to transaction")
 
-            plan = subscription.plan
+            # Prefer the plan recorded on the transaction (source of truth), fallback to subscription.plan
+            plan = tx.plan or subscription.plan
             if not plan:
-                logger.info("payment_success_return: subscription %s has no plan, falling back to tx.plan", subscription.id)
-                plan = tx.plan
-                if plan:
-                    subscription.plan = plan
-                    subscription.save()
-                else:
-                    logger.error("payment_success_return: no plan available on subscription or transaction; tx=%s", tx.id)
-                    return HttpResponseBadRequest("subscription has no plan")
+                logger.error("payment_success_return: no plan available on transaction or subscription; tx=%s", tx.id)
+                return HttpResponseBadRequest("subscription has no plan")
+
+            # Attach the chosen plan to the subscription if needed
+            if subscription.plan != plan:
+                subscription.plan = plan
+                subscription.save()
+
 
             # Try calling activate with mark_free_trial if supported, otherwise call without args
             try:

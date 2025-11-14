@@ -12,7 +12,7 @@
           <p><strong>Amount:</strong> ₹{{ amount_display }}</p>
 
           {# This form will be submitted by JS after Razorpay Checkout succeeds #}
-          <form id="rzp-return" method="post" action="{% url 'payment_success' %}">
+          <form id="rzp-return" method="post" action="{% url 'subscription:payment_success' %}">
             {% csrf_token %}
             <input type="hidden" name="razorpay_order_id" id="rzp_order_id_field" value="{{ order_id }}" />
             <input type="hidden" name="razorpay_payment_id" id="rzp_payment_id_field" value="" />

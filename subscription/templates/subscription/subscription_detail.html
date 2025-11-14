@@ -112,7 +112,7 @@
       <hr>
 
       <div class="d-flex gap-2">
-        {% comment %} <form method="post" action="{% url 'subscription_cancel' subscription.pk %}">
+        {% comment %} <form method="post" action="{% url 'subscription:subscription_cancel' subscription.pk %}">
           {% csrf_token %}
           <button type="submit" class="btn btn-danger">Cancel Subscription</button>
         </form> {% endcomment %}

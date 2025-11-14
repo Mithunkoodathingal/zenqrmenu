@@ -16,7 +16,7 @@
             <div class="text-muted">Valid until {{ subscription.end_date|date:"d M Y" }}</div>
           </div>
         {% else %}
-          <a href="{% url 'subscription_plans' %}" class="btn btn-warning fw-bold text-white">Subscribe</a>
+          <a href="{% url 'subscription:subscription_plans' %}" class="btn btn-warning fw-bold text-white">Subscribe</a>
         {% endif %}
       </div>
     </div>
@@ -58,13 +58,13 @@
       </a> {% endcomment %}
       <a href="{% url 'manage_menu' %}" class="btn btn-outline-primary">Manage Menu</a>
       <a href="{% url 'create_table_qr' %}" class="btn btn-outline-secondary">Create / Download QR</a>
-      <a href="{% url 'subscription_plans' %}" class="btn btn-warning text-white">Manage Subscription</a>
+      <a href="{% url 'subscription:subscription_plans' %}" class="btn btn-warning text-white">Manage Subscription</a>
 
 
       {# inside the existing subscription block, near Manage Subscription link #}
 
         {# Cancel subscription form (POST) #}
-        <form id="cancel-subscription-form" method="post" action="{% url 'subscription_cancel' subscription.pk %}" style="display:inline;">
+        <form id="cancel-subscription-form" method="post" action="{% url 'subscription:subscription_cancel' subscription.pk %}" style="display:inline;">
           {% csrf_token %}
           <button
             type="submit"
@@ -85,7 +85,7 @@
     </div>
 
     <div class="d-flex gap-2">
-      <a href="{% url 'subscription_plans' %}" class="btn btn-warning text-white">View Plans & Subscribe</a>
+      <a href="{% url 'subscription:subscription_plans' %}" class="btn btn-warning text-white">View Plans & Subscribe</a>
       <!-- optionally show a disabled view link (visual hint) -->
       <button class="btn btn-outline-secondary" disabled title="Subscribe to enable">Completed Orders</button>
       <button class="btn btn-outline-secondary" disabled title="Subscribe to enable">Manage Menu</button>

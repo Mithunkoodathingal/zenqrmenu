@@ -3,7 +3,7 @@
 from django.urls import path
 from .views import *
 
-
+app_name = "subscription"   # <-- important for namespacing
 
 urlpatterns = [
     path('', subscription_plans, name='subscription_plans'),  # View available plans

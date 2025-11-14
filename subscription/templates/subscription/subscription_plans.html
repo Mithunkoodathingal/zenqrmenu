@@ -167,7 +167,7 @@
         </ul>
       </div>
 
-      <a href="{% url 'create_subscription' plan.id %}" class="subscribe-btn">Subscribe</a>
+      <a href="{% url 'subscription:create_subscription' plan.id %}" class="subscribe-btn">Subscribe</a>
     </div>
     {% empty %}
     <div style="color:#666; padding:16px;">No plans available.</div>

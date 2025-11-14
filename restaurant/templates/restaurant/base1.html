@@ -104,7 +104,7 @@
           {% if user.is_authenticated %}
             {% if not has_subscription %}
               <li>
-                <a class="dropdown-item fw-bold text-warning" href="{% url 'subscription_plans' %}">
+                <a class="dropdown-item fw-bold text-warning" href="{% url 'subscription:subscription_plans' %}">
                   <i class="bi bi-star-fill me-2"></i> Subscribe Now
                 </a>
               </li>
