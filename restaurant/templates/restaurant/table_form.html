@@ -8,13 +8,39 @@
 
       <!-- Inner card -->
       <div class="card shadow-sm p-3">
-        <form method="post" class="d-flex justify-content-between align-items-center">
+
+        {# show non-field errors (unlikely here but safe) #}
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger mb-3">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
+
+        <form method="post" class="d-flex justify-content-between align-items-center" novalidate>
           {% csrf_token %}
           
           <!-- Input -->
           <div class="flex-grow-1 me-3">
-            <input type="number" name="table_number" class="form-control" 
-                   placeholder="Unique Table Number" required id="id_table_number">
+            <input
+              type="number"
+              name="table_number"
+              class="form-control {% if form.table_number.errors %}is-invalid{% endif %}"
+              placeholder="Unique Table Number"
+              required
+              id="id_table_number"
+              value="{{ form.table_number.value|default:'' }}"
+            >
+
+            {# field-specific errors shown inline (keeps UI compact) #}
+            {% if form.table_number.errors %}
+              <div class="invalid-feedback d-block">
+                {% for err in form.table_number.errors %}
+                  {{ err }}{% if not forloop.last %}<br>{% endif %}
+                {% endfor %}
+              </div>
+            {% else %}
+              {% comment %} <div class="form-text">Enter a unique table number for this restaurant.</div> {% endcomment %}
+            {% endif %}
           </div>
 
           <!-- Buttons -->
@@ -33,3 +59,4 @@
 </style>
 
 {% endblock %}
+

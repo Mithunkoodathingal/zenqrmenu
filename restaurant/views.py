@@ -25,6 +25,8 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from allauth.account.models import EmailAddress, EmailConfirmation
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseForbidden
+from django.db import IntegrityError
+from django.core.exceptions import ValidationError
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, F, DecimalField, ExpressionWrapper, Q
@@ -574,13 +576,34 @@ class TableCreateView(LoginRequiredMixin, CreateView):
 
 
     def form_valid(self, form):
-        form.instance.restaurant = self.restaurant
-        response = super().form_valid(form)
-        try:
-            generate_qr_code(self.object)
-        except Exception as e:
-            messages.warning(self.request, f"QR generation failed: {e}")
-        return response
+            form.instance.restaurant = self.restaurant
+
+            # Try to validate uniqueness at the model/form level first (optional but helpful)
+            try:
+                # validate_unique will raise ValidationError if unique constraint violated
+                form.instance.validate_unique()
+            except ValidationError as e:
+                # Attach any field-specific unique errors to the form and re-render
+                # e.message_dict is a dict like {'table_number': ['...']}
+                for field, msgs in e.message_dict.items():
+                    for m in msgs:
+                        form.add_error(field, m)
+                return self.form_invalid(form)
+
+            # Now attempt to save and catch DB-level IntegrityError as a fallback
+            try:
+                response = super().form_valid(form)
+            except IntegrityError:
+                # Defensive: add a friendly error on the table_number field
+                form.add_error('table_number', "This table number is already used — please enter a unique number.")
+                return self.form_invalid(form)
+
+            # QR generation as before (keep existing behavior)
+            try:
+                generate_qr_code(self.object)
+            except Exception as e:
+                messages.warning(self.request, f"QR generation failed: {e}")
+            return response
 
 
 
