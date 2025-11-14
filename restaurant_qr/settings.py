@@ -17,6 +17,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('DJANGO_SECRET_KEY', default='django-insecure-placeholder-change-me')
 DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
 
+SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
+SESSION_COOKIE_AGE = 60 * 60 * 24  # 1 day
+
 # after DEBUG = config(...) line
 # Force local sqlite for dev when DJANGO_DEBUG/DJANGO_ENV indicates debug mode
 if DEBUG and not os.getenv("FORCE_POSTGRES", ""):

@@ -1,12 +1,136 @@
-{% comment %} subscription/templates/subscription/subscription_detail.html {% endcomment %}
-
 {% extends 'restaurant/base.html' %}
+{% load tz %}
 {% block content %}
-<h2>Subscription Details</h2>
-<p>Plan: {{ subscription.plan }}</p>
-<p>Status: {% if subscription.is_active and subscription.end_date >= now %}Active{% else %}Inactive{% endif %}</p>
-<form method="post" action="{% url 'subscription_cancel' subscription.pk %}">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-danger">Cancel Subscription</button>
-</form>
+<div class="container mt-4">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h3 class="mb-0">Subscription #{{ subscription.id }}</h3>
+      <small class="text-muted">
+        Owner: {{ subscription.restaurant.owner.get_full_name|default:subscription.restaurant.owner.username }}
+      </small>
+    </div>
+
+    <div class="card-body">
+      <div class="row">
+
+        <!-- SUBSCRIPTION INFO -->
+        <div class="col-md-6">
+          <p><strong>Plan:</strong>
+            {% if subscription.plan %}
+              {{ subscription.plan.name }} — ₹{{ subscription.plan.price }}
+            {% else %}
+              None — ₹0.00
+            {% endif %}
+          </p>
+
+          <p><strong>Status:</strong>
+            {% if is_currently_active %}
+              <span class="badge bg-success">Active</span>
+            {% else %}
+              <span class="badge bg-secondary">Inactive</span>
+            {% endif %}
+          </p>
+
+          <p><strong>Start:</strong>
+            {% if start_date_local %}
+              {{ start_date_local|date:"DATETIME_FORMAT" }}
+            {% else %} N/A {% endif %}
+          </p>
+
+          <p><strong>End:</strong>
+            {% if end_date_local %}
+              {{ end_date_local|date:"DATETIME_FORMAT" }}
+            {% else %} N/A {% endif %}
+          </p>
+
+          <p class="text-muted small">Server time: {{ now_local|date:"DATETIME_FORMAT" }}</p>
+        </div>
+
+        <!-- PAYMENT INFO -->
+        <div class="col-md-6">
+          <h5>Payment Details</h5>
+
+          {% if latest_transaction %}
+            <div class="mb-2">
+
+              <!-- TRANSACTION ID -->
+              <p class="mb-1 d-flex align-items-center">
+                <strong class="me-2">Transaction ID:</strong>
+                <code id="txid">{{ latest_transaction.razorpay_payment_id }}</code>
+                <button class="btn btn-sm btn-outline-secondary ms-2"
+                        onclick="copyToClipboard('txid')">
+                  Copy
+                </button>
+              </p>
+
+              <!-- ORDER ID -->
+              <p class="mb-1 d-flex align-items-center">
+                <strong class="me-2">Order Ref:</strong>
+                <code id="orderid">{{ latest_transaction.razorpay_order_id }}</code>
+                <button class="btn btn-sm btn-outline-secondary ms-2"
+                        onclick="copyToClipboard('orderid')">
+                  Copy
+                </button>
+              </p>
+
+              <p class="mb-1"><strong>Amount:</strong> ₹{{ latest_transaction.amount }}</p>
+
+              <p class="mb-1"><strong>Status:</strong>
+                {% if latest_transaction.get_status_display %}
+                  {{ latest_transaction.get_status_display }}
+                {% else %}
+                  {{ latest_transaction.status }}
+                {% endif %}
+              </p>
+
+              <p class="mb-1"><strong>Date:</strong>
+                {% if latest_transaction.processed_at %}
+                  {{ latest_transaction.processed_at|localtime|date:"DATETIME_FORMAT" }}
+                {% else %}
+                  {{ latest_transaction.created_at|localtime|date:"DATETIME_FORMAT" }}
+                {% endif %}
+              </p>
+
+              <!-- OPTIONAL RECEIPT URL -->
+              {% if latest_transaction.receipt_url %}
+                <p class="mt-2">
+                  <a href="{{ latest_transaction.receipt_url }}" target="_blank"
+                     class="btn btn-sm btn-primary">
+                    View Receipt
+                  </a>
+                </p>
+              {% endif %}
+            </div>
+
+          {% else %}
+            <p class="text-muted">No successful payment found for this subscription.</p>
+          {% endif %}
+        </div>
+
+      </div>
+
+      <hr>
+
+      <div class="d-flex gap-2">
+        {% comment %} <form method="post" action="{% url 'subscription_cancel' subscription.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Cancel Subscription</button>
+        </form> {% endcomment %}
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-warning">Back to Dashboard</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Copy to Clipboard JS -->
+<script>
+function copyToClipboard(elementId) {
+  const text = document.getElementById(elementId).innerText;
+  navigator.clipboard.writeText(text).then(() => {
+      alert("Copied: " + text);
+  }).catch(err => {
+      alert("Failed to copy: " + err);
+  });
+}
+</script>
 {% endblock %}
