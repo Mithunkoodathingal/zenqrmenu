@@ -1,14 +1,14 @@
 # subscription/views.py
 import json
 import logging
-from decimal import Decimal
-from django.db import transaction
 import traceback
-import razorpay
+from decimal import Decimal
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.db import transaction
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
@@ -17,6 +17,8 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.views.decorators.http import require_POST
 from django.views.generic import DetailView
+
+import razorpay
 
 from .models import SubscriptionPlan, Subscription, PaymentTransaction
 from restaurant.models import Restaurant
@@ -59,7 +61,7 @@ def create_subscription(request, plan_id):
     For paid plans:
       - create a Subscription record (not active yet)
       - create a Razorpay order
-      - create a PaymentTransaction linked to the Subscription
+      - create a PaymentTransaction linked to the Subscription (and store the chosen plan there)
       - render payment page (JS will call /subscription/payment-success/ on checkout success)
     """
     plan = get_object_or_404(SubscriptionPlan, id=plan_id)
@@ -98,12 +100,11 @@ def create_subscription(request, plan_id):
         return redirect('dashboard')
 
     # Paid plan -> create/prepare subscription record and Razorpay order
-    # Ensure we have a Subscription object to link the PaymentTransaction to
     subscription, created = Subscription.objects.get_or_create(restaurant=restaurant)
-    subscription.plan = plan
+    # Do NOT assign subscription.plan yet — wait until payment successful
     if hasattr(subscription, 'auto_renew'):
         subscription.auto_renew = auto_renew
-    subscription.save()  # save now; activation will happen after payment
+    # Don't save plan/start/end/is_active here.
 
     # Build Razorpay order
     order_amount_paisa = int(plan.price * Decimal(100))
@@ -117,10 +118,11 @@ def create_subscription(request, plan_id):
     order = razorpay_client.order.create(data=order_data)
     order_id = order.get('id')
 
-    # Persist PaymentTransaction
+    # Persist PaymentTransaction. Store the chosen plan on the transaction (so we can recover it on success)
     amount_decimal = (Decimal(order_amount_paisa) / Decimal(100)).quantize(Decimal("0.01"))
     tx = PaymentTransaction.objects.create(
         subscription=subscription,
+        plan=plan,
         razorpay_order_id=order_id,
         amount=amount_decimal,
         currency=order_currency,
@@ -173,11 +175,11 @@ def payment_success_webhook(request):
     # Try to extract order_id robustly
     order_id = None
     try:
-        # common nested location for payment object
         order_id = (data.get('payload', {}).get('payment', {}).get('entity', {}).get('order_id'))
     except Exception:
         order_id = None
     if not order_id:
+        # also try other common shapes
         order_id = data.get('order_id') or data.get('payload', {}).get('order', {}).get('entity', {}).get('id')
 
     if not order_id:
@@ -208,18 +210,28 @@ def payment_success_webhook(request):
                 tx.save()
                 return HttpResponse("ok")
 
-            # ensure plan exists on subscription; if missing, try to fallback to subscription.plan or tx info
+            # ensure plan exists on subscription; if missing, try to fallback to tx.plan
             plan = subscription.plan
             if not plan:
-                logger.warning("Webhook: subscription %s has no plan. Cannot compute duration.", subscription.id)
-                # mark tx but don't crash; return 200 so webhook won't be retried
-                tx.status = 'failed'
-                tx.save()
-                return HttpResponse("ok")
+                logger.info("Webhook: subscription %s has no plan. Falling back to tx.plan.", subscription.id)
+                plan = tx.plan
+                if plan:
+                    # attach the chosen plan to the subscription now that payment succeeded
+                    subscription.plan = plan
+                    subscription.save()
+                else:
+                    logger.warning("Webhook: no plan on subscription or tx. Cannot compute duration.")
+                    tx.status = 'failed'
+                    tx.save()
+                    return HttpResponse("ok")
 
             # Activate
             if hasattr(subscription, 'activate'):
-                subscription.activate(mark_free_trial=False)
+                try:
+                    subscription.activate(mark_free_trial=False)
+                except TypeError:
+                    # Some older activate(...) signatures may not accept keyword
+                    subscription.activate(False)
             else:
                 now = timezone.now()
                 subscription.start_date = now
@@ -229,7 +241,11 @@ def payment_success_webhook(request):
 
             tx.status = 'paid'
             if hasattr(tx, 'processed_at'):
-                tx.processed_at = timezone.now()
+                try:
+                    tx.processed_at = timezone.now()
+                except Exception:
+                    # processed_at may not exist on older schemas; ignore
+                    pass
             tx.save()
 
         logger.info("Webhook: activated subscription %s for order %s", subscription.id, order_id)
@@ -305,15 +321,29 @@ def payment_success_return(request):
 
             plan = subscription.plan
             if not plan:
-                logger.error("payment_success_return: subscription %s has no plan; tx=%s", subscription.id, tx.id)
-                return HttpResponseBadRequest("subscription has no plan")
+                logger.info("payment_success_return: subscription %s has no plan, falling back to tx.plan", subscription.id)
+                plan = tx.plan
+                if plan:
+                    subscription.plan = plan
+                    subscription.save()
+                else:
+                    logger.error("payment_success_return: no plan available on subscription or transaction; tx=%s", tx.id)
+                    return HttpResponseBadRequest("subscription has no plan")
 
             # Try calling activate with mark_free_trial if supported, otherwise call without args
             try:
                 subscription.activate(mark_free_trial=False)
             except TypeError:
                 # activate() doesn't accept mark_free_trial — call without it
-                subscription.activate()
+                try:
+                    subscription.activate(False)
+                except Exception:
+                    # fallback to manual activation
+                    now = timezone.now()
+                    subscription.start_date = now
+                    subscription.end_date = now + timezone.timedelta(days=getattr(plan, 'duration_days', 30))
+                    subscription.is_active = True
+                    subscription.save()
             except AttributeError:
                 # No activate method — do manual activation
                 now = timezone.now()
@@ -321,9 +351,7 @@ def payment_success_return(request):
                 subscription.end_date = now + timezone.timedelta(days=getattr(plan, 'duration_days', 30))
                 subscription.is_active = True
                 subscription.save()
-
     except Exception as exc:
-        # Log stacktrace, show friendly error template
         logger.exception("payment_success_return activation failed for order %s: %s", razorpay_order_id, exc)
         messages.error(request, "Payment received but activation failed. Our team has been notified; please contact support.")
         return render(request, 'subscription/error_activation.html', {
