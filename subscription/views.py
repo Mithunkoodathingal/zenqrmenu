@@ -397,3 +397,24 @@ class SubscriptionCancelView(LoginRequiredMixin, UserPassesTestMixin, View):
     def get(self, request, *args, **kwargs):
         messages.error(request, "Invalid request method.")
         return redirect('dashboard')
+
+
+def require_active_subscription(request, restaurant):
+    try:
+        subscription = restaurant.subscription
+        if not subscription.has_active_subscription():
+            return render(
+                request,
+                "subscription/expired.html",
+                {"restaurant": restaurant},
+                status=403
+            )
+    except Subscription.DoesNotExist:
+        return render(
+            request,
+            "subscription/expired.html",
+            {"restaurant": restaurant},
+            status=403
+        )
+
+    return None

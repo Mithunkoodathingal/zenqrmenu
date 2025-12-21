@@ -848,22 +848,49 @@ def menu_view(request, restaurant_id, table_id):
 
     # subscription / allowed-table checks (unchanged)
     try:
-        subscription = restaurant.subscription
-        if not subscription.has_active_subscription():
-            messages.info(request, "This restaurant's subscription has expired. Please subscribe to view menu.")
-            return redirect('subscription_plans')
+            subscription = restaurant.subscription
 
-        allowed_limit = subscription.plan.table_limit if subscription.plan else 0
-        allowed_table_ids = list(
-            Table.objects.filter(restaurant=restaurant).order_by('id')[:allowed_limit]
-            .values_list('id', flat=True)
-        )
-        if table.id not in allowed_table_ids:
-            messages.info(request, "This table is not part of the active subscription. Please upgrade to enable more tables.")
-            return redirect('subscription_plans')
+            if not subscription.has_active_subscription():
+                return render(
+                    request,
+                    "subscription/expired.html",
+                    {
+                        "restaurant": restaurant,
+                        "reason": "expired"
+                    },
+                    status=403
+                )
+
+            allowed_limit = subscription.plan.table_limit if subscription.plan else 0
+            allowed_table_ids = list(
+                Table.objects
+                .filter(restaurant=restaurant)
+                .order_by('id')[:allowed_limit]
+                .values_list('id', flat=True)
+            )
+
+            if table.id not in allowed_table_ids:
+                return render(
+                    request,
+                    "subscription/expired.html",
+                    {
+                        "restaurant": restaurant,
+                        "reason": "table_limit"
+                    },
+                    status=403
+                )
+
     except Subscription.DoesNotExist:
-        messages.info(request, "This restaurant does not have an active subscription.")
-        return redirect('subscription_plans')
+            return render(
+                request,
+                "subscription/expired.html",
+                {
+                    "restaurant": restaurant,
+                    "reason": "no_subscription"
+                },
+                status=403
+            )
+
 
     is_owner = _user_is_restaurant_owner(request, restaurant)
 
@@ -889,25 +916,48 @@ def menu_view(request, restaurant_id, table_id):
 
     # Defensive extra-check: if prefetch produced active_items but it somehow contains paused items
     # or if some categories didn't prefetch correctly, normalize them here for public users.
+    if is_owner:
+        categories = Category.objects.filter(restaurant=restaurant).prefetch_related(
+            Prefetch(
+                'fooditem_set',
+                queryset=FoodItem.objects.select_related('category').order_by('id'),
+                to_attr='active_items'
+            )
+        )
+        food_items = FoodItem.objects.filter(
+            category__restaurant=restaurant
+        ).select_related('category').order_by('id')
+    else:
+        categories = Category.objects.filter(restaurant=restaurant).prefetch_related(
+            Prefetch(
+                'fooditem_set',
+                queryset=FoodItem.objects.filter(is_paused=False)
+                .select_related('category')
+                .order_by('id'),
+                to_attr='active_items'
+            )
+        )
+        food_items = FoodItem.objects.filter(
+            category__restaurant=restaurant,
+            is_paused=False
+        ).select_related('category').order_by('id')
+
+    # -------- Safety normalization --------
     if not is_owner:
         for cat in categories:
-            # if prefetch produced attribute, filter it; otherwise produce empty list or safe fallback
-            ai = getattr(cat, 'active_items', None)
-            if ai is None:
-                # ensure attribute exists and is filtered
-                setattr(cat, 'active_items', list(FoodItem.objects.filter(category=cat, is_paused=False).select_related('category').order_by('id')))
-            else:
-                # filter the list just in case (this keeps order)
-                filtered = [i for i in ai if not getattr(i, 'is_paused', False)]
-                setattr(cat, 'active_items', filtered)
+            ai = getattr(cat, 'active_items', [])
+            cat.active_items = [i for i in ai if not getattr(i, 'is_paused', False)]
 
-    context = {
-        'restaurant': restaurant,
-        'table': table,
-        'categories': categories,
-        'food_items': food_items,
-    }
-    return render(request, 'restaurant/menu.html', context)
+    return render(
+        request,
+        'restaurant/menu.html',
+        {
+            'restaurant': restaurant,
+            'table': table,
+            'categories': categories,
+            'food_items': food_items,
+        }
+    )
 
 @require_POST
 @login_required

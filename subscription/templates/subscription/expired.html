@@ -1,0 +1,20 @@
+{% extends "restaurant/base.html" %}
+{% block content %}
+<div class="container mt-5 text-center">
+    <div class="card shadow p-4 mx-auto" style="max-width: 480px;">
+        <h3 class="text-danger mb-3">Subscription Expired</h3>
+
+        <p class="text-muted">
+            Your subscription has expired and access to this menu is temporarily restricted.
+        </p>
+
+        <p class="text-muted">
+            Please renew or upgrade your subscription to continue enjoying our services.
+        </p>
+
+        <a href="{% url 'subscription:subscription_plans' %}" class="btn btn-warning mt-3">
+            Update Subscription
+        </a>
+    </div>
+</div>
+{% endblock %}
