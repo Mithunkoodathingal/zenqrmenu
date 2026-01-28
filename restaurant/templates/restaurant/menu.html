@@ -338,7 +338,7 @@
   <div class="dz-bnr-inr style-1 text-center">
     <div class="">
       <div class="restaurant-banner">
-        {% if restaurant.cover_image.url %}
+        {% if restaurant.cover_image %}
           <img class="restaurant-cover" src="{{ restaurant.cover_image.url }}" alt="{{ restaurant.name }}">
         {% else %}
           <img class="restaurant-cover" src="{% static 'assets/images/banner/bnr4.jpg' %}" alt="{{ restaurant.name }}">
@@ -347,9 +347,9 @@
 
         <div class="banner-caption" role="contentinfo" aria-label="Restaurant name and thumbnail">
           <div class="thumb" aria-hidden="true">
-            {% if restaurant.logo.url %}
+            {% if restaurant.logo %}
               <img src="{{ restaurant.logo.url }}" alt="{{ restaurant.name }}">
-            {% elif restaurant.cover_image.url %}
+            {% elif restaurant.cover_image %}
               <img src="{{ restaurant.cover_image.url }}" alt="{{ restaurant.name }}">
             {% else %}
               <img src="{% static 'assets/images/default-logo.png' %}" alt="{{ restaurant.name }}">
@@ -409,7 +409,7 @@
                     data-item-paused="{{ item.is_paused|yesno:'true,false' }}">
 
                 <div class="img-wrap">
-                  {% if item.image.url %}
+                  {% if item.image %}
                     <img src="{{ item.image.url }}" alt="{{ item.name }}">
                   {% else %}
                     <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ item.name }}">
@@ -461,7 +461,7 @@
             <a class="tile-link" href="/menu/{{ restaurant.id }}/{{ table.id }}/item/{{ item.id }}/">
               <div class="menu-card" data-item-id="{{ item.id }}" data-item-paused="{{ item.is_paused|yesno:'true,false' }}">
                 <div class="img-wrap">
-                  {% if item.image.url %}
+                  {% if item.image %}
                     <img src="{{ item.image.url }}" alt="{{ item.name }}">
                   {% else %}
                     <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ item.name }}">
