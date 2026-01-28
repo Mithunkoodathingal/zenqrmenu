@@ -19,7 +19,7 @@
 
         <!-- QR Code -->
         {% if table.qr_code %}
-          <img src="{{ table.qr_code.url }}" alt="QR Code" class="img-fluid" style="max-width:60px;">
+          <img src="{% url 'download_qr' table.id %}" alt="QR Code" class="img-fluid" style="max-width:60px;">
         {% else %}
           <p class="text-muted mb-0">No QR</p>
         {% endif %}

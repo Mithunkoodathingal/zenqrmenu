@@ -236,83 +236,123 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # -----------------------------
-# AWS / S3 / static & media - works for dev and prod
+# Cloudflare R2 — MEDIA ONLY
 # -----------------------------
 
-USE_S3 = config("USE_S3", default=False, cast=bool)
+USE_S3 = True
 
-# Common defaults
-STATICFILES_LOCATION = config("STATICFILES_LOCATION", default="static")
-MEDIAFILES_LOCATION = config("MEDIAFILES_LOCATION", default="media")
+AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME")
 
-if USE_S3:
-    # --- S3 credentials and settings ---
-    AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID")
-    AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY")
-    AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_ENDPOINT_URL = config("AWS_S3_ENDPOINT_URL")
+AWS_S3_CUSTOM_DOMAIN = config("AWS_S3_PUBLIC_URL")
+AWS_S3_PUBLIC_URL = config("AWS_S3_PUBLIC_URL")
+AWS_S3_REGION_NAME = "auto"
+AWS_S3_ADDRESSING_STYLE = "path"
 
-    AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME') or None
-    AWS_S3_CUSTOM_DOMAIN = config("AWS_S3_CUSTOM_DOMAIN", default="")  # optional
-    AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL') or None
+AWS_DEFAULT_ACL = None
+AWS_QUERYSTRING_AUTH = False
+AWS_S3_FILE_OVERWRITE = False
 
-    AWS_DEFAULT_ACL = None
-    AWS_S3_FILE_OVERWRITE = config("AWS_S3_FILE_OVERWRITE", default=False, cast=bool)
-    AWS_QUERYSTRING_AUTH = False
-    AWS_S3_SIGNATURE_VERSION = config("AWS_S3_SIGNATURE_VERSION", default="s3v4")
-    AWS_S3_OBJECT_PARAMETERS = {}
-
-    # Backward-compatible OPTIONS
-    _default_options = {}
-    if AWS_S3_ENDPOINT_URL:
-        _default_options["endpoint_url"] = AWS_S3_ENDPOINT_URL
-
-    # --- Django 5 STORAGES mapping ---
-    STORAGES = {
-        "default": {
-            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-            "OPTIONS": _default_options,
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "OPTIONS": {
+            "endpoint_url": AWS_S3_ENDPOINT_URL,
         },
-        "staticfiles": {
-            "BACKEND": "restaurant.storages.StaticS3Storage",
-            "OPTIONS": {"location": STATICFILES_LOCATION},
-        },
-        "media": {
-            "BACKEND": "restaurant.storages.MediaS3Storage",
-            "OPTIONS": {"location": MEDIAFILES_LOCATION},
-        },
-    }
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 
-    # --- URLs for public access ---
-    if AWS_S3_CUSTOM_DOMAIN:
-        STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{STATICFILES_LOCATION}/"
-        MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{MEDIAFILES_LOCATION}/"
-    else:
-        if AWS_S3_ENDPOINT_URL:
-            STATIC_URL = f"{AWS_S3_ENDPOINT_URL.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}/{STATICFILES_LOCATION}/"
-            MEDIA_URL = f"{AWS_S3_ENDPOINT_URL.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}/{MEDIAFILES_LOCATION}/"
-        else:
-            STATIC_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{STATICFILES_LOCATION}/"
-            MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{MEDIAFILES_LOCATION}/"
+# 🔥 MEDIA ROOT IS BUCKET ROOT
+MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
 
-else:
-    # --- Local dev fallback ---
-    STATIC_URL = config("STATIC_URL", default="/static/")
-    STATIC_ROOT = config("STATIC_ROOT", default=os.path.join(BASE_DIR, "staticfiles"))
-    STATICFILES_DIRS = [BASE_DIR / "restaurant" / "static"]
+# Local static
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "restaurant" / "static"]
 
-    MEDIA_URL = config("MEDIA_URL", default="/media/")
-    MEDIA_ROOT = config("MEDIA_ROOT", default=os.path.join(BASE_DIR, "media"))
 
-    STORAGES = {
-        "default": {
-            "BACKEND": "django.core.files.storage.FileSystemStorage",
-            "OPTIONS": {"location": MEDIA_ROOT},
-        },
-        "staticfiles": {
-            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-            "OPTIONS": {"location": STATIC_ROOT},
-        },
-    }
+
+
+
+# USE_S3 = config("USE_S3", default=False, cast=bool)
+
+# # Common defaults
+# STATICFILES_LOCATION = config("STATICFILES_LOCATION", default="static")
+# MEDIAFILES_LOCATION = config("MEDIAFILES_LOCATION", default="media")
+
+# if USE_S3:
+#     # --- S3 credentials and settings ---
+#     AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID")
+#     AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY")
+#     AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME")
+
+#     AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME') or None
+#     AWS_S3_CUSTOM_DOMAIN = config("AWS_S3_CUSTOM_DOMAIN", default="")  # optional
+#     AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL') or None
+
+#     AWS_DEFAULT_ACL = None
+#     AWS_S3_FILE_OVERWRITE = config("AWS_S3_FILE_OVERWRITE", default=False, cast=bool)
+#     AWS_QUERYSTRING_AUTH = False
+#     AWS_S3_SIGNATURE_VERSION = config("AWS_S3_SIGNATURE_VERSION", default="s3v4")
+#     AWS_S3_OBJECT_PARAMETERS = {}
+
+#     # Backward-compatible OPTIONS
+#     _default_options = {}
+#     if AWS_S3_ENDPOINT_URL:
+#         _default_options["endpoint_url"] = AWS_S3_ENDPOINT_URL
+
+#     # --- Django 5 STORAGES mapping ---
+#     STORAGES = {
+#         "default": {
+#             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+#             "OPTIONS": _default_options,
+#         },
+#         "staticfiles": {
+#             "BACKEND": "restaurant.storages.StaticS3Storage",
+#             "OPTIONS": {"location": STATICFILES_LOCATION},
+#         },
+#         "media": {
+#             "BACKEND": "restaurant.storages.MediaS3Storage",
+#             "OPTIONS": {"location": MEDIAFILES_LOCATION},
+#         },
+#     }
+
+#     # --- URLs for public access ---
+#     if AWS_S3_CUSTOM_DOMAIN:
+#         STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{STATICFILES_LOCATION}/"
+#         MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{MEDIAFILES_LOCATION}/"
+#     else:
+#         if AWS_S3_ENDPOINT_URL:
+#             STATIC_URL = f"{AWS_S3_ENDPOINT_URL.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}/{STATICFILES_LOCATION}/"
+#             MEDIA_URL = f"{AWS_S3_ENDPOINT_URL.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}/{MEDIAFILES_LOCATION}/"
+#         else:
+#             STATIC_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{STATICFILES_LOCATION}/"
+#             MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{MEDIAFILES_LOCATION}/"
+
+# else:
+#     # --- Local dev fallback ---
+#     STATIC_URL = config("STATIC_URL", default="/static/")
+#     STATIC_ROOT = config("STATIC_ROOT", default=os.path.join(BASE_DIR, "staticfiles"))
+#     STATICFILES_DIRS = [BASE_DIR / "restaurant" / "static"]
+
+#     MEDIA_URL = config("MEDIA_URL", default="/media/")
+#     MEDIA_ROOT = config("MEDIA_ROOT", default=os.path.join(BASE_DIR, "media"))
+
+#     STORAGES = {
+#         "default": {
+#             "BACKEND": "django.core.files.storage.FileSystemStorage",
+#             "OPTIONS": {"location": MEDIA_ROOT},
+#         },
+#         "staticfiles": {
+#             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+#             "OPTIONS": {"location": STATIC_ROOT},
+#         },
+#     }
 
 # ✅ REMOVE the following lines if present anywhere:
 # DEFAULT_FILE_STORAGE = ...

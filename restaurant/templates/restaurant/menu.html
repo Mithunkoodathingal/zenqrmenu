@@ -43,7 +43,7 @@
       inset:0;
       width:100%;
       height:100%;
-      object-fit:cover;      /* ensure cover fills area */
+      object-fit: cover;      /* ensure cover fills area */
       display:block;
       -webkit-transform: translateZ(0);
       transform: translateZ(0);
@@ -338,7 +338,7 @@
   <div class="dz-bnr-inr style-1 text-center">
     <div class="">
       <div class="restaurant-banner">
-        {% if restaurant.cover_image %}
+        {% if restaurant.cover_image.url %}
           <img class="restaurant-cover" src="{{ restaurant.cover_image.url }}" alt="{{ restaurant.name }}">
         {% else %}
           <img class="restaurant-cover" src="{% static 'assets/images/banner/bnr4.jpg' %}" alt="{{ restaurant.name }}">
@@ -347,13 +347,14 @@
 
         <div class="banner-caption" role="contentinfo" aria-label="Restaurant name and thumbnail">
           <div class="thumb" aria-hidden="true">
-            {% if restaurant.logo %}
+            {% if restaurant.logo.url %}
               <img src="{{ restaurant.logo.url }}" alt="{{ restaurant.name }}">
-            {% elif restaurant.cover_image %}
+            {% elif restaurant.cover_image.url %}
               <img src="{{ restaurant.cover_image.url }}" alt="{{ restaurant.name }}">
             {% else %}
               <img src="{% static 'assets/images/default-logo.png' %}" alt="{{ restaurant.name }}">
             {% endif %}
+
           </div>
 
 
@@ -401,10 +402,14 @@
               </button>
             {% endif %}
 
-            <a class="tile-link" href="/menu/{{ restaurant.id }}/{{ table.id }}/item/{{ item.id }}/">
-              <div class="menu-card" data-item-id="{{ item.id }}" data-item-paused="{{ item.is_paused|yesno:'true,false' }}">
+            {% comment %} <a class="tile-link" href="/menu/{{ restaurant.id }}/{{ table.id }}/item/{{ item.id }}/"> {% endcomment %}
+              <div class="menu-card tile-link"
+                    data-href="/menu/{{ restaurant.id }}/{{ table.id }}/item/{{ item.id }}/"
+                    data-item-id="{{ item.id }}"
+                    data-item-paused="{{ item.is_paused|yesno:'true,false' }}">
+
                 <div class="img-wrap">
-                  {% if item.image %}
+                  {% if item.image.url %}
                     <img src="{{ item.image.url }}" alt="{{ item.name }}">
                   {% else %}
                     <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ item.name }}">
@@ -431,7 +436,7 @@
 
                 <div class="plus-badge desktop-floating card-plus" aria-hidden="true">+</div>
               </div>
-            </a>
+            {% comment %} </a> {% endcomment %}
           </div>
       {% endfor %}
     {% else %}
@@ -456,7 +461,7 @@
             <a class="tile-link" href="/menu/{{ restaurant.id }}/{{ table.id }}/item/{{ item.id }}/">
               <div class="menu-card" data-item-id="{{ item.id }}" data-item-paused="{{ item.is_paused|yesno:'true,false' }}">
                 <div class="img-wrap">
-                  {% if item.image %}
+                  {% if item.image.url %}
                     <img src="{{ item.image.url }}" alt="{{ item.name }}">
                   {% else %}
                     <img src="{% static 'assets/images/menu-small/pic1.png' %}" alt="{{ item.name }}">
@@ -645,7 +650,7 @@ function findItemIdFromElement(el) {
 
 /* event delegation: intercept clicks on tile links and plus buttons */
 document.addEventListener('click', function (e) {
-  const tile = e.target.closest && e.target.closest('a.tile-link');
+  const tile = e.target.closest && e.target.closest('.tile-link');
   if (tile) {
     if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
     e.preventDefault();

@@ -555,22 +555,23 @@ class TableCreateView(LoginRequiredMixin, CreateView):
             subscription = self.restaurant.subscription
         except Subscription.DoesNotExist:
             messages.error(request, "You need an active subscription to create tables.")
-            return redirect('subscription_plans')
+            return redirect("subscription:subscription_plans")
+
 
         # Ensure subscription has a plan attached
         if not subscription.plan:
             messages.error(request, "Subscription is missing a plan. Please contact support or re-subscribe.")
-            return redirect('subscription_plans')
+            return redirect("subscription:subscription_plans")
 
         # Ensure subscription is active and not expired
         if not subscription.is_active or (subscription.end_date and subscription.end_date < timezone.now()):
             messages.error(request, "Your subscription expired. Please renew.")
-            return redirect('subscription_plans')
+            return redirect("subscription:subscription_plans")
 
         # Ensure there are remaining table slots
         if subscription.remaining_tables() <= 0:
             messages.error(request, "You reached your table limit. Upgrade your plan.")
-            return redirect('subscription_plans')
+            return redirect("subscription:subscription_plans")
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -1007,18 +1008,17 @@ def toggle_item_availability(request):
 @login_required
 def create_table_qr_view(request):
     """
-    List tables and show which are currently scannable (first N).
-    If a table is scannable and its QR is missing, generate and upload it to storage.
-    Now passes absolute URL to generator so QR encodes full URL.
+    List tables and mark which are scannable.
+    If a table is scannable and QR is missing, generate it.
     """
     restaurant = get_object_or_404(Restaurant, owner=request.user)
-    logger.info(f"[QR] Loading tables for restaurant {restaurant.id} ({restaurant.name})")
+    logger.info(f"[QR] Loading tables for restaurant {restaurant.id}")
 
-    # Get subscription and allowed table ids
     subscription = None
     allowed_table_ids = []
     allowed_table_limit = 0
     subscription_active = False
+
     try:
         subscription = restaurant.subscription
         if subscription and subscription.has_active_subscription():
@@ -1026,139 +1026,129 @@ def create_table_qr_view(request):
             allowed_table_limit = subscription.plan.table_limit if subscription.plan else 0
             allowed_table_ids = list(
                 Table.objects.filter(restaurant=restaurant)
-                .order_by('id')[:allowed_table_limit]
-                .values_list('id', flat=True)
+                .order_by("id")[:allowed_table_limit]
+                .values_list("id", flat=True)
             )
     except Subscription.DoesNotExist:
-        logger.warning(f"[QR] Restaurant {restaurant.id} has no subscription record.")
-        subscription = None
+        logger.warning(f"[QR] No subscription for restaurant {restaurant.id}")
 
-    tables = Table.objects.filter(restaurant=restaurant).order_by('id')
-    annotated_tables = []
+    tables = Table.objects.filter(restaurant=restaurant).order_by("id")
 
-    for t in tables:
-        t.is_scannable = (t.id in allowed_table_ids) and subscription_active
-        if t.is_scannable:
-            logger.debug(f"[QR] Table {t.id} is scannable (Restaurant {restaurant.id})")
+    for table in tables:
+        table.is_scannable = subscription_active and table.id in allowed_table_ids
 
-        # If scannable but QR missing, create it now and pass absolute URL
-        try:
-            if t.is_scannable and (not t.qr_code or not default_storage.exists(t.qr_code.name)):
-                # build absolute URL for this table and pass it to generator
-                rel = f"/menu/{t.restaurant.id}/{t.id}/"
-                abs_url = request.build_absolute_uri(rel)  # e.g. https://your-domain/menu/2/8/
-                logger.info(f"[QR] Generating QR for table {t.id} with target {abs_url} ...")
-                generate_qr_code(t, force=False, target_url=abs_url)
-                logger.info(f"[QR] QR created for table {t.id}: {t.qr_code.name}")
-        except Exception as e:
-            logger.exception(f"[QR][ERROR] Failed to generate QR for Table {t.id} ({t.table_number}): {e}")
-
-        annotated_tables.append(t)
+        if table.is_scannable:
+            try:
+                if not table.qr_code or not default_storage.exists(table.qr_code.name):
+                    logger.info(f"[QR] Generating QR for table {table.id}")
+                    generate_qr_code(table, force=False)
+            except Exception as e:
+                logger.exception(f"[QR][ERROR] Failed QR for table {table.id}: {e}")
 
     context = {
-        'restaurant': restaurant,
-        'tables': annotated_tables,
-        'subscription': subscription,
-        'subscription_active': subscription_active,
-        'allowed_table_limit': allowed_table_limit,
+        "restaurant": restaurant,
+        "tables": tables,
+        "subscription": subscription,
+        "subscription_active": subscription_active,
+        "allowed_table_limit": allowed_table_limit,
     }
-    return render(request, 'restaurant/create_table_qr.html', context)
+    return render(request, "restaurant/create_table_qr.html", context)
 
 
-def generate_qr_code(table, force=False, target_url=None):
-    """
-    Generate and save a unique QR code for the given Table instance into S3 (or media storage).
-    - QR content always uses https://www.zenqrmenu.com/menu/<restaurant_id>/<table_id>/
-    - File path always begins with media/qr_codes/...
-    """
-    logger.debug(f"[QR] Starting QR generation for Table {table.id} (force={force})")
 
-    if not table.restaurant or not table.restaurant.id:
-        msg = f"Table {table.id} has no valid restaurant"
-        logger.error(f"[QR][INVALID] {msg}")
-        raise ValueError(msg)
+def generate_qr_code(table, force=False):
+    if not table.restaurant_id:
+        raise ValueError("Table has no restaurant")
 
-    # ✅ Always ensure prefix = media/
-    media_prefix = getattr(settings, "MEDIAFILES_LOCATION", "media").rstrip('/')
-    key = f"{media_prefix}/qr_codes/restaurant_{table.restaurant.id}/table_{table.table_number}_qr.png"
-    logger.debug(f"[QR] Target S3 key: {key}")
+    # ALWAYS use POSIX path
+    key = (
+        f"qr_codes/"
+        f"restaurant_{table.restaurant_id}/"
+        f"table_{table.table_number}_qr.png"
+    )
 
-    try:
-        # If file exists and not forcing regeneration
-        if default_storage.exists(key) and not force:
-            if not table.qr_code or table.qr_code.name != key:
+    key = key.replace("\\", "/")  # 🔴 CRITICAL
+
+    logger.info(f"[QR] Using storage key: {key}")
+
+    if not force:
+        try:
+            if default_storage.exists(key):
                 table.qr_code.name = key
                 table.save(update_fields=["qr_code"])
-            logger.info(f"[QR] Using existing QR for Table {table.id}")
-            return key
-    except Exception as e:
-        logger.warning(f"[QR][WARN] Storage.exists failed for {key}: {e}")
+                return key
+        except Exception as e:
+            logger.warning(f"[QR] exists() failed: {e}")
 
-    try:
-        # ✅ Hardcode your production domain (no relative or request needed)
-        qr_data = f"https://www.zenqrmenu.com/menu/{table.restaurant.id}/{table.id}/"
-        logger.debug(f"[QR] QR will embed: {qr_data}")
+    qr_url = f"https://www.zenqrmenu.com/menu/{table.restaurant_id}/{table.id}/"
 
-        # Generate the QR image
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=10,
-            border=4,
-        )
-        qr.add_data(qr_data)
-        qr.make(fit=True)
-        img = qr.make_image(fill='black', back_color='white')
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(qr_url)
+    qr.make(fit=True)
 
-        buf = BytesIO()
-        img.save(buf, format="PNG")
-        buf.seek(0)
-        content = ContentFile(buf.read())
+    img = qr.make_image(fill_color="black", back_color="white")
 
-        if force and default_storage.exists(key):
-            logger.info(f"[QR] Deleting old QR for Table {table.id} before overwrite.")
-            default_storage.delete(key)
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
 
-        saved_name = default_storage.save(key, content)
-        table.qr_code.name = saved_name
-        table.save(update_fields=["qr_code"])
+    if force:
+        try:
+            if default_storage.exists(key):
+                default_storage.delete(key)
+        except Exception:
+            pass
 
-        logger.info(f"[QR] Successfully generated QR for Table {table.id}: {saved_name}")
-        return saved_name
+    saved_name = default_storage.save(key, ContentFile(buf.read()))
 
-    except Exception as e:
-        logger.exception(f"[QR][FATAL] Could not generate or upload QR for Table {table.id}: {e}")
-        raise
+    # 🔴 Normalize AGAIN before saving to DB
+    saved_name = saved_name.replace("\\", "/")
+
+    table.qr_code.name = saved_name
+    table.save(update_fields=["qr_code"])
+
+    logger.info(f"[QR] QR saved at {saved_name}")
+    return saved_name
+
+
+
 
 
 
 def download_qr_code(request, table_id):
     """
-    Serve the QR PNG for the given table via storage backend.
-    Logs every access and error.
+    Download QR code image for a table using storage backend.
+    Works for local, S3, and Cloudflare R2.
     """
-    logger.debug(f"[QR] Download requested for Table {table_id}")
-    try:
-        table = Table.objects.get(id=table_id)
-    except Table.DoesNotExist:
-        logger.warning(f"[QR][404] Table {table_id} not found in DB")
-        raise Http404("Table not found.")
+
+    logger.debug(f"[QR] Download requested for table {table_id}")
+
+    table = get_object_or_404(Table, id=table_id)
 
     if not table.qr_code:
-        logger.warning(f"[QR][404] Table {table_id} has no qr_code field set")
+        logger.warning(f"[QR][404] Table {table_id} has no QR assigned")
         raise Http404("QR Code not found.")
 
-    key = table.qr_code.name
+    key = table.qr_code.name.replace("\\", "/")
+
+
     try:
-        f = default_storage.open(key, mode="rb")
-        logger.info(f"[QR] Serving QR for Table {table_id} from {key}")
+        file_obj = default_storage.open(key, "rb")
     except Exception as e:
-        logger.error(f"[QR][MISSING] QR file {key} not found in storage: {e}")
+        logger.error(f"[QR][404] Missing QR file {key}: {e}")
         raise Http404("QR Code file missing.")
 
-    response = FileResponse(f, content_type="image/png")
-    response["Content-Disposition"] = f'attachment; filename="table_{table.table_number}_qr.png"'
+    response = FileResponse(file_obj, content_type="image/png")
+    response["Content-Disposition"] = (
+        f'attachment; filename="table_{table.table_number}_qr.png"'
+    )
     return response
+
 
 
 
