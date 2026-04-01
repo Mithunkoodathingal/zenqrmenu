@@ -26,6 +26,9 @@ from django.utils.translation import gettext as _
 from allauth.account.models import EmailAddress, EmailConfirmation
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.db import IntegrityError
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework.decorators import api_view, permission_classes
 from django.core.exceptions import ValidationError
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
@@ -1912,9 +1915,6 @@ def test_email(request):
 
 @csrf_exempt
 def api_register(request):
-    if request.method != "POST":
-        return JsonResponse({"success": False, "error": "Invalid method"}, status=405)
-
     data = json.loads(request.body)
 
     username = data.get("username")
@@ -1922,22 +1922,11 @@ def api_register(request):
     password1 = data.get("password1")
     password2 = data.get("password2")
 
-    errors = {}
-
-    if not username:
-        errors["username"] = ["This field is required."]
-    if not email:
-        errors["email"] = ["This field is required."]
-    if not password1:
-        errors["password1"] = ["This field is required."]
     if password1 != password2:
-        errors["password2"] = ["Passwords do not match."]
-
-    if User.objects.filter(username=username).exists():
-        errors["username"] = ["Username already exists."]
-
-    if errors:
-        return JsonResponse({"success": False, "errors": errors}, status=400)
+        return JsonResponse({
+            "success": False,
+            "errors": {"password": ["Passwords do not match"]}
+        }, status=400)
 
     user = User.objects.create_user(
         username=username,
@@ -1945,8 +1934,12 @@ def api_register(request):
         password=password1
     )
 
+    refresh = RefreshToken.for_user(user)
+
     return JsonResponse({
         "success": True,
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
         "user": {
             "username": user.username,
             "email": user.email
@@ -1954,28 +1947,28 @@ def api_register(request):
     })
 
 
+
 @csrf_exempt
 def api_login(request):
-    if request.method != "POST":
-        return JsonResponse({"success": False, "error": "Invalid method"}, status=405)
-
     data = json.loads(request.body)
 
     username = data.get("username")
     password = data.get("password")
 
-    user = authenticate(request, username=username, password=password)
+    user = authenticate(username=username, password=password)
 
-    if user is None:
+    if not user:
         return JsonResponse({
             "success": False,
             "errors": {"non_field_errors": ["Invalid credentials"]}
         }, status=400)
 
-    login(request, user)
+    refresh = RefreshToken.for_user(user)
 
     return JsonResponse({
         "success": True,
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
         "user": {
             "username": user.username,
             "email": user.email
@@ -2000,3 +1993,11 @@ def api_user(request):
         }
     })
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def api_user(request):
+    return JsonResponse({
+        "username": request.user.username,
+        "email": request.user.email
+    })

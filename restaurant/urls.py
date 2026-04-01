@@ -6,6 +6,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from . import debug_views
 from . import views
+from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import (
     dashboard,
@@ -125,8 +126,8 @@ urlpatterns = [
 
     path('api/register/', api_register),
     path('api/login/', api_login),
-    path('api/logout/', api_logout),
     path('api/user/', api_user),
+    path('api/refresh/', TokenRefreshView.as_view()),
 
 ]
 
