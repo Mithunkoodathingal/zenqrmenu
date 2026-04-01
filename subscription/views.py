@@ -6,6 +6,8 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseBadRequest
@@ -432,23 +434,30 @@ def subscription_plans_api(request):
             "price": float(p.price),
             "duration_days": p.duration_days,
             "table_limit": p.table_limit,
-            "features": [f.strip() for f in p.features.split(",")],
+            "features": [f.strip() for f in p.features.split(",")],  # ✅ FIX
         })
+
+    return JsonResponse({"plans": data})
 
     return JsonResponse(data, safe=False)
 
 
-@csrf_exempt
-@login_required
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def api_create_subscription(request):
-    if request.method != "POST":
-        return JsonResponse({"error": "Invalid method"}, status=405)
 
-    body = json.loads(request.body)
-    plan_id = body.get("plan_id")
+    plan_id = request.data.get("plan_id")
 
-    plan = SubscriptionPlan.objects.get(id=plan_id)
-    restaurant = Restaurant.objects.get(owner=request.user)
+    if not plan_id:
+        return JsonResponse({"success": False, "error": "plan_id required"}, status=400)
+
+    try:
+        plan = SubscriptionPlan.objects.get(id=plan_id)
+    except SubscriptionPlan.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Invalid plan"}, status=400)
+
+    user = request.user
+    restaurant = Restaurant.objects.get(owner=user)
 
     # FREE PLAN
     if plan.price == 0:
@@ -462,7 +471,7 @@ def api_create_subscription(request):
             "message": "Free plan activated"
         })
 
-    # PAID PLAN → create Razorpay order
+    # PAID PLAN
     order_amount = int(plan.price * 100)
 
     order = razorpay_client.order.create({
@@ -471,8 +480,10 @@ def api_create_subscription(request):
         "payment_capture": 1,
     })
 
+    subscription, _ = Subscription.objects.get_or_create(restaurant=restaurant)
+
     tx = PaymentTransaction.objects.create(
-        subscription=Subscription.objects.get_or_create(restaurant=restaurant)[0],
+        subscription=subscription,
         plan=plan,
         razorpay_order_id=order["id"],
         amount=plan.price,
@@ -488,40 +499,3 @@ def api_create_subscription(request):
         "plan": plan.name,
     })
 
-@csrf_exempt
-@login_required
-def api_verify_payment(request):
-    if request.method != "POST":
-        return JsonResponse({"error": "Invalid method"}, status=405)
-
-    data = json.loads(request.body)
-
-    order_id = data.get("razorpay_order_id")
-    payment_id = data.get("razorpay_payment_id")
-    signature = data.get("razorpay_signature")
-
-    try:
-        razorpay_client.utility.verify_payment_signature({
-            "razorpay_order_id": order_id,
-            "razorpay_payment_id": payment_id,
-            "razorpay_signature": signature
-        })
-    except:
-        return JsonResponse({"success": False, "error": "Invalid signature"}, status=400)
-
-    tx = PaymentTransaction.objects.get(razorpay_order_id=order_id)
-
-    if tx.status == "paid":
-        return JsonResponse({"success": True})
-
-    subscription = tx.subscription
-    plan = tx.plan
-
-    subscription.plan = plan
-    subscription.activate()
-
-    tx.status = "paid"
-    tx.razorpay_payment_id = payment_id
-    tx.save()
-
-    return JsonResponse({"success": True})

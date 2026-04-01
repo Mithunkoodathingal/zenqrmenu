@@ -1924,11 +1924,20 @@ def api_register(request):
     password1 = data.get("password1")
     password2 = data.get("password2")
 
+    errors = {}
+
+    if not username:
+        errors["username"] = ["This field is required."]
+    if not email:
+        errors["email"] = ["This field is required."]
     if password1 != password2:
-        return JsonResponse({
-            "success": False,
-            "errors": {"password": ["Passwords do not match"]}
-        }, status=400)
+        errors["password2"] = ["Passwords do not match."]
+
+    if User.objects.filter(username=username).exists():
+        errors["username"] = ["Username already exists."]
+
+    if errors:
+        return JsonResponse({"success": False, "errors": errors}, status=400)
 
     user = User.objects.create_user(
         username=username,
@@ -1985,7 +1994,8 @@ def api_logout(request):
     return JsonResponse({"success": True})
 
 
-@login_required
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def api_user(request):
     return JsonResponse({
         "success": True,
@@ -2000,6 +2010,9 @@ def api_user(request):
 @permission_classes([IsAuthenticated])
 def api_user(request):
     return JsonResponse({
-        "username": request.user.username,
-        "email": request.user.email
+        "success": True,
+        "user": {
+            "username": request.user.username,
+            "email": request.user.email
+        }
     })
