@@ -499,3 +499,53 @@ def api_create_subscription(request):
         "plan": plan.name,
     })
 
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def api_verify_payment(request):
+
+    order_id = request.data.get("razorpay_order_id")
+    payment_id = request.data.get("razorpay_payment_id")
+    signature = request.data.get("razorpay_signature")
+
+    if not (order_id and payment_id and signature):
+        return JsonResponse({
+            "success": False,
+            "error": "Missing payment data"
+        }, status=400)
+
+    try:
+        razorpay_client.utility.verify_payment_signature({
+            "razorpay_order_id": order_id,
+            "razorpay_payment_id": payment_id,
+            "razorpay_signature": signature
+        })
+    except Exception:
+        return JsonResponse({
+            "success": False,
+            "error": "Invalid signature"
+        }, status=400)
+
+    try:
+        tx = PaymentTransaction.objects.get(razorpay_order_id=order_id)
+    except PaymentTransaction.DoesNotExist:
+        return JsonResponse({
+            "success": False,
+            "error": "Transaction not found"
+        }, status=404)
+
+    if tx.status == "paid":
+        return JsonResponse({"success": True})
+
+    subscription = tx.subscription
+    plan = tx.plan
+
+    subscription.plan = plan
+    subscription.activate()
+
+    tx.status = "paid"
+    tx.razorpay_payment_id = payment_id
+    tx.save()
+
+    return JsonResponse({"success": True})
