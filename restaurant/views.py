@@ -1988,7 +1988,7 @@ def api_login(request):
 
 @api_view(['POST'])
 def api_logout(request):
-    return JsonResponse({"success": True}))
+    return JsonResponse({"success": True})
 
 
 @api_view(['GET'])
