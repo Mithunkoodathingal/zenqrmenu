@@ -97,6 +97,7 @@ INSTALLED_APPS = [
 
     # local
     'restaurant.apps.RestaurantConfig',
+    'corsheaders',
     'subscription',
 ]
 
@@ -105,6 +106,7 @@ INSTALLED_APPS = [
 # -------------------------
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     # WhiteNoise should live right after SecurityMiddleware for static file serving.
     "whitenoise.middleware.WhiteNoiseMiddleware",
 
@@ -507,6 +509,11 @@ LOGGING = {
 # Misc
 # -------------------------
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
+
+CORS_ALLOWED_ORIGINS = [
+    "https://id-preview--b088f15c-f245-4627-a305-23917fc054c6.lovable.app",
+]
+CORS_ALLOW_CREDENTIALS = True
 
 # Optional: if you need file uploads to be served from a cloud storage (S3, etc.), configure here.
 
