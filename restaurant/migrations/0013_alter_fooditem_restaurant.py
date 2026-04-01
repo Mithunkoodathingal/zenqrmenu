@@ -14,6 +14,10 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='fooditem',
             name='restaurant',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='restaurant.restaurant'),
+            field=models.ForeignKey(
+                default=1,  # 👈 ADD THIS LINE
+                on_delete=django.db.models.deletion.CASCADE,
+                to='restaurant.restaurant',
+            ),
         ),
     ]
