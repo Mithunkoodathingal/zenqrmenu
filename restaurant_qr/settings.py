@@ -105,8 +105,8 @@ INSTALLED_APPS = [
 # Middleware
 # -------------------------
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
     # WhiteNoise should live right after SecurityMiddleware for static file serving.
     "whitenoise.middleware.WhiteNoiseMiddleware",
 
