@@ -519,6 +519,13 @@ CORS_ALLOWED_ORIGINS = config(
     cast=Csv()
 )
 
+
+SESSION_COOKIE_SAMESITE = "None"
+SESSION_COOKIE_SECURE = True
+
+CSRF_COOKIE_SAMESITE = "None"
+CSRF_COOKIE_SECURE = True
+
 # Optional: if you need file uploads to be served from a cloud storage (S3, etc.), configure here.
 
 # -------------------------

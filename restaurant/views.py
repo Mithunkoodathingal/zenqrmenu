@@ -1905,3 +1905,98 @@ def test_email(request):
             "error_message": str(e),
             "traceback": traceback.format_exc(),
         }, status=500)
+
+
+#################### AUTH APIS #####################################
+
+
+@csrf_exempt
+def api_register(request):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Invalid method"}, status=405)
+
+    data = json.loads(request.body)
+
+    username = data.get("username")
+    email = data.get("email")
+    password1 = data.get("password1")
+    password2 = data.get("password2")
+
+    errors = {}
+
+    if not username:
+        errors["username"] = ["This field is required."]
+    if not email:
+        errors["email"] = ["This field is required."]
+    if not password1:
+        errors["password1"] = ["This field is required."]
+    if password1 != password2:
+        errors["password2"] = ["Passwords do not match."]
+
+    if User.objects.filter(username=username).exists():
+        errors["username"] = ["Username already exists."]
+
+    if errors:
+        return JsonResponse({"success": False, "errors": errors}, status=400)
+
+    user = User.objects.create_user(
+        username=username,
+        email=email,
+        password=password1
+    )
+
+    return JsonResponse({
+        "success": True,
+        "user": {
+            "username": user.username,
+            "email": user.email
+        }
+    })
+
+
+@csrf_exempt
+def api_login(request):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Invalid method"}, status=405)
+
+    data = json.loads(request.body)
+
+    username = data.get("username")
+    password = data.get("password")
+
+    user = authenticate(request, username=username, password=password)
+
+    if user is None:
+        return JsonResponse({
+            "success": False,
+            "errors": {"non_field_errors": ["Invalid credentials"]}
+        }, status=400)
+
+    login(request, user)
+
+    return JsonResponse({
+        "success": True,
+        "user": {
+            "username": user.username,
+            "email": user.email
+        }
+    })
+
+
+
+@csrf_exempt
+def api_logout(request):
+    logout(request)
+    return JsonResponse({"success": True})
+
+
+@login_required
+def api_user(request):
+    return JsonResponse({
+        "success": True,
+        "user": {
+            "username": request.user.username,
+            "email": request.user.email
+        }
+    })
+

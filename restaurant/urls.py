@@ -42,6 +42,10 @@ from .views import (
     toggle_item_availability,
     product_detail_view,
     manage_menu,
+    api_register, 
+    api_login, 
+    api_logout, 
+    api_user
 )
 
 urlpatterns = [
@@ -116,6 +120,13 @@ urlpatterns = [
         ), name='password_reset_complete'),
     path("__debug/diagnostic/", debug_views.diagnostic, name="diagnostic"),
     path('test-email/', views.test_email, name='test_email'),
+
+    # API URLS #########
+
+    path('api/register/', api_register),
+    path('api/login/', api_login),
+    path('api/logout/', api_logout),
+    path('api/user/', api_user),
 
 ]
 
