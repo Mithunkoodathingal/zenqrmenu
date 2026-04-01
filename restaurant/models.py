@@ -40,7 +40,7 @@ class AddOn(models.Model):
         return f"{self.name} (+₹{self.price})"
 
 class FoodItem(models.Model):
-    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, null=True, blank=True)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, default=2)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=6, decimal_places=2)
