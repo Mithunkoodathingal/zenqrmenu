@@ -40,6 +40,7 @@ class AddOn(models.Model):
         return f"{self.name} (+₹{self.price})"
 
 class FoodItem(models.Model):
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=6, decimal_places=2)
@@ -48,6 +49,10 @@ class FoodItem(models.Model):
     addons = models.ManyToManyField(AddOn, blank=True)
     is_paused = models.BooleanField(default=False, help_text="When true, item is hidden from public menu (out of stock).")
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['restaurant']),
+        ]
 
     def __str__(self):
         return self.name

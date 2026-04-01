@@ -1915,9 +1915,9 @@ def test_email(request):
 #################### AUTH APIS #####################################
 
 
-@csrf_exempt
+@api_view(['POST'])
 def api_register(request):
-    data = json.loads(request.body)
+    data = request.data
 
     username = data.get("username")
     email = data.get("email")
@@ -1949,8 +1949,7 @@ def api_register(request):
 
     return JsonResponse({
         "success": True,
-        "access": str(refresh.access_token),
-        "refresh": str(refresh),
+        "token": str(refresh.access_token),
         "user": {
             "username": user.username,
             "email": user.email
@@ -1959,9 +1958,9 @@ def api_register(request):
 
 
 
-@csrf_exempt
+@api_view(['POST'])
 def api_login(request):
-    data = json.loads(request.body)
+    data = request.data
 
     username = data.get("username")
     password = data.get("password")
@@ -1978,8 +1977,7 @@ def api_login(request):
 
     return JsonResponse({
         "success": True,
-        "access": str(refresh.access_token),
-        "refresh": str(refresh),
+        "token": str(refresh.access_token),
         "user": {
             "username": user.username,
             "email": user.email
@@ -1988,10 +1986,9 @@ def api_login(request):
 
 
 
-@csrf_exempt
+@api_view(['POST'])
 def api_logout(request):
-    logout(request)
-    return JsonResponse({"success": True})
+    return JsonResponse({"success": True}))
 
 
 @api_view(['GET'])
@@ -2005,14 +2002,191 @@ def api_user(request):
         }
     })
 
+############ CATEGORY APIs ################
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
-def api_user(request):
-    return JsonResponse({
-        "success": True,
-        "user": {
-            "username": request.user.username,
-            "email": request.user.email
-        }
-    })
+def categories_api(request):
+
+    try:
+        restaurant = Restaurant.objects.get(owner=request.user)
+    except Restaurant.DoesNotExist:
+        return JsonResponse({"error": "Restaurant not found"}, status=404)
+
+    if request.method == 'GET':
+        cats = Category.objects.filter(restaurant=restaurant)
+
+        data = [{"id": c.id, "name": c.name} for c in cats]
+        return JsonResponse(data, safe=False)
+
+    if request.method == 'POST':
+        name = request.data.get("name")
+
+        if not name:
+            return JsonResponse({"error": "Name required"}, status=400)
+
+        cat = Category.objects.create(name=name, restaurant=restaurant)
+
+        return JsonResponse({"id": cat.id, "name": cat.name}, status=201)
+    
+
+
+@api_view(['PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def category_detail_api(request, id):
+
+    try:
+        category = Category.objects.get(id=id, restaurant__owner=request.user)
+    except Category.DoesNotExist:
+        return JsonResponse({"error": "Not found"}, status=404)
+
+    if request.method == 'PATCH':
+        category.name = request.data.get("name", category.name)
+        category.save()
+
+        return JsonResponse({"id": category.id, "name": category.name})
+
+    if request.method == 'DELETE':
+        category.delete()
+        return JsonResponse({"success": True})
+    
+
+from subscription.utils import check_subscription_access
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def menu_items_api(request):
+
+    try:
+        restaurant = Restaurant.objects.get(owner=request.user)
+    except Restaurant.DoesNotExist:
+        return JsonResponse({"error": "Restaurant not found"}, status=404)
+
+    # 🔥 Subscription check
+    is_valid, result = check_subscription_access(restaurant)
+
+    if not is_valid:
+        return JsonResponse({"success": False, "error": result}, status=403)
+
+    plan = result
+
+    # ✅ GET ITEMS
+    if request.method == 'GET':
+        items = FoodItem.objects.filter(restaurant=restaurant)
+
+        data = []
+        for i in items:
+            data.append({
+                "id": i.id,
+                "name": i.name,
+                "price": float(i.price),
+                "description": i.description,
+                "category": i.category.id if i.category else None,
+                "is_available": not i.is_paused,
+                "image": i.image.url if i.image else None
+            })
+
+        return JsonResponse(data, safe=False)
+
+    # ✅ CREATE ITEM
+    if request.method == 'POST':
+
+        max_items = getattr(plan, "menu_item_limit", None)
+
+        if max_items:
+            count = FoodItem.objects.filter(restaurant=restaurant).count()
+            if count >= max_items:
+                return JsonResponse({
+                    "success": False,
+                    "error": f"Limit reached ({max_items})"
+                }, status=403)
+
+        item = FoodItem.objects.create(
+            name=request.data.get("name"),
+            price=request.data.get("price"),
+            description=request.data.get("description"),
+            category_id=request.data.get("category"),
+            image=request.FILES.get("image"),
+            restaurant=restaurant
+        )
+
+        return JsonResponse({
+            "id": item.id,
+            "name": item.name,
+            "price": float(item.price),
+            "description": item.description,
+            "category": item.category.id if item.category else None,
+            "is_available": not item.is_paused,
+            "image": item.image.url if item.image else None
+        }, status=201)
+    
+
+@api_view(['PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def menu_item_detail_api(request, id):
+
+    try:
+        item = FoodItem.objects.get(id=id, restaurant__owner=request.user)
+    except FoodItem.DoesNotExist:
+        return JsonResponse({"error": "Not found"}, status=404)
+
+    if request.method == 'PATCH':
+        item.name = request.data.get("name", item.name)
+        item.price = request.data.get("price", item.price)
+        item.description = request.data.get("description", item.description)
+        item.category_id = request.data.get("category", item.category_id)
+
+        if "is_available" in request.data:
+            item.is_paused = not request.data.get("is_available")
+
+        if request.FILES.get("image"):
+            item.image = request.FILES.get("image")
+
+        item.save()
+
+        return JsonResponse({
+            "id": item.id,
+            "name": item.name,
+            "price": float(item.price),
+            "description": item.description,
+            "category": item.category.id if item.category else None,
+            "is_available": not item.is_paused,
+            "image": item.image.url if item.image else None
+        })
+
+    if request.method == 'DELETE':
+        item.delete()
+        return JsonResponse({"success": True})
+
+################### TABLE API ################################
+    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_table_api(request):
+
+    try:
+        restaurant = Restaurant.objects.get(owner=request.user)
+    except Restaurant.DoesNotExist:
+        return JsonResponse({"error": "Restaurant not found"}, status=404)
+
+    is_valid, result = check_subscription_access(restaurant)
+
+    if not is_valid:
+        return JsonResponse({"success": False, "error": result}, status=403)
+
+    plan = result
+
+    count = Table.objects.filter(restaurant=restaurant).count()
+
+    if count >= plan.table_limit:
+        return JsonResponse({
+            "success": False,
+            "error": f"Table limit reached ({plan.table_limit})"
+        }, status=403)
+
+    table = Table.objects.create(
+        restaurant=restaurant,
+        table_number=request.data.get("table_number")
+    )
+
+    return JsonResponse({"id": table.id})

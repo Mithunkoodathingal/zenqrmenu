@@ -8,6 +8,7 @@ class SubscriptionPlan(models.Model):
     price = models.DecimalField(max_digits=8, decimal_places=2)
     duration_days = models.PositiveIntegerField(default=30)
     table_limit = models.PositiveIntegerField(default=1)
+    menu_item_limit = models.IntegerField(default=20)  # ✅ ADD THIS
     features = models.TextField(blank=True)
 
     def __str__(self):

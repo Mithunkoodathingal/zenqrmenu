@@ -5,7 +5,7 @@ from django.urls import reverse_lazy
 from django.conf import settings
 from django.conf.urls.static import static
 from . import debug_views
-from . import views
+from .views import *
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import (
@@ -58,7 +58,7 @@ urlpatterns = [
     path('resend-confirmation/', resend_confirmation, name='resend_confirmation'),
     # public resend-by-email (matches templates that post to 'resend_confirmation_by_email')
     path('resend-by-email/', resend_confirmation_by_email, name='resend_confirmation_by_email'),
-    path('terms-and-conditions/', views.terms_conditions, name='terms_conditions'),
+    path('terms-and-conditions/', terms_conditions, name='terms_conditions'),
 
     # Dashboard / menu management
     path('dashboard/', dashboard, name='dashboard'),
@@ -120,14 +120,22 @@ urlpatterns = [
             template_name='registration/password_reset_complete.html'
         ), name='password_reset_complete'),
     path("__debug/diagnostic/", debug_views.diagnostic, name="diagnostic"),
-    path('test-email/', views.test_email, name='test_email'),
+    path('test-email/', test_email, name='test_email'),
 
-    # API URLS #########
+    ######### API URLS #########
 
-    path('api/register/', api_register),
-    path('api/login/', api_login),
-    path('api/user/', api_user),
-    path('api/refresh/', TokenRefreshView.as_view()),
+    path('menu/api/categories/', categories_api),
+    path('menu/api/categories/<int:id>/', category_detail_api),
+
+    path('menu/api/items/', menu_items_api),
+    path('menu/api/items/<int:id>/', menu_item_detail_api),
+
+    path('menu/api/tables/', create_table_api),
+
+    path('accounts/api/register/', api_register),
+    path('accounts/api/login/', api_login),
+    path('accounts/api/user/', api_user),
+    path('accounts/api/logout/', api_logout),
 
 ]
 
