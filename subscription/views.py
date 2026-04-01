@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
 
-@login_required
+
 def subscription_plans(request):
     default_plans = [
         {"name": "Free", "price": Decimal("0.00"), "duration_days": 30, "table_limit": 1,
