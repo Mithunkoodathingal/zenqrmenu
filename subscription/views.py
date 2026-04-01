@@ -432,7 +432,7 @@ def subscription_plans_api(request):
             "price": float(p.price),
             "duration_days": p.duration_days,
             "table_limit": p.table_limit,
-            "features": p.features,
+            "features": [f.strip() for f in p.features.split(",")],
         })
 
     return JsonResponse(data, safe=False)
