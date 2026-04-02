@@ -528,11 +528,14 @@ CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
 
 CORS_ALLOW_CREDENTIALS = True
 
+CORS_ALLOW_ALL_HEADERS = True
+
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
     default='',
     cast=Csv()
 )
+
 
 
 SESSION_COOKIE_SAMESITE = "None"
