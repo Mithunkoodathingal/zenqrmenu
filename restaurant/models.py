@@ -10,6 +10,9 @@ class Restaurant(models.Model):
     about = models.TextField(default='Initial Listings')
     cover_image = models.ImageField(upload_to='restaurant_covers/', default='default-cover.jpg')
     logo = models.ImageField( upload_to='restaurant_logos/', blank=True, null=True, default='default-logo.png', help_text='Small square logo/profile image used as thumbnail on menus')
+    phone = models.CharField(max_length=20, blank=True)
+    cuisine_type = models.CharField(max_length=100, blank=True)
+
 
     def __str__(self):
         return self.name

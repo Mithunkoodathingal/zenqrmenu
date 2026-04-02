@@ -30,9 +30,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
 from django.core.exceptions import ValidationError
-from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, F, DecimalField, ExpressionWrapper, Q
 import datetime
@@ -40,19 +38,21 @@ from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.urls import reverse_lazy
 from django.views import View
 import time
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.response import Response
+from .serializers import RestaurantSerializer
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.cache import cache_page
 from django.utils.translation import gettext as _
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth import login, logout
 from django.contrib import messages
 from django.views.generic import CreateView, UpdateView, DeleteView
 from django.core.mail import EmailMultiAlternatives, send_mail
@@ -2190,3 +2190,93 @@ def create_table_api(request):
     )
 
     return JsonResponse({"id": table.id})
+
+
+########## Public Menu ###################
+
+
+
+@cache_page(60 * 2)  # cache for 2 minutes (fast QR loading)
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def public_menu(request, restaurant_id):
+    restaurant = get_object_or_404(Restaurant, id=restaurant_id)
+
+    categories = Category.objects.filter(restaurant=restaurant)
+    items = FoodItem.objects.filter(
+        restaurant=restaurant,
+        is_paused=False
+    ).select_related("category").prefetch_related("addons")
+
+    # 🔥 Categories
+    category_data = [
+        {
+            "id": c.id,
+            "name": c.name,
+        }
+        for c in categories
+    ]
+
+    # 🔥 Items
+    items_data = [
+        {
+            "id": item.id,
+            "name": item.name,
+            "description": item.description,
+            "price": float(item.price),
+            "image": item.image.url if item.image else None,
+            "category": item.category.id,
+            "addons": [
+                {
+                    "id": a.id,
+                    "name": a.name,
+                    "price": float(a.price),
+                }
+                for a in item.addons.all()
+            ],
+        }
+        for item in items
+    ]
+
+    data = {
+        "restaurant": {
+            "id": restaurant.id,
+            "name": restaurant.name,
+            "address": restaurant.address,
+            "logo": restaurant.logo.url if restaurant.logo else None,
+            "cover_photo": restaurant.cover_image.url if restaurant.cover_image else None,
+        },
+        "categories": category_data,
+        "items": items_data,
+    }
+
+    return Response(data)
+
+
+############ Customer Profile #########################
+
+
+
+# ✅ GET + PATCH (OWNER ONLY)
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+def restaurant_profile(request):
+    restaurant = get_object_or_404(Restaurant, owner=request.user)
+
+    # GET
+    if request.method == "GET":
+        serializer = RestaurantSerializer(restaurant)
+        return Response(serializer.data)
+
+    # PATCH (multipart supported automatically)
+    serializer = RestaurantSerializer(
+        restaurant,
+        data=request.data,
+        partial=True
+    )
+
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+
+    return Response(serializer.errors, status=400)

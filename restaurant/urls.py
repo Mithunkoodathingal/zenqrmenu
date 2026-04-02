@@ -127,6 +127,12 @@ urlpatterns = [
     path('menu/api/categories/', categories_api),
     path('menu/api/categories/<int:id>/', category_detail_api),
 
+    # 🔐 Owner API
+    path("menu/api/restaurant/", restaurant_profile),
+
+    # 🌍 Public API (QR)
+    path("menu/api/public/<int:restaurant_id>/", public_menu),
+
     path('menu/api/items/', menu_items_api),
     path('menu/api/items/<int:id>/', menu_item_detail_api),
 
