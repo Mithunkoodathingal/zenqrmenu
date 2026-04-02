@@ -98,7 +98,7 @@ urlpatterns = [
     path('menu/api/categories/<int:id>/', category_detail_api),
 
     path("menu/api/restaurant/", restaurant_profile),
-    path("menu/api/public/<int:restaurant_id>/", public_menu),
+    # path("menu/api/public/<int:restaurant_id>/", public_menu),
 
     path('menu/api/items/', menu_items_api),
     path('menu/api/items/<int:id>/', menu_item_detail_api),
@@ -109,6 +109,11 @@ urlpatterns = [
     path('api/login/', api_login),
     path('api/user/', api_user),
     path('api/logout/', api_logout),
+
+    ################# Menu URL ######################
+
+    path('menu/table/<int:table_id>/', menu_view_by_table, name='menu_by_table'),
+    path('menu/api/table/<int:table_id>/', public_menu_by_table),
 
     # ================= NEW (IMPORTANT) =================
     path('menu/api/', include(router.urls)),

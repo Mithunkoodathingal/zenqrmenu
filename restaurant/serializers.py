@@ -102,14 +102,32 @@ class OrderSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['status', 'is_completed', 'created_at', 'total_price_cached']
 
+        
+
     def create(self, validated_data):
         items_data = validated_data.pop('items')
 
-        order = Order.objects.create(**validated_data)
+        # ✅ Get table and derive restaurant automatically
+        table = validated_data.get('table')
+        restaurant = table.restaurant
+
+        # ✅ Create order with correct restaurant
+        order = Order.objects.create(
+            table=table,
+            restaurant=restaurant,
+            customer_name=validated_data.get('customer_name', ''),
+            customer_phone=validated_data.get('customer_phone', '')
+        )
+
+        total = 0
 
         for item in items_data:
             food_item = FoodItem.objects.get(id=item['food_item_id'])
             quantity = item.get('quantity', 1)
+
+            # ✅ Safety check (VERY IMPORTANT)
+            if food_item.restaurant != restaurant:
+                raise serializers.ValidationError("Invalid food item for this restaurant")
 
             order_item = OrderItem.objects.create(
                 order=order,
@@ -122,7 +140,13 @@ class OrderSerializer(serializers.ModelSerializer):
                 addons = AddOn.objects.filter(id__in=addon_ids)
                 order_item.selected_addons.set(addons)
 
-        # ✅ update total after all items added
-        order.update_total()
+            # ✅ Calculate total inline (faster)
+            base = (food_item.price or 0) * quantity
+            addons_price = sum(a.price for a in order_item.selected_addons.all()) * quantity
+            total += base + addons_price
+
+        # ✅ Save total once
+        order.total_price_cached = total
+        order.save()
 
         return order

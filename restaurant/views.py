@@ -20,7 +20,9 @@ from django.http import (
     HttpResponseServerError,
     JsonResponse,
 )
+
 # add these imports near the top of your file if not already present
+from django.core.files import File
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from allauth.account.models import EmailAddress, EmailConfirmation
@@ -2186,7 +2188,17 @@ def menu_item_detail_api(request, id):
 
 ################### TABLE API ################################
     
-@api_view(['POST'])
+
+
+
+import qrcode
+from io import BytesIO
+from django.core.files import File
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from django.http import JsonResponse
+
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def create_table_api(request):
 
@@ -2195,27 +2207,70 @@ def create_table_api(request):
     except Restaurant.DoesNotExist:
         return JsonResponse({"error": "Restaurant not found"}, status=404)
 
-    is_valid, result = check_subscription_access(restaurant)
+    # ================= GET TABLE LIST =================
+    if request.method == 'GET':
+        tables = Table.objects.filter(restaurant=restaurant).order_by('table_number')
 
-    if not is_valid:
-        return JsonResponse({"success": False, "error": result}, status=403)
+        data = []
+        for t in tables:
+            data.append({
+                "id": t.id,
+                "table_number": t.table_number,
+                "qr_code": t.qr_code.url if t.qr_code else None
+            })
 
-    plan = result
+        return JsonResponse(data, safe=False)
 
-    count = Table.objects.filter(restaurant=restaurant).count()
+    # ================= CREATE TABLE =================
+    if request.method == 'POST':
 
-    if count >= plan.table_limit:
+        is_valid, result = check_subscription_access(restaurant)
+
+        if not is_valid:
+            return JsonResponse({"success": False, "error": result}, status=403)
+
+        plan = result
+
+        count = Table.objects.filter(restaurant=restaurant).count()
+
+        if count >= plan.table_limit:
+            return JsonResponse({
+                "success": False,
+                "error": f"Table limit reached ({plan.table_limit})"
+            }, status=403)
+
+        table_number = request.data.get("table_number")
+
+        if not table_number:
+            return JsonResponse({"error": "table_number is required"}, status=400)
+
+        # ✅ CREATE TABLE
+        table = Table.objects.create(
+            restaurant=restaurant,
+            table_number=table_number
+        )
+
+        # ✅ GENERATE QR URL (TABLE-BASED SYSTEM)
+        qr_url = request.build_absolute_uri(
+            f"/menu/table/{table.id}/"
+        )
+
+        # ✅ CREATE QR IMAGE
+        qr = qrcode.make(qr_url)
+
+        buffer = BytesIO()
+        qr.save(buffer, format="PNG")
+
+        file_name = f"table_{table.id}.png"
+
+        table.qr_code.save(file_name, File(buffer), save=True)
+
         return JsonResponse({
-            "success": False,
-            "error": f"Table limit reached ({plan.table_limit})"
-        }, status=403)
-
-    table = Table.objects.create(
-        restaurant=restaurant,
-        table_number=request.data.get("table_number")
-    )
-
-    return JsonResponse({"id": table.id})
+            "id": table.id,
+            "table_number": table.table_number,
+            "qr_code": table.qr_code.url,
+            "qr_url": qr_url
+        }, status=201)
 
 
 ########## Public Menu ###################
@@ -2345,3 +2400,73 @@ class OrderViewSet(viewsets.ModelViewSet):
         order = serializer.save()
 
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+    
+
+###################### Menu View By Table ###############################
+
+
+
+def menu_view_by_table(request, table_id):
+    table = get_object_or_404(Table, id=table_id)
+    restaurant = table.restaurant
+
+    return render(request, 'menu.html', {
+        'restaurant_id': restaurant.id,
+        'table_id': table.id
+    })
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def public_menu_by_table(request, table_id):
+
+    table = get_object_or_404(Table, id=table_id)
+    restaurant = table.restaurant
+
+    categories = Category.objects.filter(restaurant=restaurant)
+
+    items = FoodItem.objects.filter(
+        restaurant=restaurant,
+        is_paused=False
+    ).select_related("category").prefetch_related("addons")
+
+    categories_data = [
+        {
+            "id": c.id,
+            "name": c.name,
+        }
+        for c in categories
+    ]
+
+    items_data = [
+        {
+            "id": item.id,
+            "name": item.name,
+            "description": item.description,
+            "price": float(item.price),
+            "image": item.image.url if item.image else None,
+            "category": item.category.id,
+            "addons": [
+                {
+                    "id": a.id,
+                    "name": a.name,
+                    "price": float(a.price),
+                }
+                for a in item.addons.all()
+            ],
+        }
+        for item in items
+    ]
+
+    return Response({
+        "restaurant": {
+            "id": restaurant.id,
+            "name": restaurant.name,
+        },
+        "table": {
+            "id": table.id,
+            "table_number": table.table_number
+        },
+        "categories": categories_data,
+        "items": items_data,
+    })
