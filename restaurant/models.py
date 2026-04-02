@@ -3,13 +3,27 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+import uuid
+
+def upload_logo(instance, filename):
+    ext = filename.split('.')[-1]
+    return f"restaurant_logos/{uuid.uuid4()}.{ext}"
+
+def upload_cover(instance, filename):
+    ext = filename.split('.')[-1]
+    return f"restaurant_covers/{uuid.uuid4()}.{ext}"
+
+def upload_food_image(instance, filename):
+    ext = filename.split('.')[-1]
+    return f"food_images/{uuid.uuid4()}.{ext}"
+
 class Restaurant(models.Model):
     owner = models.OneToOneField(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     address = models.CharField(max_length=200)
     about = models.TextField(default='Initial Listings')
-    cover_image = models.ImageField(upload_to='restaurant_covers/', default='default-cover.jpg')
-    logo = models.ImageField( upload_to='restaurant_logos/', blank=True, null=True, default='default-logo.png', help_text='Small square logo/profile image used as thumbnail on menus')
+    cover_image = models.ImageField( upload_to=upload_cover, default='default/default-cover.jpg')
+    logo = models.ImageField( upload_to=upload_logo, blank=True, null=True, default='default/default-logo.png', help_text='Small square logo/profile image used as thumbnail on menus')
     phone = models.CharField(max_length=20, blank=True)
     cuisine_type = models.CharField(max_length=100, blank=True)
 
@@ -48,7 +62,7 @@ class FoodItem(models.Model):
     name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=6, decimal_places=2)
     description = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to='food_images/', null=True, blank=True)  # New field
+    image = models.ImageField(upload_to=upload_food_image, null=True, blank=True)  # New field
     addons = models.ManyToManyField(AddOn, blank=True)
     is_paused = models.BooleanField(default=False, help_text="When true, item is hidden from public menu (out of stock).")
 
