@@ -43,4 +43,3 @@ class RestaurantSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
-    print("FILES:", request.FILES)
