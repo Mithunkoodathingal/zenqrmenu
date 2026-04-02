@@ -132,10 +132,10 @@ urlpatterns = [
 
     path('menu/api/tables/', create_table_api),
 
-    path('accounts/api/register/', api_register),
-    path('accounts/api/login/', api_login),
-    path('accounts/api/user/', api_user),
-    path('accounts/api/logout/', api_logout),
+    path('api/register/', api_register),
+    path('api/login/', api_login),
+    path('api/user/', api_user),
+    path('api/logout/', api_logout),
 
 ]
 
