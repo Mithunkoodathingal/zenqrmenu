@@ -2208,8 +2208,8 @@ def public_menu(request, restaurant_id):
         is_paused=False
     ).select_related("category").prefetch_related("addons")
 
-    # 🔥 Categories
-    category_data = [
+    # ✅ Categories
+    categories_data = [
         {
             "id": c.id,
             "name": c.name,
@@ -2217,7 +2217,7 @@ def public_menu(request, restaurant_id):
         for c in categories
     ]
 
-    # 🔥 Items
+    # ✅ Items
     items_data = [
         {
             "id": item.id,
@@ -2238,19 +2238,17 @@ def public_menu(request, restaurant_id):
         for item in items
     ]
 
-    data = {
+    return Response({
         "restaurant": {
             "id": restaurant.id,
             "name": restaurant.name,
             "address": restaurant.address,
             "logo": restaurant.logo.url if restaurant.logo else None,
-            "cover_photo": restaurant.cover_image.url if restaurant.cover_image else None,
+            "cover_image": restaurant.cover_image.url if restaurant.cover_image else None,  # ✅ matches your fix
         },
-        "categories": category_data,
+        "categories": categories_data,
         "items": items_data,
-    }
-
-    return Response(data)
+    })
 
 
 ############ Customer Profile #########################
