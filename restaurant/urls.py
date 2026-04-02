@@ -7,47 +7,15 @@ from django.conf.urls.static import static
 from . import debug_views
 from .views import *
 from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework.routers import DefaultRouter
+from .views import RestaurantViewSet
 
-from .views import (
-    dashboard,
-    menu_view,
-    kitchen_interface,
-    signup_view,
-    login_view,
-    CustomLogoutView,
-    cancel_order,
-    CategoryCreateView,
-    FoodItemUpdateView,
-    FoodItemDeleteView,
-    order_confirmation,
-    complete_order,
-    download_qr_code,
-    FoodItemCreateView,
-    TableCreateView,
-    cart_summary,
-    orders_json,
-    delete_order_item_ajax,
-    confirm_order_ajax,
-    create_table_qr_view,
-    create_restaurant,
-    product_detail_html,
-    menu_preview,
-    product_json,
-    add_to_cart_ajax,
-    place_cart_order,
-    product_detail_view,
-    resend_confirmation_by_email,
-    completed_orders,
-    add_to_order,
-    resend_confirmation,
-    toggle_item_availability,
-    product_detail_view,
-    manage_menu,
-    api_register, 
-    api_login, 
-    api_logout, 
-    api_user
-)
+
+
+router = DefaultRouter()
+router.register(r'restaurants', RestaurantViewSet, basename='restaurant')
+
+urlpatterns = router.urls
 
 urlpatterns = [
     # Auth

@@ -1912,6 +1912,31 @@ def test_email(request):
         }, status=500)
 
 
+###################### RestaurantView Set #####################################
+
+
+
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated
+from .models import Restaurant
+from .serializers import RestaurantSerializer
+
+class RestaurantViewSet(ModelViewSet):
+    serializer_class = RestaurantSerializer
+    permission_classes = [IsAuthenticated]
+
+    # 🔥 REQUIRED FOR IMAGE UPLOAD
+    parser_classes = (MultiPartParser, FormParser)
+
+    def get_queryset(self):
+        return Restaurant.objects.filter(owner=self.request.user)
+
+    def get_serializer_context(self):
+        return {'request': self.request}  # 🔥 REQUIRED
+    
+
+
 #################### AUTH APIS #####################################
 
 
