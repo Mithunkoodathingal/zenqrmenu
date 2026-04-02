@@ -2271,6 +2271,30 @@ def create_table_api(request):
             "qr_code": table.qr_code.url,
             "qr_url": qr_url
         }, status=201)
+    
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_table_api(request, table_id):
+
+    try:
+        restaurant = Restaurant.objects.get(owner=request.user)
+    except Restaurant.DoesNotExist:
+        return JsonResponse({"error": "Restaurant not found"}, status=404)
+
+    try:
+        table = Table.objects.get(id=table_id, restaurant=restaurant)
+    except Table.DoesNotExist:
+        return JsonResponse({"error": "Table not found"}, status=404)
+
+    # ✅ Delete QR image file (important cleanup)
+    if table.qr_code:
+        table.qr_code.delete(save=False)
+
+    table.delete()
+
+    return JsonResponse({"success": True})
 
 
 ########## Public Menu ###################

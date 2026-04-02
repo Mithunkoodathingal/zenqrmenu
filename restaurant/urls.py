@@ -104,6 +104,7 @@ urlpatterns = [
     path('menu/api/items/<int:id>/', menu_item_detail_api),
 
     path('menu/api/tables/', create_table_api),
+    path('menu/api/tables/<int:table_id>/', delete_table_api),
 
     path('api/register/', api_register),
     path('api/login/', api_login),
