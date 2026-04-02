@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Restaurant
 
+
 class RestaurantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Restaurant
@@ -15,27 +16,35 @@ class RestaurantSerializer(serializers.ModelSerializer):
             'phone',
             'cuisine_type',
         ]
-        read_only_fields = ['owner']  # ✅ keep owner read-only ONLY
+        read_only_fields = ['owner']  # keep owner read-only
 
     def update(self, instance, validated_data):
-        request = self.context.get('request')
+        request = self.context.get('request', None)
 
-            # 🔥 DEBUG HERE
-        print("FILES:", request.FILES)
+        # ✅ SAFE DEBUG (won’t crash)
+        if request:
+            print("FILES:", request.FILES)
 
-        # 🔥 HANDLE FILES PROPERLY
+        # 🔥 HANDLE FILE UPLOADS SAFELY
         if request and request.FILES:
 
+            # ✅ LOGO
             if 'logo' in request.FILES:
-                # delete old file (optional but recommended)
-                if instance.logo:
-                    instance.logo.delete(save=False)
-                instance.logo = request.FILES['logo']
+                new_logo = request.FILES.get('logo')
 
+                if new_logo:
+                    if instance.logo:
+                        instance.logo.delete(save=False)  # remove old file
+                    instance.logo = new_logo
+
+            # ✅ COVER IMAGE
             if 'cover_image' in request.FILES:
-                if instance.cover_image:
-                    instance.cover_image.delete(save=False)
-                instance.cover_image = request.FILES['cover_image']
+                new_cover = request.FILES.get('cover_image')
+
+                if new_cover:
+                    if instance.cover_image:
+                        instance.cover_image.delete(save=False)
+                    instance.cover_image = new_cover
 
         # 🔥 UPDATE NORMAL FIELDS
         for attr, value in validated_data.items():

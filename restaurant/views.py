@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import traceback
+from rest_framework import status
 from decimal import Decimal, InvalidOperation
 import datetime
 from io import BytesIO
@@ -40,6 +41,7 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.views import View
 import time
+from .serializers import RestaurantSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from .serializers import RestaurantSerializer
@@ -2280,26 +2282,36 @@ def public_menu(request, restaurant_id):
 
 
 
-# ✅ GET + PATCH (OWNER ONLY)
-@api_view(["GET", "PATCH"])
+
+@api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def restaurant_profile(request):
-    restaurant = get_object_or_404(Restaurant, owner=request.user)
+    
+    # ✅ Get restaurant safely
+    restaurant = Restaurant.objects.filter(owner=request.user).first()
 
-    # GET
-    if request.method == "GET":
-        serializer = RestaurantSerializer(restaurant)
+    if not restaurant:
+        return Response(
+            {"error": "Restaurant not found. Please create one first."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # ✅ GET
+    if request.method == 'GET':
+        serializer = RestaurantSerializer(restaurant, context={'request': request})
         return Response(serializer.data)
 
-    # PATCH (multipart supported automatically)
-    serializer = RestaurantSerializer(
-        restaurant,
-        data=request.data,
-        partial=True
-    )
+    # ✅ PATCH (update)
+    elif request.method == 'PATCH':
+        serializer = RestaurantSerializer(
+            restaurant,
+            data=request.data,
+            partial=True,
+            context={'request': request}  # 🔥 REQUIRED for file uploads
+        )
 
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
-    return Response(serializer.errors, status=400)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
