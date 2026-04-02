@@ -2459,14 +2459,17 @@ def public_menu_by_table(request, table_id):
     ]
 
     return Response({
-        "restaurant": {
-            "id": restaurant.id,
-            "name": restaurant.name,
-        },
-        "table": {
-            "id": table.id,
-            "table_number": table.table_number
-        },
-        "categories": categories_data,
-        "items": items_data,
-    })
+            "restaurant": {
+                "id": restaurant.id,
+                "name": restaurant.name,
+                "logo": request.build_absolute_uri(restaurant.logo.url) if restaurant.logo else None,
+                "cover_image": request.build_absolute_uri(restaurant.cover_image.url) if restaurant.cover_image else None,
+                "address": restaurant.address,
+            },
+            "table": {
+                "id": table.id,
+                "table_number": table.table_number
+            },
+            "categories": categories_data,
+            "items": items_data,
+        })
