@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import traceback
-from rest_framework import status
 from decimal import Decimal, InvalidOperation
 import datetime
 from io import BytesIO
@@ -29,7 +28,6 @@ from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseForbid
 from django.db import IntegrityError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from django.core.exceptions import ValidationError
 from django.contrib.auth.decorators import login_required
@@ -41,10 +39,11 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.views import View
 import time
+from rest_framework import viewsets, status
+from .serializers import OrderSerializer
 from .serializers import RestaurantSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from .serializers import RestaurantSerializer
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import cache_page
 from django.utils.translation import gettext as _
@@ -2315,3 +2314,34 @@ def restaurant_profile(request):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+##################### Order APIs ##################################
+
+
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.all().order_by('-created_at')
+    serializer_class = OrderSerializer
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [AllowAny()]  # QR public order
+        return [IsAuthenticated()]  # dashboard
+
+    def get_queryset(self):
+        user = self.request.user
+
+        # dashboard → only owner's restaurant orders
+        if user.is_authenticated:
+            return Order.objects.filter(restaurant__owner=user).order_by('-created_at')
+
+        return super().get_queryset()
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        order = serializer.save()
+
+        return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)

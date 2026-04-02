@@ -75,10 +75,27 @@ class FoodItem(models.Model):
         return self.name
     
 class Order(models.Model):
+    STATUS_CHOICES = [
+    ('pending', 'Pending'),
+    ('confirmed', 'Confirmed'),
+    ('preparing', 'Preparing'),
+    ('completed', 'Completed'),
+    ('cancelled', 'Cancelled'),
+]
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     table = models.ForeignKey(Table, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     is_completed = models.BooleanField(default=False)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    total_price_cached = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    customer_name = models.CharField(max_length=100, blank=True, default='')
+    customer_phone = models.CharField(max_length=15, blank=True, default='')
+
+    def save(self, *args, **kwargs):
+        if self.status == 'completed':
+            self.is_completed = True
+        super().save(*args, **kwargs)
 
     def total_price(self):
         total = 0
@@ -90,6 +107,15 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order {self.id} for {self.table}"
+    
+    def update_total(self):
+        total = 0
+        for item in self.order_items.all():
+            base = (item.food_item.price or 0) * (item.quantity or 0)
+            addons_price = sum((a.price or 0) for a in item.selected_addons.all()) * (item.quantity or 0)
+            total += base + addons_price
+        self.total_price_cached = total
+        self.save(update_fields=['total_price_cached'])
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='order_items', on_delete=models.CASCADE)

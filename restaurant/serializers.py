@@ -52,3 +52,77 @@ class RestaurantSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+
+
+from rest_framework import serializers
+from .models import Order, OrderItem, FoodItem, AddOn
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    food_item_id = serializers.IntegerField(write_only=True)
+    selected_addons_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False
+    )
+
+    food_item_name = serializers.CharField(source='food_item.name', read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = [
+            'id',
+            'food_item_id',
+            'food_item_name',
+            'quantity',
+            'selected_addons_ids',
+            'selected_addons'
+        ]
+        read_only_fields = ['selected_addons']
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, write_only=True)
+    order_items = OrderItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = [
+            'id',
+            'restaurant',
+            'table',
+            'customer_name',
+            'customer_phone',
+            'status',
+            'is_completed',
+            'created_at',
+            'total_price_cached',
+            'items',
+            'order_items'
+        ]
+        read_only_fields = ['status', 'is_completed', 'created_at', 'total_price_cached']
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('items')
+
+        order = Order.objects.create(**validated_data)
+
+        for item in items_data:
+            food_item = FoodItem.objects.get(id=item['food_item_id'])
+            quantity = item.get('quantity', 1)
+
+            order_item = OrderItem.objects.create(
+                order=order,
+                food_item=food_item,
+                quantity=quantity
+            )
+
+            addon_ids = item.get('selected_addons_ids', [])
+            if addon_ids:
+                addons = AddOn.objects.filter(id__in=addon_ids)
+                order_item.selected_addons.set(addons)
+
+        # ✅ update total after all items added
+        order.update_total()
+
+        return order

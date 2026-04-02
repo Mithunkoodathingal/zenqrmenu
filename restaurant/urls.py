@@ -1,52 +1,52 @@
 # restaurant/urls.py
+
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from django.urls import reverse_lazy
 from django.conf import settings
 from django.conf.urls.static import static
+from rest_framework.routers import DefaultRouter
+
 from . import debug_views
 from .views import *
-from rest_framework_simplejwt.views import TokenRefreshView
-from rest_framework.routers import DefaultRouter
-from .views import RestaurantViewSet
+from .views import RestaurantViewSet, OrderViewSet
 
 
-
+# ✅ DRF ROUTER (ALL API VIEWSETS HERE)
 router = DefaultRouter()
 router.register(r'restaurants', RestaurantViewSet, basename='restaurant')
+router.register(r'orders', OrderViewSet, basename='orders')
 
-urlpatterns = router.urls
 
 urlpatterns = [
-    # Auth
+
+    # ================= AUTH =================
     path('', login_view, name='login'),
     path('signup/', signup_view, name='signup'),
     path('logout/', CustomLogoutView.as_view(), name='logout'),
-    # logged-in user resend (keeps existing name)
     path('resend-confirmation/', resend_confirmation, name='resend_confirmation'),
-    # public resend-by-email (matches templates that post to 'resend_confirmation_by_email')
     path('resend-by-email/', resend_confirmation_by_email, name='resend_confirmation_by_email'),
     path('terms-and-conditions/', terms_conditions, name='terms_conditions'),
 
-    # Dashboard / menu management
+    # ================= DASHBOARD =================
     path('dashboard/', dashboard, name='dashboard'),
     path('manage-menu/', manage_menu, name='manage_menu'),
     path('menu-preview/', menu_preview, name='menu_preview'),
     path('ajax/toggle-item-availability/', toggle_item_availability, name='toggle_item_availability'),
 
-    # Public menu
+    # ================= PUBLIC MENU =================
     path('menu/<int:restaurant_id>/<int:table_id>/', menu_view, name='menu_view'),
     path('menu/<int:restaurant_id>/<int:table_id>/item/<int:pk>/', product_detail_view, name='product_detail'),
     path('menu/<int:restaurant_id>/<int:table_id>/item/<int:pk>/html/', product_detail_html, name='product_detail_html'),
     path('menu/<int:restaurant_id>/<int:table_id>/item/<int:pk>/json/', product_json, name='product_json'),
     path('menu/<int:restaurant_id>/<int:table_id>/add/<int:pk>/', add_to_order, name='add_to_order'),
 
-    # Cart / ajax
+    # ================= CART =================
     path('menu/<int:restaurant_id>/<int:table_id>/cart/add/<int:pk>/', add_to_cart_ajax, name='add_to_cart_ajax'),
     path('menu/<int:restaurant_id>/<int:table_id>/cart/place/', place_cart_order, name='place_cart_order'),
     path('menu/<int:restaurant_id>/<int:table_id>/cart/summary/', cart_summary, name='cart_summary'),
 
-    # Orders
+    # ================= ORDERS =================
     path('order_confirmation/<int:order_id>/', order_confirmation, name='order_confirmation'),
     path('cancel_order/<int:order_id>/', cancel_order, name='cancel_order'),
     path('order/item/<int:order_item_id>/delete/', delete_order_item_ajax, name='delete_order_item_ajax'),
@@ -54,51 +54,50 @@ urlpatterns = [
     path('complete_order/<int:order_id>/', complete_order, name='complete_order'),
     path('orders/completed/', completed_orders, name='completed_orders'),
 
-    # Kitchen / polling
+    # ================= KITCHEN =================
     path('kitchen/', kitchen_interface, name='kitchen_interface'),
     path('kitchen/orders/json/', orders_json, name='orders_json'),
 
-    # CRUD endpoints
+    # ================= CRUD =================
     path('category/new/', CategoryCreateView.as_view(), name='category_create'),
     path('fooditem/new/', FoodItemCreateView.as_view(), name='fooditem_create'),
     path('menu/edit/<int:pk>/', FoodItemUpdateView.as_view(), name='edit_fooditem'),
     path('menu/delete/<int:pk>/', FoodItemDeleteView.as_view(), name='delete_fooditem'),
 
-    # Tables / QR / restaurant create
+    # ================= TABLE / QR =================
     path('table/new/', TableCreateView.as_view(), name='table_create'),
     path('tables/', create_table_qr_view, name='create_table_qr'),
     path('create-restaurant/', create_restaurant, name='create_restaurant'),
     path('download_qr/<int:table_id>/', download_qr_code, name='download_qr'),
 
-    # Password reset using Django built-in class-based views.
-    # Templates should be placed under "registration/" (see templates below).
+    # ================= PASSWORD RESET =================
     path('accounts/password_reset/', auth_views.PasswordResetView.as_view(
-            template_name='registration/password_reset_form.html',
-            email_template_name='registration/password_reset_email.html',
-            success_url = reverse_lazy('password_reset_done')
-        ), name='password_reset'),
+        template_name='registration/password_reset_form.html',
+        email_template_name='registration/password_reset_email.html',
+        success_url=reverse_lazy('password_reset_done')
+    ), name='password_reset'),
+
     path('accounts/password_reset/done/', auth_views.PasswordResetDoneView.as_view(
-            template_name='registration/password_reset_done.html'
-        ), name='password_reset_done'),
+        template_name='registration/password_reset_done.html'
+    ), name='password_reset_done'),
+
     path('accounts/reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
-            template_name='registration/password_reset_confirm.html',
-            success_url=reverse_lazy('password_reset_complete')
-        ), name='password_reset_confirm'),
+        template_name='registration/password_reset_confirm.html',
+        success_url=reverse_lazy('password_reset_complete')
+    ), name='password_reset_confirm'),
+
     path('accounts/reset/done/', auth_views.PasswordResetCompleteView.as_view(
-            template_name='registration/password_reset_complete.html'
-        ), name='password_reset_complete'),
+        template_name='registration/password_reset_complete.html'
+    ), name='password_reset_complete'),
+
     path("__debug/diagnostic/", debug_views.diagnostic, name="diagnostic"),
     path('test-email/', test_email, name='test_email'),
 
-    ######### API URLS #########
-
+    # ================= API (EXISTING) =================
     path('menu/api/categories/', categories_api),
     path('menu/api/categories/<int:id>/', category_detail_api),
 
-    # 🔐 Owner API
     path("menu/api/restaurant/", restaurant_profile),
-
-    # 🌍 Public API (QR)
     path("menu/api/public/<int:restaurant_id>/", public_menu),
 
     path('menu/api/items/', menu_items_api),
@@ -111,8 +110,10 @@ urlpatterns = [
     path('api/user/', api_user),
     path('api/logout/', api_logout),
 
+    # ================= NEW (IMPORTANT) =================
+    path('menu/api/', include(router.urls)),
 ]
 
-# append static files served in development
+# ================= STATIC =================
 if settings.DEBUG:
-    urlpatterns = urlpatterns + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
