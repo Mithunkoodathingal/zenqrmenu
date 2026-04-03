@@ -9,7 +9,7 @@ from rest_framework.routers import DefaultRouter
 
 from . import debug_views
 from .views import *
-from .views import RestaurantViewSet, OrderViewSet
+from subscription.views import subscription_status
 
 
 # ✅ DRF ROUTER (ALL API VIEWSETS HERE)
@@ -106,10 +106,17 @@ urlpatterns = [
     path('menu/api/tables/', create_table_api),
     path('menu/api/tables/<int:table_id>/', delete_table_api),
 
+
+
     path('api/register/', api_register),
     path('api/login/', api_login),
     path('api/user/', api_user),
     path('api/logout/', api_logout),
+
+    ################# Subscription Status api(From Subscription app) ####################
+
+    path('menu/api/subscription/', subscription_status),
+
 
     ################# Menu URL ######################
 
