@@ -2497,3 +2497,68 @@ def public_menu_by_table(request, table_id):
             "categories": categories_data,
             "items": items_data,
         })
+
+
+######################### JWT Login API ########################
+
+################################################################
+
+
+
+@api_view(['POST'])
+def api_login(request):
+    username_or_email = request.data.get("username")
+    password = request.data.get("password")
+
+    if not username_or_email or not password:
+        return Response({"error": "Missing credentials"}, status=400)
+
+    user = authenticate(username=username_or_email, password=password)
+
+    # fallback: email login
+    if user is None:
+        try:
+            user_obj = User.objects.get(email=username_or_email)
+            if user_obj.check_password(password):
+                user = user_obj
+        except User.DoesNotExist:
+            return Response({"error": "Invalid credentials"}, status=400)
+
+    if not user:
+        return Response({"error": "Invalid credentials"}, status=400)
+
+    # 🚨 Email verification check
+    is_verified = EmailAddress.objects.filter(user=user, verified=True).exists()
+    if not is_verified:
+        return Response({
+            "error": "Email not verified",
+            "email": user.email
+        }, status=403)
+
+    # ✅ Generate JWT tokens
+    refresh = RefreshToken.for_user(user)
+
+    return Response({
+        "message": "Login successful",
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email
+        }
+    })
+
+
+@api_view(['POST'])
+def api_logout(request):
+    return Response({"message": "Logged out (client should delete token)"})
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def dashboard_api(request):
+    return Response({
+        "message": f"Welcome {request.user.username}"
+    })

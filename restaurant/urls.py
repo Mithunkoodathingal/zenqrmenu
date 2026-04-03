@@ -106,6 +106,11 @@ urlpatterns = [
     path('menu/api/tables/', create_table_api),
     path('menu/api/tables/<int:table_id>/', delete_table_api),
 
+    ################### JWT ##################################
+
+    path('api/auth/login/', api_login),
+    path('api/auth/refresh/', TokenRefreshView.as_view()),
+
 
 
     path('api/register/', api_register),
