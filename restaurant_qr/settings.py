@@ -395,10 +395,10 @@ BREVO_API_KEY = config("BREVO_API_KEY")            # top-level key
 ANYMAIL_BREVO_API_KEY = BREVO_API_KEY              # legacy name anymail may check
 
 # Primary ANYMAIL dict (modern shape)
+
+
 ANYMAIL = {
-    "BREVO": {
-        "API_KEY": BREVO_API_KEY,
-    },
+    "BREVO_API_KEY": BREVO_API_KEY,
 }
 
 # DEFAULT_FROM_EMAIL: read raw env and sanitize
