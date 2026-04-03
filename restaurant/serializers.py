@@ -1,6 +1,8 @@
 from rest_framework import serializers
-from .models import Restaurant
+from .models import Restaurant, Order, OrderItem, FoodItem, AddOn
 
+
+# ================= RESTAURANT =================
 
 class RestaurantSerializer(serializers.ModelSerializer):
     class Meta:
@@ -16,37 +18,33 @@ class RestaurantSerializer(serializers.ModelSerializer):
             'phone',
             'cuisine_type',
         ]
-        read_only_fields = ['owner']  # keep owner read-only
+        read_only_fields = ['owner']
 
     def update(self, instance, validated_data):
         request = self.context.get('request', None)
 
-        # ✅ SAFE DEBUG (won’t crash)
+        # DEBUG
         if request:
             print("FILES:", request.FILES)
 
-        # 🔥 HANDLE FILE UPLOADS SAFELY
+        # HANDLE FILES
         if request and request.FILES:
 
-            # ✅ LOGO
             if 'logo' in request.FILES:
                 new_logo = request.FILES.get('logo')
-
                 if new_logo:
                     if instance.logo:
-                        instance.logo.delete(save=False)  # remove old file
+                        instance.logo.delete(save=False)
                     instance.logo = new_logo
 
-            # ✅ COVER IMAGE
             if 'cover_image' in request.FILES:
                 new_cover = request.FILES.get('cover_image')
-
                 if new_cover:
                     if instance.cover_image:
                         instance.cover_image.delete(save=False)
                     instance.cover_image = new_cover
 
-        # 🔥 UPDATE NORMAL FIELDS
+        # NORMAL FIELDS
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
@@ -54,9 +52,7 @@ class RestaurantSerializer(serializers.ModelSerializer):
         return instance
 
 
-from rest_framework import serializers
-from .models import Order, OrderItem, FoodItem, AddOn
-
+# ================= ORDER ITEM =================
 
 class OrderItemSerializer(serializers.ModelSerializer):
     food_item_id = serializers.IntegerField(write_only=True)
@@ -81,6 +77,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
         read_only_fields = ['selected_addons']
 
 
+# ================= ORDER =================
+
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, write_only=True)
     order_items = OrderItemSerializer(many=True, read_only=True)
@@ -93,25 +91,23 @@ class OrderSerializer(serializers.ModelSerializer):
             'table',
             'customer_name',
             'customer_phone',
-            'status',
+            'status',  # ✅ NOW WRITABLE
             'is_completed',
             'created_at',
             'total_price_cached',
             'items',
             'order_items'
         ]
-        read_only_fields = ['status', 'is_completed', 'created_at', 'total_price_cached']
+        # ❌ REMOVED status from read_only
+        read_only_fields = ['is_completed', 'created_at', 'total_price_cached']
 
-        
-
+    # ================= CREATE =================
     def create(self, validated_data):
         items_data = validated_data.pop('items')
 
-        # ✅ Get table and derive restaurant automatically
         table = validated_data.get('table')
         restaurant = table.restaurant
 
-        # ✅ Create order with correct restaurant
         order = Order.objects.create(
             table=table,
             restaurant=restaurant,
@@ -125,7 +121,7 @@ class OrderSerializer(serializers.ModelSerializer):
             food_item = FoodItem.objects.get(id=item['food_item_id'])
             quantity = item.get('quantity', 1)
 
-            # ✅ Safety check (VERY IMPORTANT)
+            # 🔒 SECURITY CHECK
             if food_item.restaurant != restaurant:
                 raise serializers.ValidationError("Invalid food item for this restaurant")
 
@@ -140,13 +136,26 @@ class OrderSerializer(serializers.ModelSerializer):
                 addons = AddOn.objects.filter(id__in=addon_ids)
                 order_item.selected_addons.set(addons)
 
-            # ✅ Calculate total inline (faster)
             base = (food_item.price or 0) * quantity
             addons_price = sum(a.price for a in order_item.selected_addons.all()) * quantity
             total += base + addons_price
 
-        # ✅ Save total once
         order.total_price_cached = total
         order.save()
 
         return order
+
+    # ================= UPDATE (FIX FOR PATCH) =================
+    def update(self, instance, validated_data):
+        status = validated_data.get('status', instance.status)
+
+        instance.status = status
+
+        # ✅ SYNC BOOLEAN FIELD
+        if status == 'completed':
+            instance.is_completed = True
+        else:
+            instance.is_completed = False
+
+        instance.save()
+        return instance
