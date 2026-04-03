@@ -37,10 +37,10 @@ from django.db.models import Sum, F, DecimalField, ExpressionWrapper, Q
 import datetime
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from django.contrib.auth.models import User
 from django.contrib import messages
 from django.views import View
 import time
+from allauth.account.adapter import get_adapter
 from rest_framework import viewsets, status
 from .serializers import OrderSerializer
 from .serializers import RestaurantSerializer
@@ -1943,6 +1943,9 @@ class RestaurantViewSet(ModelViewSet):
 #################### AUTH APIS #####################################
 
 
+
+######################### REGISTER API #########################
+
 @api_view(['POST'])
 def api_register(request):
     data = request.data
@@ -1964,71 +1967,145 @@ def api_register(request):
     if User.objects.filter(username=username).exists():
         errors["username"] = ["Username already exists."]
 
-    if errors:
-        return JsonResponse({"success": False, "errors": errors}, status=400)
+    if User.objects.filter(email=email).exists():
+        errors["email"] = ["Email already exists."]
 
+    if errors:
+        return Response({"success": False, "errors": errors}, status=400)
+
+    # ✅ Create user
     user = User.objects.create_user(
         username=username,
         email=email,
         password=password1
     )
 
-    refresh = RefreshToken.for_user(user)
+    # ✅ Create EmailAddress (required by allauth)
+    EmailAddress.objects.create(
+        user=user,
+        email=user.email,
+        verified=False,
+        primary=True
+    )
 
-    return JsonResponse({
+    # ✅ Send verification email
+    try:
+        get_adapter(request).send_confirmation_mail(request, user, signup=True)
+    except Exception as e:
+        print("Email send error:", str(e))
+
+    return Response({
         "success": True,
-        "token": str(refresh.access_token),
-        "user": {
-            "username": user.username,
-            "email": user.email
-        }
+        "message": "Account created. Please verify your email.",
+        "email": user.email
     })
 
 
+######################### LOGIN API #########################
 
 @api_view(['POST'])
 def api_login(request):
-    data = request.data
+    username_or_email = request.data.get("username")
+    password = request.data.get("password")
 
-    username = data.get("username")
-    password = data.get("password")
+    if not username_or_email or not password:
+        return Response({"error": "Missing credentials"}, status=400)
 
-    user = authenticate(username=username, password=password)
+    # 🔐 Try username login
+    user = authenticate(username=username_or_email, password=password)
+
+    # 🔁 Fallback to email login
+    if user is None:
+        try:
+            user_obj = User.objects.get(email=username_or_email)
+            if user_obj.check_password(password):
+                user = user_obj
+        except User.DoesNotExist:
+            return Response({"error": "Invalid credentials"}, status=400)
 
     if not user:
-        return JsonResponse({
-            "success": False,
-            "errors": {"non_field_errors": ["Invalid credentials"]}
-        }, status=400)
+        return Response({"error": "Invalid credentials"}, status=400)
 
+    # 🚨 Email verification check
+    email_obj = EmailAddress.objects.filter(user=user, email=user.email).first()
+
+    if email_obj:
+        if not email_obj.verified:
+            # resend verification (avoid spam: 60 sec rule optional)
+            try:
+                get_adapter(request).send_confirmation_mail(request, user, signup=True)
+            except Exception as e:
+                print("Email send error:", str(e))
+
+            return Response({
+                "error": "Email not verified. Verification email sent.",
+                "email": user.email
+            }, status=403)
+    else:
+        # if missing, create and send
+        EmailAddress.objects.create(
+            user=user,
+            email=user.email,
+            verified=False,
+            primary=True
+        )
+
+        get_adapter(request).send_confirmation_mail(request, user, signup=True)
+
+        return Response({
+            "error": "Email not verified. Verification email sent.",
+            "email": user.email
+        }, status=403)
+
+    # ✅ Generate JWT
     refresh = RefreshToken.for_user(user)
 
-    return JsonResponse({
-        "success": True,
-        "token": str(refresh.access_token),
+    return Response({
+        "message": "Login successful",
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
         "user": {
+            "id": user.id,
             "username": user.username,
             "email": user.email
         }
     })
 
 
+######################### LOGOUT API #########################
 
 @api_view(['POST'])
 def api_logout(request):
-    return JsonResponse({"success": True})
+    return Response({
+        "success": True,
+        "message": "Logged out (delete token on frontend)"
+    })
 
+
+######################### USER API #########################
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_user(request):
-    return JsonResponse({
+    return Response({
         "success": True,
         "user": {
+            "id": request.user.id,
             "username": request.user.username,
             "email": request.user.email
         }
     })
+
+
+######################### DASHBOARD API #########################
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def dashboard_api(request):
+    return Response({
+        "message": f"Welcome {request.user.username}"
+    })
+
 
 ############ CATEGORY APIs ################
 
@@ -2502,63 +2579,3 @@ def public_menu_by_table(request, table_id):
 ######################### JWT Login API ########################
 
 ################################################################
-
-
-
-@api_view(['POST'])
-def api_login(request):
-    username_or_email = request.data.get("username")
-    password = request.data.get("password")
-
-    if not username_or_email or not password:
-        return Response({"error": "Missing credentials"}, status=400)
-
-    user = authenticate(username=username_or_email, password=password)
-
-    # fallback: email login
-    if user is None:
-        try:
-            user_obj = User.objects.get(email=username_or_email)
-            if user_obj.check_password(password):
-                user = user_obj
-        except User.DoesNotExist:
-            return Response({"error": "Invalid credentials"}, status=400)
-
-    if not user:
-        return Response({"error": "Invalid credentials"}, status=400)
-
-    # 🚨 Email verification check
-    is_verified = EmailAddress.objects.filter(user=user, verified=True).exists()
-    if not is_verified:
-        return Response({
-            "error": "Email not verified",
-            "email": user.email
-        }, status=403)
-
-    # ✅ Generate JWT tokens
-    refresh = RefreshToken.for_user(user)
-
-    return Response({
-        "message": "Login successful",
-        "access": str(refresh.access_token),
-        "refresh": str(refresh),
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email
-        }
-    })
-
-
-@api_view(['POST'])
-def api_logout(request):
-    return Response({"message": "Logged out (client should delete token)"})
-
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def dashboard_api(request):
-    return Response({
-        "message": f"Welcome {request.user.username}"
-    })
