@@ -549,3 +549,31 @@ def api_verify_payment(request):
     tx.save()
 
     return JsonResponse({"success": True})
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def subscription_status(request):
+
+    try:
+        restaurant = Restaurant.objects.get(owner=request.user)
+    except Restaurant.DoesNotExist:
+        return JsonResponse({"error": "Restaurant not found"}, status=404)
+
+    is_valid, result = check_subscription_access(restaurant)
+
+    if not is_valid:
+        return JsonResponse({
+            "is_active": False,
+            "error": result
+        }, status=403)
+
+    plan = result
+
+    return JsonResponse({
+        "plan": getattr(plan, "name", "free"),
+        "menu_item_limit": getattr(plan, "menu_item_limit", 0),
+        "table_limit": getattr(plan, "table_limit", 0),
+        "is_active": True
+    })
