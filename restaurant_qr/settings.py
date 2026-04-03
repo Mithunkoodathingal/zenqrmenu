@@ -424,7 +424,7 @@ EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 
 # Keep your allauth/account settings
-ACCOUNT_ADAPTER = "restaurant.adapters.NoPrefixAccountAdapter"
+ACCOUNT_ADAPTER = "restaurant.adapters.CustomAccountAdapter"
 EMAIL_SUBJECT_PREFIX = ""
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
 
