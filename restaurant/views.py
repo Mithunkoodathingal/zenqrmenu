@@ -40,6 +40,9 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
 from django.views import View
 import time
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_decode
+from allauth.account.forms import ResetPasswordForm
 from allauth.account.adapter import get_adapter
 from rest_framework import viewsets, status
 from .serializers import OrderSerializer
@@ -2576,6 +2579,84 @@ def public_menu_by_table(request, table_id):
         })
 
 
-######################### JWT Login API ########################
+######################### EMAIL UPDATE/VERIFICATION ########################
 
-################################################################
+############################################################################
+
+
+
+
+@api_view(['POST'])
+def resend_verification(request):
+    email = request.data.get("email")
+
+    if not email:
+        return Response({"error": "Email required"}, status=400)
+
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+    email_obj = EmailAddress.objects.filter(user=user, email=email).first()
+
+    if email_obj and email_obj.verified:
+        return Response({"message": "Email already verified"}, status=400)
+
+    # create if missing
+    if not email_obj:
+        EmailAddress.objects.create(
+            user=user,
+            email=email,
+            verified=False,
+            primary=True
+        )
+
+    # send email
+    get_adapter(request).send_confirmation_mail(request, user, signup=False)
+
+    return Response({"message": "Verification email sent"})
+
+
+
+@api_view(['POST'])
+def password_reset(request):
+    email = request.data.get("email")
+
+    if not email:
+        return Response({"error": "Email required"}, status=400)
+
+    form = ResetPasswordForm(data={"email": email})
+
+    if form.is_valid():
+        form.save(request=request)
+        return Response({"message": "Password reset email sent"})
+
+    return Response({"error": "Invalid email"}, status=400)
+
+
+
+
+@api_view(['POST'])
+def password_reset_confirm(request):
+    uid = request.data.get("uid")
+    token = request.data.get("token")
+    password1 = request.data.get("new_password1")
+    password2 = request.data.get("new_password2")
+
+    if password1 != password2:
+        return Response({"error": "Passwords do not match"}, status=400)
+
+    try:
+        user_id = urlsafe_base64_decode(uid).decode()
+        user = User.objects.get(pk=user_id)
+    except Exception:
+        return Response({"error": "Invalid UID"}, status=400)
+
+    if not default_token_generator.check_token(user, token):
+        return Response({"error": "Invalid token"}, status=400)
+
+    user.set_password(password1)
+    user.save()
+
+    return Response({"message": "Password reset successful"})

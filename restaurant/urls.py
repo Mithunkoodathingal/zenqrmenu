@@ -106,6 +106,12 @@ urlpatterns = [
     path('menu/api/tables/', create_table_api),
     path('menu/api/tables/<int:table_id>/', delete_table_api),
 
+    ####################### EMAIL/PASSWORD ############################
+
+    path("api/resend-verification/", resend_verification),
+    path("api/password/reset/", password_reset),
+    path("api/password/reset/confirm/", password_reset_confirm),
+
     ################### JWT ##################################
 
     path('api/auth/login/', api_login),
