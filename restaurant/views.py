@@ -40,6 +40,8 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
 from django.views import View
 import time
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode
 from allauth.account.forms import ResetPasswordForm
@@ -2660,3 +2662,38 @@ def password_reset_confirm(request):
     user.save()
 
     return Response({"message": "Password reset successful"})
+
+
+
+
+
+@api_view(['POST'])
+def google_login(request):
+    id_token_from_frontend = request.data.get("id_token")
+
+    if not id_token_from_frontend:
+        return Response({"error": "No token"}, status=400)
+
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            id_token_from_frontend,
+            google_requests.Request(),
+            "886773285585-fg35vj7ot1884qvkp64q9l7n8gst3tfn.apps.googleusercontent.com"
+        )
+
+        email = idinfo['email']
+
+        user, _ = User.objects.get_or_create(
+            email=email,
+            defaults={"username": email.split("@")[0]}
+        )
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+        })
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)

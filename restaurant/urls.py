@@ -124,6 +124,8 @@ urlpatterns = [
     path('api/user/', api_user),
     path('api/logout/', api_logout),
 
+    path("api/auth/google/", google_login),
+
     ################# Subscription Status api(From Subscription app) ####################
 
     path('menu/api/subscription/', subscription_status),
