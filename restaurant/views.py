@@ -2446,32 +2446,28 @@ def public_menu(request, restaurant_id):
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def restaurant_profile(request):
-    
-    # ✅ Get restaurant safely
-    restaurant = Restaurant.objects.filter(owner=request.user).first()
 
-    if not restaurant:
-        return Response(
-            {"error": "Restaurant not found. Please create one first."},
-            status=status.HTTP_404_NOT_FOUND
-        )
+    # ✅ FIXED: auto create if not exists
+    restaurant, created = Restaurant.objects.get_or_create(
+        owner=request.user
+    )
 
     # ✅ GET
     if request.method == 'GET':
         serializer = RestaurantSerializer(restaurant, context={'request': request})
         return Response(serializer.data)
 
-    # ✅ PATCH (update)
+    # ✅ PATCH
     elif request.method == 'PATCH':
         serializer = RestaurantSerializer(
             restaurant,
             data=request.data,
             partial=True,
-            context={'request': request}  # 🔥 REQUIRED for file uploads
+            context={'request': request}
         )
 
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(owner=request.user)  # ✅ important
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
