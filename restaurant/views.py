@@ -2683,10 +2683,15 @@ def google_login(request):
 
         email = idinfo['email']
 
-        user, _ = User.objects.get_or_create(
-            email=email,
-            defaults={"username": email.split("@")[0]}
-        )
+        users = User.objects.filter(email=email)
+
+        if users.exists():
+            user = users.first()   # ✅ pick first user
+        else:
+            user = User.objects.create(
+                email=email,
+                username=email.split("@")[0]
+            )
 
         refresh = RefreshToken.for_user(user)
 
