@@ -24,15 +24,15 @@ from restaurant.views import MySignupView, login_view, CustomLogoutView, signup_
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    path('accounts/login/', login_view, name='account_login'), 
-    path('login/', login_view, name='login'),    # covers templates that use allauth name
-    path('accounts/logout/', CustomLogoutView.as_view(), name='account_logout'),
+    # path('accounts/login/', login_view, name='account_login'), 
+    # path('login/', login_view, name='login'),    # covers templates that use allauth name
+    # path('accounts/logout/', CustomLogoutView.as_view(), name='account_logout'),
 
 
-    # 1) Override the signup route BEFORE including allauth.
-    path('accounts/signup/', MySignupView.as_view(), name='account_signup'),
+    # # 1) Override the signup route BEFORE including allauth.
+    # path('accounts/signup/', MySignupView.as_view(), name='account_signup'),
 
-    path('accounts/signup/thankyou/', signup_thankyou, name='signup_thankyou'),
+    # path('accounts/signup/thankyou/', signup_thankyou, name='signup_thankyou'),
 
     # 3) Now include the rest of allauth's URLs
     path('accounts/', include('allauth.urls')),

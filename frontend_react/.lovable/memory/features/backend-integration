@@ -1,0 +1,40 @@
+---
+name: Backend integration
+description: Django API endpoints, JWT auth with refresh tokens, email verification, Razorpay flow, menu CRUD APIs
+type: feature
+---
+Django backend at zenqrmenu.com. JWT auth with SimpleJWT (access + refresh tokens).
+
+Auth endpoints:
+- POST /api/login/ — returns { access, refresh, user } or { error: "Email not verified", email }
+- POST /api/auth/refresh/ — SimpleJWT refresh, payload: { refresh }, returns { access }
+- POST /api/register/ — triggers verification email via allauth
+- POST /api/logout/ — client deletes tokens
+- GET  /api/user/
+
+Email verification: allauth handles verification emails. Login returns 403 with error "Email not verified" if unverified. Frontend redirects to /verify-email page.
+
+Subscription/Payment endpoints:
+- GET  /subscription/api/plans/
+- POST /subscription/api/create/
+- POST /subscription/api/verify/
+- GET  /menu/api/subscription/ — returns { plan, menu_item_limit, table_limit, is_active }
+
+Menu CRUD endpoints (JWT Bearer token):
+- GET/POST        /menu/api/categories/
+- PATCH/DELETE    /menu/api/categories/:id/
+- GET/POST        /menu/api/items/
+- PATCH/DELETE    /menu/api/items/:id/
+
+Tables endpoint (JWT Bearer token):
+- GET /menu/api/tables/ — returns list of { id, table_number, qr_code }
+
+Public menu endpoint (no auth):
+- GET /menu/api/table/{table_id}/  — returns menu for the table's restaurant
+
+Order endpoints:
+- POST /menu/api/orders/ — public, payload: { table, customer_name?, customer_phone?, items: [{ food_item_id, quantity, selected_addons_ids? }] }
+- GET  /menu/api/orders/ — auth required, ?restaurant_id= filter
+- PATCH /menu/api/orders/:id/ — auth required, update status
+
+Token stored in localStorage via src/lib/auth.ts (access + refresh). Auto-refresh on 401 via authFetch(). Menu API layer in src/lib/menuApi.ts. React Query hooks in src/hooks/useMenuData.ts.

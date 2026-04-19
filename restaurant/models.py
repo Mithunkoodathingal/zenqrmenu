@@ -64,6 +64,7 @@ class FoodItem(models.Model):
     description = models.TextField(blank=True, null=True)
     image = models.ImageField(upload_to=upload_food_image, null=True, blank=True)  # New field
     addons = models.ManyToManyField(AddOn, blank=True)
+    is_veg = models.BooleanField(default=True)
     is_paused = models.BooleanField(default=False, help_text="When true, item is hidden from public menu (out of stock).")
 
     class Meta:

@@ -52,6 +52,15 @@ class RestaurantSerializer(serializers.ModelSerializer):
         return instance
 
 
+# ================= FOOD ITEM =================
+
+
+class FoodItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FoodItem
+        fields = '__all__'   # OR explicitly add 'is_veg'
+
+
 # ================= ORDER ITEM =================
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -64,6 +73,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     food_item_name = serializers.CharField(source='food_item.name', read_only=True)
 
+    is_veg = serializers.BooleanField(source='food_item.is_veg', read_only=True)
+
     class Meta:
         model = OrderItem
         fields = [
@@ -71,6 +82,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
             'food_item_id',
             'food_item_name',
             'quantity',
+            'is_veg',
             'selected_addons_ids',
             'selected_addons'
         ]

@@ -40,6 +40,7 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
 from django.views import View
 import time
+from allauth.account.utils import send_email_confirmation
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from django.contrib.auth.tokens import default_token_generator
@@ -1994,10 +1995,7 @@ def api_register(request):
     )
 
     # ✅ Send verification email
-    try:
-        get_adapter(request).send_confirmation_mail(request, user, signup=True)
-    except Exception as e:
-        print("Email send error:", str(e))
+    send_email_confirmation(request, user, signup=True)
 
     return Response({
         "success": True,
@@ -2008,59 +2006,56 @@ def api_register(request):
 
 ######################### LOGIN API #########################
 
+
+
 @api_view(['POST'])
-def api_login(request):
-    username_or_email = request.data.get("username")
-    password = request.data.get("password")
+def api_register(request):
+    data = request.data
 
-    if not username_or_email or not password:
-        return Response({"error": "Missing credentials"}, status=400)
+    username = data.get("username")
+    email = data.get("email")
+    password1 = data.get("password1")
+    password2 = data.get("password2")
 
-    # 🔐 Try username login
-    user = authenticate(username=username_or_email, password=password)
+    errors = {}
 
-    # 🔁 Fallback to email login
-    if user is None:
-        try:
-            user_obj = User.objects.get(email=username_or_email)
-            if user_obj.check_password(password):
-                user = user_obj
-        except User.DoesNotExist:
-            return Response({"error": "Invalid credentials"}, status=400)
+    if not username:
+        errors["username"] = ["This field is required."]
+    if not email:
+        errors["email"] = ["This field is required."]
+    if password1 != password2:
+        errors["password2"] = ["Passwords do not match."]
 
-    if not user:
-        return Response({"error": "Invalid credentials"}, status=400)
+    if User.objects.filter(username=username).exists():
+        errors["username"] = ["Username already exists."]
 
-    # 🚨 Email verification check
-    email_obj = EmailAddress.objects.filter(user=user, email=user.email).first()
+    if User.objects.filter(email=email).exists():
+        errors["email"] = ["Email already exists."]
 
-    if email_obj:
-        if not email_obj.verified:
-            # resend verification (avoid spam: 60 sec rule optional)
-            try:
-                get_adapter(request).send_confirmation_mail(request, user, signup=True)
-            except Exception as e:
-                print("Email send error:", str(e))
+    if errors:
+        return Response({"success": False, "errors": errors}, status=400)
 
-            return Response({
-                "error": "Email not verified. Verification email sent.",
-                "email": user.email
-            }, status=403)
-    else:
-        # if missing, create and send
-        EmailAddress.objects.create(
-            user=user,
-            email=user.email,
-            verified=False,
-            primary=True
-        )
+    user = User.objects.create_user(
+        username=username,
+        email=email,
+        password=password1
+    )
 
-        get_adapter(request).send_confirmation_mail(request, user, signup=True)
+    # ✅ safe create
+    EmailAddress.objects.get_or_create(
+        user=user,
+        email=user.email,
+        defaults={"primary": True, "verified": False}
+    )
 
-        return Response({
-            "error": "Email not verified. Verification email sent.",
-            "email": user.email
-        }, status=403)
+    # ✅ correct email trigger
+    send_email_confirmation(request, user, signup=True)
+
+    return Response({
+        "success": True,
+        "message": "Account created. Please verify your email.",
+        "email": user.email
+    })
 
     # ✅ Generate JWT
     refresh = RefreshToken.for_user(user)
