@@ -465,7 +465,10 @@ SIMPLE_JWT = {
 
 # Login/Logout
 LOGIN_REDIRECT_URL = config('LOGIN_REDIRECT_URL', default='dashboard')
-LOGOUT_REDIRECT_URL = config('LOGOUT_REDIRECT_URL', default='login')
+LOGOUT_REDIRECT_URL = config('LOGOUT_REDIRECT_URL', default="https://www.zenqrmenu.com/login")
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "https://www.zenqrmenu.com/email-verified"
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = "https://www.zenqrmenu.com/email-verified"
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True
 
 # Third party credentials
 RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID', default='')
