@@ -40,7 +40,7 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
 from django.views import View
 import time
-from allauth.account.utils import send_email_confirmation
+from django.contrib.auth.models import User
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from django.contrib.auth.tokens import default_token_generator
@@ -1986,16 +1986,18 @@ def api_register(request):
         password=password1
     )
 
-    # ✅ Create EmailAddress (required by allauth)
-    EmailAddress.objects.create(
+    # ✅ Create or get EmailAddress
+    email_address, created = EmailAddress.objects.get_or_create(
         user=user,
         email=user.email,
-        verified=False,
-        primary=True
+        defaults={"primary": True, "verified": False}
     )
 
-    # ✅ Send verification email
-    send_email_confirmation(request, user, signup=True)
+    # 🔥 Send verification email (NEW ALLAUTH METHOD)
+    try:
+        email_address.send_confirmation(request)
+    except Exception as e:
+        print("Email send error:", str(e))
 
     return Response({
         "success": True,
@@ -2006,56 +2008,62 @@ def api_register(request):
 
 ######################### LOGIN API #########################
 
-
-
 @api_view(['POST'])
-def api_register(request):
-    data = request.data
+def api_login(request):
+    username_or_email = request.data.get("username")
+    password = request.data.get("password")
 
-    username = data.get("username")
-    email = data.get("email")
-    password1 = data.get("password1")
-    password2 = data.get("password2")
+    if not username_or_email or not password:
+        return Response({"error": "Missing credentials"}, status=400)
 
-    errors = {}
+    # 🔐 Try username login
+    user = authenticate(username=username_or_email, password=password)
 
-    if not username:
-        errors["username"] = ["This field is required."]
-    if not email:
-        errors["email"] = ["This field is required."]
-    if password1 != password2:
-        errors["password2"] = ["Passwords do not match."]
+    # 🔁 Fallback to email login
+    if user is None:
+        try:
+            user_obj = User.objects.get(email=username_or_email)
+            if user_obj.check_password(password):
+                user = user_obj
+        except User.DoesNotExist:
+            return Response({"error": "Invalid credentials"}, status=400)
 
-    if User.objects.filter(username=username).exists():
-        errors["username"] = ["Username already exists."]
+    if not user:
+        return Response({"error": "Invalid credentials"}, status=400)
 
-    if User.objects.filter(email=email).exists():
-        errors["email"] = ["Email already exists."]
+    # 🚨 Email verification check
+    email_obj = EmailAddress.objects.filter(user=user, email=user.email).first()
 
-    if errors:
-        return Response({"success": False, "errors": errors}, status=400)
+    if email_obj:
+        if not email_obj.verified:
+            try:
+                # 🔥 resend verification
+                email_obj.send_confirmation(request)
+            except Exception as e:
+                print("Email send error:", str(e))
 
-    user = User.objects.create_user(
-        username=username,
-        email=email,
-        password=password1
-    )
+            return Response({
+                "error": "Email not verified. Verification email sent.",
+                "email": user.email
+            }, status=403)
+    else:
+        # if missing, create and send
+        email_obj = EmailAddress.objects.create(
+            user=user,
+            email=user.email,
+            verified=False,
+            primary=True
+        )
 
-    # ✅ safe create
-    EmailAddress.objects.get_or_create(
-        user=user,
-        email=user.email,
-        defaults={"primary": True, "verified": False}
-    )
+        try:
+            email_obj.send_confirmation(request)
+        except Exception as e:
+            print("Email send error:", str(e))
 
-    # ✅ correct email trigger
-    send_email_confirmation(request, user, signup=True)
-
-    return Response({
-        "success": True,
-        "message": "Account created. Please verify your email.",
-        "email": user.email
-    })
+        return Response({
+            "error": "Email not verified. Verification email sent.",
+            "email": user.email
+        }, status=403)
 
     # ✅ Generate JWT
     refresh = RefreshToken.for_user(user)
