@@ -6,7 +6,6 @@ import os
 import traceback
 from decimal import Decimal, InvalidOperation
 import datetime
-from io import BytesIO
 from django.db.models import Prefetch 
 import qrcode
 from django.conf import settings
@@ -40,6 +39,10 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
 from django.views import View
 import time
+from io import BytesIO
+from django.core.files import File
+from django.http import JsonResponse
+from subscription.utils import check_subscription_access
 from django.contrib.auth.models import User
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
@@ -2138,7 +2141,12 @@ def categories_api(request):
         if not name:
             return JsonResponse({"error": "Name required"}, status=400)
 
-        cat = Category.objects.create(name=name, restaurant=restaurant)
+        name = name.strip().title()
+
+        category, created = Category.objects.get_or_create(
+            name=name,
+            restaurant=restaurant
+        )
 
         return JsonResponse({"id": cat.id, "name": cat.name}, status=201)
     
@@ -2164,7 +2172,7 @@ def category_detail_api(request, id):
         return JsonResponse({"success": True})
     
 
-from subscription.utils import check_subscription_access
+
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
@@ -2214,14 +2222,39 @@ def menu_items_api(request):
                     "error": f"Limit reached ({max_items})"
                 }, status=403)
 
-        item = FoodItem.objects.create(
-            name=request.data.get("name"),
-            price=request.data.get("price"),
-            description=request.data.get("description"),
-            category_id=request.data.get("category"),
-            image=request.FILES.get("image"),
-            restaurant=restaurant
+        # 🔥 normalize input
+        name = request.data.get("name", "").strip().title()
+        price = request.data.get("price")
+        description = request.data.get("description", "")
+        category_id = request.data.get("category")
+        image = request.FILES.get("image")
+
+        # 🔒 validate category belongs to this restaurant
+        try:
+            category = Category.objects.get(id=category_id, restaurant=restaurant)
+        except Category.DoesNotExist:
+            return JsonResponse({"success": False, "error": "Invalid category"}, status=400)
+
+        # 🔥 prevent duplicates
+        item, created = FoodItem.objects.get_or_create(
+            name=name,
+            restaurant=restaurant,
+            defaults={
+                "price": price,
+                "description": description,
+                "category": category,
+                "image": image,
+            }
         )
+
+        # 🔁 update if already exists
+        if not created:
+            item.price = price
+            item.description = description
+            item.category = category
+            if image:
+                item.image = image
+            item.save()
 
         return JsonResponse({
             "id": item.id,
@@ -2230,7 +2263,8 @@ def menu_items_api(request):
             "description": item.description,
             "category": item.category.id if item.category else None,
             "is_available": not item.is_paused,
-            "image": item.image.url if item.image else None
+            "image": item.image.url if item.image else None,
+            "created": created
         }, status=201)
     
 
@@ -2275,13 +2309,6 @@ def menu_item_detail_api(request, id):
     
 
 
-
-import qrcode
-from io import BytesIO
-from django.core.files import File
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from django.http import JsonResponse
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])

@@ -46,6 +46,9 @@ class Category(models.Model):
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
 
+    class Meta:
+        unique_together = ['name', 'restaurant']
+
     def __str__(self):
         return self.name
 
@@ -71,6 +74,9 @@ class FoodItem(models.Model):
         indexes = [
             models.Index(fields=['restaurant']),
         ]
+
+    class Meta:
+        unique_together = ['name', 'restaurant']
 
     def __str__(self):
         return self.name
