@@ -21,7 +21,7 @@ class Subscription(models.Model):
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=False)
-    auto_renew = models.BooleanField(default=False)  # <-- NEW
+    auto_renew = models.BooleanField(default=True)  # <-- NEW
 
     was_free_trial = models.BooleanField(default=False)   # was this subscription the free-trial for this restaurant?
     is_cancelled = models.BooleanField(default=False)     # user hit "cancel" (prevents future renewals)
