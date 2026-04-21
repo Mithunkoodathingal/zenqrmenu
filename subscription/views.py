@@ -19,7 +19,8 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.views.decorators.http import require_POST
 from django.views.generic import DetailView
-
+from rest_framework.response import Response
+from rest_framework import status
 import razorpay
 
 from .models import SubscriptionPlan, Subscription, PaymentTransaction
@@ -440,65 +441,108 @@ def subscription_plans_api(request):
 
     return JsonResponse({"plans": data})
 
-    return JsonResponse(data, safe=False)
+
+
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def api_create_subscription(request):
-
-    plan_id = request.data.get("plan_id")
-
-    if not plan_id:
-        return JsonResponse({"success": False, "error": "plan_id required"}, status=400)
-
     try:
-        plan = SubscriptionPlan.objects.get(id=plan_id)
-    except SubscriptionPlan.DoesNotExist:
-        return JsonResponse({"success": False, "error": "Invalid plan"}, status=400)
+        plan_id = request.data.get("plan_id")
 
-    user = request.user
-    restaurant = Restaurant.objects.get(owner=user)
+        if not plan_id:
+            return Response(
+                {"success": False, "error": "plan_id is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-    # FREE PLAN
-    if plan.price == 0:
+        # Validate plan
+        try:
+            plan = SubscriptionPlan.objects.get(id=plan_id)
+        except SubscriptionPlan.DoesNotExist:
+            return Response(
+                {"success": False, "error": "Invalid plan"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = request.user
+
+        # Validate restaurant
+        try:
+            restaurant = Restaurant.objects.get(owner=user)
+        except Restaurant.DoesNotExist:
+            return Response(
+                {"success": False, "error": "No restaurant found for this user"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Get or create subscription
         subscription, _ = Subscription.objects.get_or_create(restaurant=restaurant)
-        subscription.plan = plan
-        subscription.activate()
 
-        return JsonResponse({
+        # 🔥 Prevent downgrade to free if already on paid
+        if subscription.plan and subscription.plan.price > 0 and plan.price == 0:
+            return Response(
+                {"success": False, "error": "Cannot downgrade to free plan"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # ================= FREE PLAN =================
+        if plan.price == 0:
+            subscription.plan = plan
+            subscription.activate()
+
+            return Response({
+                "success": True,
+                "free": True,
+                "message": "Free plan activated"
+            })
+
+        # ================= PAID PLAN =================
+        order_amount = int(plan.price * 100)
+
+        try:
+            order = razorpay_client.order.create({
+                "amount": order_amount,
+                "currency": "INR",
+                "payment_capture": 1,
+            })
+        except Exception as e:
+            logger.error(f"Razorpay order error: {str(e)}")
+            return Response(
+                {"success": False, "error": "Payment gateway error"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # Create transaction
+        tx = PaymentTransaction.objects.create(
+            subscription=subscription,
+            plan=plan,
+            razorpay_order_id=order["id"],
+            amount=plan.price,
+            currency="INR",
+            status="created"
+        )
+
+        return Response({
             "success": True,
-            "free": True,
-            "message": "Free plan activated"
+            "order_id": order["id"],
+            "amount": order_amount,
+            "key": settings.RAZORPAY_KEY_ID,
+            "plan": plan.name,
         })
 
-    # PAID PLAN
-    order_amount = int(plan.price * 100)
+    except Exception as e:
+        logger.error(f"Subscription API error: {str(e)}")
 
-    order = razorpay_client.order.create({
-        "amount": order_amount,
-        "currency": "INR",
-        "payment_capture": 1,
-    })
-
-    subscription, _ = Subscription.objects.get_or_create(restaurant=restaurant)
-
-    tx = PaymentTransaction.objects.create(
-        subscription=subscription,
-        plan=plan,
-        razorpay_order_id=order["id"],
-        amount=plan.price,
-        currency="INR",
-        status="created"
-    )
-
-    return JsonResponse({
-        "success": True,
-        "order_id": order["id"],
-        "amount": order_amount,
-        "key": settings.RAZORPAY_KEY_ID,
-        "plan": plan.name,
-    })
+        return Response(
+            {"success": False, "error": "Something went wrong"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 
