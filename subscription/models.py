@@ -18,7 +18,7 @@ class SubscriptionPlan(models.Model):
 
 
 class Subscription(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)  # NEW
+    user = models.OneToOneField(User, on_delete=models.CASCADE)  # NEW
     restaurant = models.OneToOneField('restaurant.Restaurant', on_delete=models.CASCADE)
     plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True, blank=True)
     start_date = models.DateTimeField(null=True, blank=True)
