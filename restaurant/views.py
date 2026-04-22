@@ -40,7 +40,7 @@ import time
 from io import BytesIO
 from django.core.files import File
 from django.http import JsonResponse
-from subscription.utils import check_subscription_access
+from subscription.utils import check_subscription_access, ensure_free_subscription
 from django.contrib.auth.models import User
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
@@ -2131,8 +2131,10 @@ def categories_api(request):
 
     if request.method == 'GET':
         cats = Category.objects.filter(restaurant=restaurant)
-        data = [{"id": c.id, "name": c.name} for c in cats]
-        return JsonResponse(data, safe=False)
+        return JsonResponse(
+            [{"id": c.id, "name": c.name} for c in cats],
+            safe=False
+        )
 
     if request.method == 'POST':
         name = request.data.get("name")
@@ -2143,9 +2145,8 @@ def categories_api(request):
         name = name.strip().title()
 
         category, _ = Category.objects.get_or_create(
-            name__iexact=name,
-            restaurant=restaurant,
-            defaults={"name": name}
+            name=name,
+            restaurant=restaurant
         )
 
         return JsonResponse({"id": category.id, "name": category.name}, status=201)
@@ -2182,7 +2183,7 @@ def menu_items_api(request):
     if not restaurant:
         return JsonResponse({"error": "Restaurant not found"}, status=404)
 
-    # 🔥 FIX: use user instead of restaurant
+    # ✅ CHECK SUBSCRIPTION
     is_valid, result = check_subscription_access(request.user)
 
     if not is_valid:
@@ -2193,7 +2194,7 @@ def menu_items_api(request):
     if request.method == 'GET':
         items = FoodItem.objects.filter(restaurant=restaurant)
 
-        data = [{
+        return JsonResponse([{
             "id": i.id,
             "name": i.name,
             "price": float(i.price),
@@ -2201,62 +2202,38 @@ def menu_items_api(request):
             "category": i.category.id if i.category else None,
             "is_available": not i.is_paused,
             "image": i.image.url if i.image else None
-        } for i in items]
-
-        return JsonResponse(data, safe=False)
+        } for i in items], safe=False)
 
     if request.method == 'POST':
 
-        max_items = getattr(plan, "menu_item_limit", None)
-
-        if max_items:
+        if plan.menu_item_limit:
             count = FoodItem.objects.filter(restaurant=restaurant).count()
-            if count >= max_items:
+            if count >= plan.menu_item_limit:
                 return JsonResponse({
                     "success": False,
-                    "error": f"Limit reached ({max_items})"
+                    "error": f"Limit reached ({plan.menu_item_limit})"
                 }, status=403)
 
         name = request.data.get("name", "").strip().title()
         price = request.data.get("price")
-        description = request.data.get("description", "")
         category_id = request.data.get("category")
-        image = request.FILES.get("image")
 
-        try:
-            category = Category.objects.get(id=category_id, restaurant=restaurant)
-        except Category.DoesNotExist:
-            return JsonResponse({"success": False, "error": "Invalid category"}, status=400)
+        category = Category.objects.filter(
+            id=category_id,
+            restaurant=restaurant
+        ).first()
 
-        item, created = FoodItem.objects.get_or_create(
+        if not category:
+            return JsonResponse({"error": "Invalid category"}, status=400)
+
+        item = FoodItem.objects.create(
             name=name,
+            price=price,
             restaurant=restaurant,
-            defaults={
-                "price": price,
-                "description": description,
-                "category": category,
-                "image": image,
-            }
+            category=category
         )
 
-        if not created:
-            item.price = price
-            item.description = description
-            item.category = category
-            if image:
-                item.image = image
-            item.save()
-
-        return JsonResponse({
-            "id": item.id,
-            "name": item.name,
-            "price": float(item.price),
-            "description": item.description,
-            "category": item.category.id if item.category else None,
-            "is_available": not item.is_paused,
-            "image": item.image.url if item.image else None,
-            "created": created
-        }, status=201)
+        return JsonResponse({"id": item.id}, status=201)
     
 
 @api_view(['PATCH', 'DELETE'])
@@ -2477,17 +2454,17 @@ def public_menu(request, restaurant_id):
 @permission_classes([IsAuthenticated])
 def restaurant_profile(request):
 
-    # ✅ FIXED: auto create if not exists
     restaurant, created = Restaurant.objects.get_or_create(
         owner=request.user
     )
 
-    # ✅ GET
+    # 🔥 AUTO CREATE FREE SUBSCRIPTION
+    ensure_free_subscription(request.user, restaurant)
+
     if request.method == 'GET':
         serializer = RestaurantSerializer(restaurant, context={'request': request})
         return Response(serializer.data)
 
-    # ✅ PATCH
     elif request.method == 'PATCH':
         serializer = RestaurantSerializer(
             restaurant,
@@ -2497,10 +2474,10 @@ def restaurant_profile(request):
         )
 
         if serializer.is_valid():
-            serializer.save(owner=request.user)  # ✅ important
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            serializer.save(owner=request.user)
+            return Response(serializer.data)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=400)
     
 
 

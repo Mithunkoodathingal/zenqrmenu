@@ -74,17 +74,32 @@ const DashboardPage = () => {
   const { data: subscription, isLoading: isLoadingSubscription } = useSubscription();
 
   // Determine onboarding step
-  // User needs to pick a plan if: no subscription, inactive, free, or auto-assigned with 0 table limit
-  const needsPlanSelection = !isLoadingSubscription && (
-    !subscription?.is_active ||
-    !subscription?.plan ||
-    subscription.plan === "free" ||
-    subscription.table_limit === 0
-  );
-  const needsRestaurantSetup = !isLoadingProfile && restaurantProfile && !restaurantProfile.name;
-  const onboardingStep: 0 | 1 | 2 = needsPlanSelection ? 1 : needsRestaurantSetup ? 2 : 0;
+// ================= ONBOARDING LOGIC =================
 
-  // Restore auth from local storage or backend session on refresh
+// ⛔ Wait until BOTH APIs are loaded
+const isReady = !isLoadingProfile && !isLoadingSubscription;
+
+// STEP 1: Restaurant must exist
+const needsRestaurantSetup =
+  isReady &&
+  (!restaurantProfile || !restaurantProfile.name);
+
+// STEP 2: Subscription required ONLY if restaurant exists
+const needsPlanSelection =
+  isReady &&
+  !needsRestaurantSetup &&
+  (!subscription || !subscription.is_active);
+
+// FINAL STEP
+const onboardingStep: 0 | 1 | 2 =
+  !isReady ? 0 :
+  needsRestaurantSetup ? 1 :
+  needsPlanSelection ? 2 :
+  0;
+
+
+// ================= AUTH RESTORE =================
+
   useEffect(() => {
     let cancelled = false;
 
@@ -98,25 +113,30 @@ const DashboardPage = () => {
         const res = await apiGetUser();
         if (cancelled) return;
 
-        if (res.authenticated) {
-          if (res.user) {
-            const currentUser = getStoredUser();
-            const currentKey = currentUser?.email || currentUser?.username || "";
-            const nextKey = res.user.email || res.user.username || "";
+        if (res && res.user) {
+          const currentUser = getStoredUser();
 
-            if (currentKey && nextKey && currentKey !== nextKey) {
-              clearStoredSubscriptionStatus();
-            }
+          const currentKey =
+            currentUser?.email || currentUser?.username || "";
 
-            setStoredUser(res.user);
+          const nextKey =
+            res.user.email || res.user.username || "";
+
+          if (currentKey && nextKey && currentKey !== nextKey) {
+            clearStoredSubscriptionStatus();
           }
+
+          setStoredUser(res.user);
           return;
         }
 
         if (!storedUser && !token) {
           navigate("/login", { replace: true });
         }
-      } catch {
+
+      } catch (err) {
+        console.warn("Session restore failed:", err);
+
         if (!cancelled && !storedUser && !token) {
           navigate("/login", { replace: true });
         }
@@ -129,6 +149,7 @@ const DashboardPage = () => {
       cancelled = true;
     };
   }, [navigate]);
+
 
   // Fetch pending order count on mount & poll
   useEffect(() => {

@@ -621,3 +621,29 @@ def subscription_status(request):
         "table_limit": getattr(plan, "table_limit", 0),
         "is_active": True
     })
+
+
+
+
+def ensure_free_subscription(user, restaurant):
+    free_plan = SubscriptionPlan.objects.filter(price=0).first()
+
+    if not free_plan:
+        raise Exception("Free plan not configured")
+
+    sub, created = Subscription.objects.get_or_create(
+        user=user,
+        defaults={
+            "restaurant": restaurant,
+            "plan": free_plan,
+        }
+    )
+
+    if not sub.is_active:
+        sub.plan = free_plan
+        sub.start_date = timezone.now()
+        sub.end_date = timezone.now() + timezone.timedelta(days=3650)
+        sub.is_active = True
+        sub.save()
+
+    return sub
