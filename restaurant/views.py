@@ -36,8 +36,6 @@ from django.db.models import Sum, F, DecimalField, ExpressionWrapper, Q
 import datetime
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from django.contrib import messages
-from django.views import View
 import time
 from io import BytesIO
 from django.core.files import File
@@ -64,7 +62,6 @@ from django.utils import timezone
 from django.views import View
 from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.views.generic import CreateView, UpdateView, DeleteView
 from django.core.mail import EmailMultiAlternatives, send_mail
@@ -2304,6 +2301,32 @@ def menu_item_detail_api(request, id):
     if request.method == 'DELETE':
         item.delete()
         return JsonResponse({"success": True})
+    
+################ KITCHEN STATUS ON MENU ########################
+
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_order_detail(request, pk):
+    try:
+        order = Order.objects.get(pk=pk, is_active=True)
+    except Order.DoesNotExist:
+        return Response({'detail': 'Not found'}, status=404)
+
+    return Response({
+        "id": order.id,
+        "status": order.status,
+        "items": [
+            {
+                "name": item.food_item.name,
+                "quantity": item.quantity
+            } for item in order.items.all()
+        ],
+        "total": float(order.total_price),
+        "created_at": order.created_at
+    })
+
 
 ################### TABLE API ################################
     
