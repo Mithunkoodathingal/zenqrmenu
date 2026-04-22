@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Restaurant, Order, OrderItem, FoodItem, AddOn
+from .models import Restaurant, Order, OrderItem, FoodItem, AddOn, Category
 
 
 # ================= RESTAURANT =================
@@ -52,7 +52,7 @@ class RestaurantSerializer(serializers.ModelSerializer):
         return instance
 
 
-# ================= FOOD ITEM =================
+# ================= FOOD ITEM ================= #
 
 
 class FoodItemSerializer(serializers.ModelSerializer):
@@ -88,6 +88,12 @@ class OrderItemSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['selected_addons']
 
+# =================== CATEGORY SERIALIZER ============== #
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ["id", "name"]
 
 # ================= ORDER =================
 

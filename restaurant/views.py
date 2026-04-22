@@ -2141,11 +2141,12 @@ def categories_api(request):
         name = name.strip().title()
 
         category, created = Category.objects.get_or_create(
-            name=name,
+            name__iexact=name,
+            defaults={"name": name, "restaurant": restaurant},
             restaurant=restaurant
         )
 
-        return JsonResponse({"id": cat.id, "name": cat.name}, status=201)
+        return JsonResponse({"id": category.id, "name": category.name}, status=201)
     
 
 

@@ -437,11 +437,17 @@ ACCOUNT_FORMS = {
 # allauth configuration
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = config('ACCOUNT_EMAIL_VERIFICATION', default='mandatory')
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_AUTHENTICATION_METHOD = "username_email"
 ACCOUNT_UNIQUE_EMAIL = config('ACCOUNT_UNIQUE_EMAIL', default=True, cast=bool)
 ACCOUNT_LOGIN_METHODS = config('ACCOUNT_LOGIN_METHODS', default='username,email', cast=Csv())
 ACCOUNT_CONFIRM_EMAIL_ON_GET = config('ACCOUNT_CONFIRM_EMAIL_ON_GET', default=False, cast=bool)
+ACCOUNT_LOGIN_METHODS = {"email", "username"}
+
+ACCOUNT_SIGNUP_FIELDS = [
+    "email*",
+    "username*",
+    "password1*",
+    "password2*"
+]
 
 # Auth backends
 AUTHENTICATION_BACKENDS = (
