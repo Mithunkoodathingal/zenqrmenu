@@ -2117,18 +2117,20 @@ def dashboard_api(request):
 
 ############ CATEGORY APIs ################
 
+
+def get_user_restaurant(user):
+    return Restaurant.objects.filter(owner=user).first()
+
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def categories_api(request):
 
-    try:
-        restaurant = Restaurant.objects.get(owner=request.user)
-    except Restaurant.DoesNotExist:
+    restaurant = get_user_restaurant(request.user)
+    if not restaurant:
         return JsonResponse({"error": "Restaurant not found"}, status=404)
 
     if request.method == 'GET':
         cats = Category.objects.filter(restaurant=restaurant)
-
         data = [{"id": c.id, "name": c.name} for c in cats]
         return JsonResponse(data, safe=False)
 
@@ -2140,10 +2142,10 @@ def categories_api(request):
 
         name = name.strip().title()
 
-        category, created = Category.objects.get_or_create(
+        category, _ = Category.objects.get_or_create(
             name__iexact=name,
-            defaults={"name": name, "restaurant": restaurant},
-            restaurant=restaurant
+            restaurant=restaurant,
+            defaults={"name": name}
         )
 
         return JsonResponse({"id": category.id, "name": category.name}, status=201)
@@ -2176,38 +2178,33 @@ def category_detail_api(request, id):
 @permission_classes([IsAuthenticated])
 def menu_items_api(request):
 
-    try:
-        restaurant = Restaurant.objects.get(owner=request.user)
-    except Restaurant.DoesNotExist:
+    restaurant = get_user_restaurant(request.user)
+    if not restaurant:
         return JsonResponse({"error": "Restaurant not found"}, status=404)
 
-    # 🔥 Subscription check
-    is_valid, result = check_subscription_access(restaurant)
+    # 🔥 FIX: use user instead of restaurant
+    is_valid, result = check_subscription_access(request.user)
 
     if not is_valid:
         return JsonResponse({"success": False, "error": result}, status=403)
 
     plan = result
 
-    # ✅ GET ITEMS
     if request.method == 'GET':
         items = FoodItem.objects.filter(restaurant=restaurant)
 
-        data = []
-        for i in items:
-            data.append({
-                "id": i.id,
-                "name": i.name,
-                "price": float(i.price),
-                "description": i.description,
-                "category": i.category.id if i.category else None,
-                "is_available": not i.is_paused,
-                "image": i.image.url if i.image else None
-            })
+        data = [{
+            "id": i.id,
+            "name": i.name,
+            "price": float(i.price),
+            "description": i.description,
+            "category": i.category.id if i.category else None,
+            "is_available": not i.is_paused,
+            "image": i.image.url if i.image else None
+        } for i in items]
 
         return JsonResponse(data, safe=False)
 
-    # ✅ CREATE ITEM
     if request.method == 'POST':
 
         max_items = getattr(plan, "menu_item_limit", None)
@@ -2220,20 +2217,17 @@ def menu_items_api(request):
                     "error": f"Limit reached ({max_items})"
                 }, status=403)
 
-        # 🔥 normalize input
         name = request.data.get("name", "").strip().title()
         price = request.data.get("price")
         description = request.data.get("description", "")
         category_id = request.data.get("category")
         image = request.FILES.get("image")
 
-        # 🔒 validate category belongs to this restaurant
         try:
             category = Category.objects.get(id=category_id, restaurant=restaurant)
         except Category.DoesNotExist:
             return JsonResponse({"success": False, "error": "Invalid category"}, status=400)
 
-        # 🔥 prevent duplicates
         item, created = FoodItem.objects.get_or_create(
             name=name,
             restaurant=restaurant,
@@ -2245,7 +2239,6 @@ def menu_items_api(request):
             }
         )
 
-        # 🔁 update if already exists
         if not created:
             item.price = price
             item.description = description
@@ -2332,29 +2325,24 @@ def public_order_detail(request, pk):
 @permission_classes([IsAuthenticated])
 def create_table_api(request):
 
-    try:
-        restaurant = Restaurant.objects.get(owner=request.user)
-    except Restaurant.DoesNotExist:
+    restaurant = get_user_restaurant(request.user)
+    if not restaurant:
         return JsonResponse({"error": "Restaurant not found"}, status=404)
 
-    # ================= GET TABLE LIST =================
     if request.method == 'GET':
         tables = Table.objects.filter(restaurant=restaurant).order_by('table_number')
 
-        data = []
-        for t in tables:
-            data.append({
-                "id": t.id,
-                "table_number": t.table_number,
-                "qr_code": t.qr_code.url if t.qr_code else None
-            })
+        data = [{
+            "id": t.id,
+            "table_number": t.table_number,
+            "qr_code": t.qr_code.url if t.qr_code else None
+        } for t in tables]
 
         return JsonResponse(data, safe=False)
 
-    # ================= CREATE TABLE =================
     if request.method == 'POST':
 
-        is_valid, result = check_subscription_access(restaurant)
+        is_valid, result = check_subscription_access(request.user)
 
         if not is_valid:
             return JsonResponse({"success": False, "error": result}, status=403)
@@ -2374,25 +2362,19 @@ def create_table_api(request):
         if not table_number:
             return JsonResponse({"error": "table_number is required"}, status=400)
 
-        # ✅ CREATE TABLE
         table = Table.objects.create(
             restaurant=restaurant,
             table_number=table_number
         )
 
-        # ✅ GENERATE QR URL (TABLE-BASED SYSTEM)
-        qr_url = request.build_absolute_uri(
-            f"/menu/table/{table.id}/"
-        )
+        qr_url = request.build_absolute_uri(f"/menu/table/{table.id}/")
 
-        # ✅ CREATE QR IMAGE
         qr = qrcode.make(qr_url)
 
         buffer = BytesIO()
         qr.save(buffer, format="PNG")
 
         file_name = f"table_{table.id}.png"
-
         table.qr_code.save(file_name, File(buffer), save=True)
 
         return JsonResponse({

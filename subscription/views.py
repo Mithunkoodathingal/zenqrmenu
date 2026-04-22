@@ -57,95 +57,95 @@ def subscription_plans(request):
     return render(request, 'subscription/subscription_plans.html', {'plans': plans})
 
 
-@login_required
-def create_subscription(request, plan_id):
-    """
-    Create a subscription order. For free plans activate immediately.
-    For paid plans:
-      - create a Subscription record (not active yet)
-      - create a Razorpay order
-      - create a PaymentTransaction linked to the Subscription (and store the chosen plan there)
-      - render payment page (JS will call /subscription/payment-success/ on checkout success)
-    """
-    plan = get_object_or_404(SubscriptionPlan, id=plan_id)
-    restaurant = get_object_or_404(Restaurant, owner=request.user)
-    auto_renew = bool(request.POST.get('auto_renew', False))
+# @login_required
+# def create_subscription(request, plan_id):
+#     """
+#     Create a subscription order. For free plans activate immediately.
+#     For paid plans:
+#       - create a Subscription record (not active yet)
+#       - create a Razorpay order
+#       - create a PaymentTransaction linked to the Subscription (and store the chosen plan there)
+#       - render payment page (JS will call /subscription/payment-success/ on checkout success)
+#     """
+#     plan = get_object_or_404(SubscriptionPlan, id=plan_id)
+#     restaurant = get_object_or_404(Restaurant, owner=request.user)
+#     auto_renew = bool(request.POST.get('auto_renew', False))
 
-    # Free plan -> immediate activation
-    if plan.price == Decimal("0.00"):
-        previous_free = False
-        if hasattr(Subscription, 'was_free_trial'):
-            previous_free = Subscription.objects.filter(restaurant=restaurant, was_free_trial=True).exists()
-        else:
-            previous_free = Subscription.objects.filter(restaurant=restaurant, plan__price=Decimal("0.00")).exists()
+#     # Free plan -> immediate activation
+#     if plan.price == Decimal("0.00"):
+#         previous_free = False
+#         if hasattr(Subscription, 'was_free_trial'):
+#             previous_free = Subscription.objects.filter(restaurant=restaurant, was_free_trial=True).exists()
+#         else:
+#             previous_free = Subscription.objects.filter(restaurant=restaurant, plan__price=Decimal("0.00")).exists()
 
-        if previous_free:
-            messages.error(request, "Free plan already used for this restaurant. Choose a paid plan or contact support.")
-            return redirect('subscription:subscription_plans')
+#         if previous_free:
+#             messages.error(request, "Free plan already used for this restaurant. Choose a paid plan or contact support.")
+#             return redirect('subscription:subscription_plans')
 
-        subscription, created = Subscription.objects.filter(user=request.user)
-        # Ensure stale plan doesn't stay on the subscription (could be from an earlier try).
-        # We will only attach the plan after successful payment (tx.plan is authoritative).
-        if subscription.plan is not None:
-            subscription.plan = None
-            subscription.save()
-        # Do NOT assign subscription.plan yet — wait until payment successful
-        if hasattr(subscription, 'auto_renew'):
-            subscription.auto_renew = auto_renew
+#         subscription, created = Subscription.objects.filter(user=request.user)
+#         # Ensure stale plan doesn't stay on the subscription (could be from an earlier try).
+#         # We will only attach the plan after successful payment (tx.plan is authoritative).
+#         if subscription.plan is not None:
+#             subscription.plan = None
+#             subscription.save()
+#         # Do NOT assign subscription.plan yet — wait until payment successful
+#         if hasattr(subscription, 'auto_renew'):
+#             subscription.auto_renew = auto_renew
 
 
-        messages.success(request, f"Free plan activated. Valid until {subscription.end_date.date()}")
-        return redirect('dashboard')
+#         messages.success(request, f"Free plan activated. Valid until {subscription.end_date.date()}")
+#         return redirect('dashboard')
 
-    # Paid plan -> create/prepare subscription record and Razorpay order
-    subscription, created = Subscription.objects.filter(user=request.user)
-    # Do NOT assign subscription.plan yet — wait until payment successful
-    if hasattr(subscription, 'auto_renew'):
-        subscription.auto_renew = auto_renew
-    # Don't save plan/start/end/is_active here.
+#     # Paid plan -> create/prepare subscription record and Razorpay order
+#     subscription, created = Subscription.objects.filter(user=request.user)
+#     # Do NOT assign subscription.plan yet — wait until payment successful
+#     if hasattr(subscription, 'auto_renew'):
+#         subscription.auto_renew = auto_renew
+#     # Don't save plan/start/end/is_active here.
 
-    # Build Razorpay order
-    order_amount_paisa = int(plan.price * Decimal(100))
-    order_currency = 'INR'
-    order_data = {
-        "amount": order_amount_paisa,
-        "currency": order_currency,
-        "payment_capture": 1,
-    }
-    logger.debug("Creating Razorpay order: %s", order_data)
-    order = razorpay_client.order.create(data=order_data)
-    order_id = order.get('id')
+#     # Build Razorpay order
+#     order_amount_paisa = int(plan.price * Decimal(100))
+#     order_currency = 'INR'
+#     order_data = {
+#         "amount": order_amount_paisa,
+#         "currency": order_currency,
+#         "payment_capture": 1,
+#     }
+#     logger.debug("Creating Razorpay order: %s", order_data)
+#     order = razorpay_client.order.create(data=order_data)
+#     order_id = order.get('id')
 
-    # Persist PaymentTransaction. Store the chosen plan on the transaction (so we can recover it on success)
-    amount_decimal = (Decimal(order_amount_paisa) / Decimal(100)).quantize(Decimal("0.01"))
-    tx = PaymentTransaction.objects.create(
-        subscription=subscription,
-        plan=plan,
-        razorpay_order_id=order_id,
-        amount=amount_decimal,
-        currency=order_currency,
-        status='created'
-    )
+#     # Persist PaymentTransaction. Store the chosen plan on the transaction (so we can recover it on success)
+#     amount_decimal = (Decimal(order_amount_paisa) / Decimal(100)).quantize(Decimal("0.01"))
+#     tx = PaymentTransaction.objects.create(
+#         subscription=subscription,
+#         plan=plan,
+#         razorpay_order_id=order_id,
+#         amount=amount_decimal,
+#         currency=order_currency,
+#         status='created'
+#     )
 
-    # Store minimal context in session (fallback, used by the browser-return)
-    request.session['subscription_order'] = {
-        'order_id': order_id,
-        'payment_tx_id': tx.id,
-        'plan_id': plan.id,
-        'restaurant_id': restaurant.id,
-        'auto_renew': auto_renew,
-    }
+#     # Store minimal context in session (fallback, used by the browser-return)
+#     request.session['subscription_order'] = {
+#         'order_id': order_id,
+#         'payment_tx_id': tx.id,
+#         'plan_id': plan.id,
+#         'restaurant_id': restaurant.id,
+#         'auto_renew': auto_renew,
+#     }
 
-    # amount_paisa is an int (paisa). Prepare a visible rupee string for template.
-    amount_display = f"{(order_amount_paisa / 100):.2f}"  # e.g. 15000 -> "150.00"
+#     # amount_paisa is an int (paisa). Prepare a visible rupee string for template.
+#     amount_display = f"{(order_amount_paisa / 100):.2f}"  # e.g. 15000 -> "150.00"
 
-    return render(request, 'subscription/payment.html', {
-        'plan': plan,
-        'order_id': order_id,
-        'amount_paisa': order_amount_paisa,
-        'amount_display': amount_display,
-        'razorpay_key': getattr(settings, 'RAZORPAY_KEY_ID', None),
-    })
+#     return render(request, 'subscription/payment.html', {
+#         'plan': plan,
+#         'order_id': order_id,
+#         'amount_paisa': order_amount_paisa,
+#         'amount_display': amount_display,
+#         'razorpay_key': getattr(settings, 'RAZORPAY_KEY_ID', None),
+#     })
 
 
 @csrf_exempt
@@ -605,12 +605,7 @@ def api_verify_payment(request):
 @permission_classes([IsAuthenticated])
 def subscription_status(request):
 
-    try:
-        restaurant = Restaurant.objects.get(owner=request.user)
-    except Restaurant.DoesNotExist:
-        return JsonResponse({"error": "Restaurant not found"}, status=404)
-
-    is_valid, result = check_subscription_access(restaurant)
+    is_valid, result = check_subscription_access(request.user)
 
     if not is_valid:
         return JsonResponse({
