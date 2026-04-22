@@ -531,6 +531,12 @@ LOGGING = {
 # -------------------------
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://zenqrmenu.com",
+]
+
+CORS_ALLOW_ALL_ORIGINS = True   # 🔥 TEMP DEBUG (enable this now)
+
 
 from corsheaders.defaults import default_headers
 
