@@ -3,7 +3,7 @@ name: Backend integration
 description: Django API endpoints, JWT auth with refresh tokens, email verification, Razorpay flow, menu CRUD APIs
 type: feature
 ---
-Django backend at zenqrmenu.com. JWT auth with SimpleJWT (access + refresh tokens).
+Django backend at api.zenqrmenu.com. JWT auth with SimpleJWT (access + refresh tokens).
 
 Auth endpoints:
 - POST /api/login/ — returns { access, refresh, user } or { error: "Email not verified", email }

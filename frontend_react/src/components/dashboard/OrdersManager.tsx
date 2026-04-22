@@ -2,8 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Clock, ChefHat, Eye, Loader2, RefreshCw, XCircle, CheckCircle } from "lucide-react";
+import { Check, Clock, ChefHat, Eye, Loader2, RefreshCw, XCircle, CheckCircle, Ban, Utensils } from "lucide-react";
 import { fetchOrders, updateOrderStatus, type Order } from "@/lib/orderApi";
+import { useTables } from "@/hooks/useRestaurantData";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
@@ -11,6 +16,7 @@ const statusConfig = {
   pending: { label: "New Order", color: "bg-orange-100 text-orange-700 border-orange-200", icon: Clock },
   confirmed: { label: "Confirmed", color: "bg-blue-100 text-blue-700 border-blue-200", icon: CheckCircle },
   preparing: { label: "Preparing", color: "bg-blue-100 text-blue-700 border-blue-200", icon: ChefHat },
+  ready: { label: "Ready", color: "bg-purple-100 text-purple-700 border-purple-200", icon: Utensils },
   completed: { label: "Completed", color: "bg-green-100 text-green-700 border-green-200", icon: Check },
   cancelled: { label: "Cancelled", color: "bg-red-100 text-red-700 border-red-200", icon: XCircle },
 };
@@ -25,6 +31,19 @@ const OrdersManager = ({ onPendingCountChange }: OrdersManagerProps = {}) => {
   const [filter, setFilter] = useState<"all" | Order["status"]>("all");
   const [expandedOrder, setExpandedOrder] = useState<number | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
+  const { data: tables } = useTables();
+
+  const tableNumberMap = new Map<number, string>();
+  (tables ?? []).forEach((t: any) => {
+    tableNumberMap.set(t.id, String(t.table_number));
+  });
+
+  const getDisplayTableNumber = (order: Order) => {
+    const mapped = tableNumberMap.get(order.table);
+    if (mapped) return mapped;
+    return order.table_number;
+  };
 
   const loadOrders = useCallback(async () => {
     try {
@@ -40,12 +59,10 @@ const OrdersManager = ({ onPendingCountChange }: OrdersManagerProps = {}) => {
 
   useEffect(() => {
     loadOrders();
-    // Poll every 30s for new orders
     const interval = setInterval(loadOrders, 30000);
     return () => clearInterval(interval);
   }, [loadOrders]);
 
-  // Notify parent of pending count changes
   useEffect(() => {
     const pendingCount = orders.filter((o) => o.status === "pending").length;
     onPendingCountChange?.(pendingCount);
@@ -66,6 +83,21 @@ const OrdersManager = ({ onPendingCountChange }: OrdersManagerProps = {}) => {
     }
   };
 
+  const handleCancel = async (orderId: number) => {
+    setCancellingId(orderId);
+    try {
+      const updated = await updateOrderStatus(orderId, "cancelled");
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, ...updated, status: "cancelled" } : o))
+      );
+      toast.success(`Order #${orderId} cancelled`);
+    } catch {
+      toast.error("Failed to cancel order");
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
   const filteredOrders = filter === "all" ? orders : orders.filter((o) => o.status === filter);
 
   const counts = {
@@ -73,11 +105,12 @@ const OrdersManager = ({ onPendingCountChange }: OrdersManagerProps = {}) => {
     pending: orders.filter((o) => o.status === "pending").length,
     confirmed: orders.filter((o) => o.status === "confirmed").length,
     preparing: orders.filter((o) => o.status === "preparing").length,
+    ready: orders.filter((o) => o.status === "ready").length,
     completed: orders.filter((o) => o.status === "completed").length,
     cancelled: orders.filter((o) => o.status === "cancelled").length,
   };
 
-  const filterTabs: Array<"all" | Order["status"]> = ["all", "pending", "confirmed", "preparing", "completed"];
+  const filterTabs: Array<"all" | Order["status"]> = ["all", "pending", "confirmed", "preparing", "ready", "completed", "cancelled"];
 
   const formatTime = (dateStr: string) => {
     try {
@@ -156,7 +189,7 @@ const OrdersManager = ({ onPendingCountChange }: OrdersManagerProps = {}) => {
                   <div className="flex items-center gap-4">
                     <div className="flex flex-col items-center">
                       <span className="text-xs text-muted-foreground">Table</span>
-                      <span className="text-lg font-bold text-primary">{order.table_number}</span>
+                      <span className="text-lg font-bold text-primary">{getDisplayTableNumber(order)}</span>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -208,13 +241,35 @@ const OrdersManager = ({ onPendingCountChange }: OrdersManagerProps = {}) => {
                             size="sm"
                             variant="hero"
                             disabled={isUpdating}
+                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(order.id, "confirmed"); }}
+                          >
+                            {isUpdating ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5 mr-1" />}
+                            Confirm
+                          </Button>
+                        )}
+                        {order.status === "confirmed" && (
+                          <Button
+                            size="sm"
+                            variant="hero"
+                            disabled={isUpdating}
                             onClick={(e) => { e.stopPropagation(); handleStatusUpdate(order.id, "preparing"); }}
                           >
                             {isUpdating ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <ChefHat className="h-3.5 w-3.5 mr-1" />}
                             Start Preparing
                           </Button>
                         )}
-                        {(order.status === "confirmed" || order.status === "preparing") && (
+                        {order.status === "preparing" && (
+                          <Button
+                            size="sm"
+                            variant="hero"
+                            disabled={isUpdating}
+                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(order.id, "ready"); }}
+                          >
+                            {isUpdating ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Utensils className="h-3.5 w-3.5 mr-1" />}
+                            Mark Ready
+                          </Button>
+                        )}
+                        {order.status === "ready" && (
                           <Button
                             size="sm"
                             variant="hero"
@@ -229,6 +284,44 @@ const OrdersManager = ({ onPendingCountChange }: OrdersManagerProps = {}) => {
                           <span className="text-sm text-green-600 font-medium flex items-center gap-1">
                             <Check className="h-4 w-4" /> Done
                           </span>
+                        )}
+
+                        {/* Cancel Order */}
+                        {order.status !== "cancelled" && order.status !== "completed" && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                                disabled={cancellingId === order.id}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {cancellingId === order.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Ban className="h-3.5 w-3.5" />
+                                )}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Cancel Order #{order.id}?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will mark the order as cancelled. The record will be kept for analytics.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Go Back</AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  onClick={() => handleCancel(order.id)}
+                                >
+                                  Cancel Order
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         )}
                       </div>
                     </div>

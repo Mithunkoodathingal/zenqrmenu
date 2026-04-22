@@ -532,9 +532,15 @@ LOGGING = {
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
 
 
+from corsheaders.defaults import default_headers
+
+
+
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOW_ALL_HEADERS = True
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "cache-control",
+]
 
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
@@ -542,6 +548,10 @@ CORS_ALLOWED_ORIGINS = config(
     cast=Csv()
 )
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8080",
+    "https://zenqrmenu.com",
+]
 
 
 SESSION_COOKIE_SAMESITE = "None"

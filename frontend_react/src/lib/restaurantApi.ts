@@ -1,6 +1,7 @@
 import { authHeaders } from "./auth";
+import { extractMenuItemType, resolveMenuItemIsVeg } from "./menuItemType";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://www.zenqrmenu.com";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.zenqrmenu.com";
 
 // ─── Types ───
 
@@ -24,6 +25,7 @@ export interface PublicMenuData {
     logo?: string | null;
     cover_image?: string | null;
   };
+  table_number?: string;
   categories: { id: number; name: string }[];
   items: {
     id: number;
@@ -56,6 +58,14 @@ type RawMenuItem = {
   image_url?: string | null;
   is_veg?: boolean;
   veg?: boolean;
+  food_type?: string | null;
+  foodType?: string | null;
+  food_item_type?: string | null;
+  foodItemType?: string | null;
+  fooditem_type?: string | null;
+  fooditemType?: string | null;
+  item_type?: string | null;
+  itemType?: string | null;
 };
 
 function toNumber(value: unknown): number | undefined {
@@ -78,6 +88,7 @@ function normalizeItem(item: RawMenuItem) {
   const id = toNumber(item.id);
   const name = item.name?.trim();
   const price = toNumber(item.price) ?? 0;
+  const normalizedType = extractMenuItemType(item.description);
 
   const categoryId =
     toNumber(item.category_id) ??
@@ -89,19 +100,32 @@ function normalizeItem(item: RawMenuItem) {
     id,
     name,
     price,
-    description: item.description?.trim() || "",
+    description: normalizedType.description,
     category: categoryId,
     is_available:
       typeof item.is_paused === "boolean"
         ? !item.is_paused
         : item.is_available ?? item.available ?? true,
     image: item.image ?? item.image_url ?? null,
-    is_veg: item.is_veg ?? item.veg,
+    is_veg: resolveMenuItemIsVeg(
+      item.description,
+      item.is_veg,
+      item.veg,
+      item.food_type,
+      item.foodType,
+      item.food_item_type,
+      item.foodItemType,
+      item.fooditem_type,
+      item.fooditemType,
+      item.item_type,
+      item.itemType,
+    ),
   };
 }
 
 function normalizePublicMenuData(data: any): PublicMenuData {
   const restaurantSource = data?.restaurant ?? data?.profile ?? data?.restaurant_profile ?? data ?? {};
+  const tableSource = data?.table ?? data?.restaurant_table ?? data?.table_details ?? {};
   const rawItems =
     data?.items ??
     data?.menu_items ??
@@ -151,6 +175,9 @@ function normalizePublicMenuData(data: any): PublicMenuData {
       logo: restaurantSource.logo ?? null,
       cover_image: restaurantSource.cover_image ?? restaurantSource.cover_photo ?? null,
     },
+    table_number: String(
+      tableSource?.table_number ?? data?.table_number ?? data?.table_no ?? tableSource?.number ?? ""
+    ).trim() || undefined,
     categories: categoriesFromResponse.length > 0 ? categoriesFromResponse : inferredCategories,
     items,
   };
@@ -262,10 +289,21 @@ export async function deleteTable(tableId: number): Promise<void> {
 // ─── Public Menu (no auth) ───
 
 export async function fetchPublicMenu(tableId: string): Promise<PublicMenuData> {
-  const res = await fetch(`${BASE_URL}/menu/api/table/${tableId}/`, {
-    headers: { Accept: "application/json" },
-  });
-  if (!res.ok) throw new Error("Menu not found");
+  const url = `${BASE_URL}/menu/api/table/${tableId}/`;
+  let res: Response;
+  try {
+    res = await fetch(url, { headers: { Accept: "application/json" } });
+  } catch (err) {
+    console.error("[fetchPublicMenu] network error", url, err);
+    throw new Error(`Network error reaching ${url}. Check CORS / connectivity.`);
+  }
+  if (!res.ok) {
+    let detail = "";
+    try { detail = await res.text(); } catch {}
+    console.error("[fetchPublicMenu] non-OK", res.status, url, detail);
+    if (res.status === 404) throw new Error(`Table #${tableId} not found on server.`);
+    throw new Error(`Menu fetch failed (${res.status}): ${detail.slice(0, 200)}`);
+  }
   const data = await res.json();
   console.log("[fetchPublicMenu] raw API response:", JSON.stringify(data).substring(0, 2000));
   return normalizePublicMenuData(data);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AnalyticsDashboard from "@/components/dashboard/AnalyticsDashboard";
 import {
   QrCode, Utensils, Settings, BarChart3, LogOut,
@@ -14,34 +14,59 @@ import OnboardingWizard from "@/components/dashboard/OnboardingWizard";
 import { getStoredUser, getToken, setStoredUser, clearStoredUser, clearToken } from "@/lib/auth";
 import { apiGetUser, apiLogout } from "@/lib/api";
 import { fetchOrders } from "@/lib/orderApi";
-import { useSubscription } from "@/hooks/useSubscription";
+import { clearStoredSubscriptionStatus, hasActivePaidSubscription, useSubscription } from "@/hooks/useSubscription";
 import { useRestaurantProfile } from "@/hooks/useRestaurantData";
 
 const PlanBadge = () => {
   const { data: subscription } = useSubscription();
   const planName = subscription?.plan || "free";
-  const isActive = subscription?.is_active ?? false;
+  const isActive = hasActivePaidSubscription(subscription);
   const displayName = planName.charAt(0).toUpperCase() + planName.slice(1);
 
   return (
     <div className="px-4 py-3">
       <div className="flex items-center gap-2 mb-1">
         <Crown className="h-4 w-4 text-primary" />
-        <span className="text-sm font-semibold text-foreground">{displayName} Plan</span>
+        <span className="text-sm font-semibold text-foreground">{isActive ? `${displayName} Plan` : "Not Subscribed"}</span>
         {isActive && (
           <span className="ml-auto text-[10px] font-medium bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">Active</span>
         )}
       </div>
       <p className="text-xs text-muted-foreground">
-        {planName === "free" ? "Upgrade for more features" : `Your ${displayName} subscription is active`}
+        {isActive ? `Your ${displayName} subscription is active` : "Choose a plan to unlock menu items, tables, and analytics."}
       </p>
     </div>
   );
 };
 
+type DashboardTab = "menu" | "orders" | "qr" | "restaurant" | "analytics";
+
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"menu" | "orders" | "qr" | "restaurant" | "analytics">("menu");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = (searchParams.get("tab") as DashboardTab) || "menu";
+  const [activeTab, setActiveTab] = useState<DashboardTab>(
+    ["menu", "orders", "qr", "restaurant", "analytics"].includes(initialTab) ? initialTab : "menu"
+  );
+
+  // Sync ?tab= query param when it changes externally (e.g. arriving from PaymentSuccess)
+  useEffect(() => {
+    const t = searchParams.get("tab") as DashboardTab | null;
+    if (t && ["menu", "orders", "qr", "restaurant", "analytics"].includes(t) && t !== activeTab) {
+      setActiveTab(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // Clear the query param after consuming it so navigation stays clean
+  useEffect(() => {
+    if (searchParams.get("tab")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("tab");
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
   const accountMenuRef = useRef<HTMLDivElement>(null);
@@ -74,7 +99,17 @@ const DashboardPage = () => {
         if (cancelled) return;
 
         if (res.authenticated) {
-          if (res.user) setStoredUser(res.user);
+          if (res.user) {
+            const currentUser = getStoredUser();
+            const currentKey = currentUser?.email || currentUser?.username || "";
+            const nextKey = res.user.email || res.user.username || "";
+
+            if (currentKey && nextKey && currentKey !== nextKey) {
+              clearStoredSubscriptionStatus();
+            }
+
+            setStoredUser(res.user);
+          }
           return;
         }
 
@@ -124,10 +159,14 @@ const DashboardPage = () => {
 
   const handleLogout = async () => {
     try { await apiLogout(); } catch { /* ignore */ }
+    clearStoredSubscriptionStatus();
     clearToken();
     clearStoredUser();
     navigate("/login", { replace: true });
   };
+
+  const storedUser = getStoredUser();
+  const accountLabel = storedUser?.email || storedUser?.username || "Account";
 
   const sidebarItems = [
     { key: "menu" as const, icon: Utensils, label: "Manage Menu" },
@@ -181,7 +220,7 @@ const DashboardPage = () => {
                 className="flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
               >
                 <Sparkles className="h-4 w-4 text-primary" />
-                <span>Upgrade Plan</span>
+                <span>{hasActivePaidSubscription(subscription) ? "Upgrade Plan" : "Subscribe Now"}</span>
               </Link>
               <div className="border-t" />
               <button
@@ -198,10 +237,10 @@ const DashboardPage = () => {
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-foreground ring-2 ring-primary">
-              Z
+              {(accountLabel[0] || "Z").toUpperCase()}
             </div>
-            <span className="flex-1 text-left">Account</span>
-            <ChevronUp className={`h-4 w-4 transition-transform ${showAccountMenu ? "rotate-180" : ""}`} />
+            <span className="flex-1 text-left truncate">{accountLabel}</span>
+            <ChevronUp className={`h-4 w-4 transition-transform shrink-0 ${showAccountMenu ? "rotate-180" : ""}`} />
           </button>
         </div>
       </aside>
@@ -265,7 +304,7 @@ const DashboardPage = () => {
       <main className="flex-1 lg:ml-64 lg:p-8 p-4 pt-28 lg:pt-8 overflow-auto">
         {/* Show Restaurant Settings when navigated there during onboarding */}
         {onboardingStep > 0 && activeTab === "restaurant" ? (
-          <RestaurantSettings />
+          <RestaurantSettings onSavedFirstTime={() => setActiveTab("menu")} />
         ) : onboardingStep > 0 ? (
           <OnboardingWizard
             currentStep={onboardingStep as 1 | 2}
@@ -273,13 +312,20 @@ const DashboardPage = () => {
           />
         ) : (
           <>
-            {activeTab === "menu" && <MenuManager onNavigateToRestaurant={() => setActiveTab("restaurant")} />}
+            {activeTab === "menu" && (
+              <MenuManager
+                onNavigateToRestaurant={() => setActiveTab("restaurant")}
+                onFirstItemCreated={() => setActiveTab("qr")}
+              />
+            )}
 
             {activeTab === "orders" && <OrdersManager onPendingCountChange={setPendingOrderCount} />}
 
             {activeTab === "qr" && <QRManager />}
 
-            {activeTab === "restaurant" && <RestaurantSettings />}
+            {activeTab === "restaurant" && (
+              <RestaurantSettings onSavedFirstTime={() => setActiveTab("menu")} />
+            )}
 
             {activeTab === "analytics" && <AnalyticsDashboard />}
           </>

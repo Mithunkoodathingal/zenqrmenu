@@ -2,10 +2,12 @@ import { useEffect, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { setToken, setRefreshToken, setStoredUser } from "@/lib/auth";
+import { apiGetUser } from "@/lib/api";
+import { clearStoredSubscriptionStatus } from "@/hooks/useSubscription";
 import { Loader2 } from "lucide-react";
 
 const GOOGLE_CLIENT_ID = "886773285585-fg35vj7ot1884qvkp64q9l7n8gst3tfn.apps.googleusercontent.com";
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://www.zenqrmenu.com";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.zenqrmenu.com";
 
 declare global {
   interface Window {
@@ -50,7 +52,14 @@ export default function GoogleSignInButton() {
         if (accessToken) setToken(accessToken);
         if (data.refresh) setRefreshToken(data.refresh);
 
-        const user = data.user ?? { username: data.email || "User", email: data.email || "" };
+        const user =
+          data.user ??
+          (await apiGetUser()
+            .then((session) => session.user)
+            .catch(() => undefined)) ??
+          { username: data.email || "User", email: data.email || "" };
+
+        clearStoredSubscriptionStatus();
         setStoredUser(user);
 
         toast({ title: "Welcome!", description: `Signed in as ${user.email || user.username}` });

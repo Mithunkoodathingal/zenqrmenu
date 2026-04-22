@@ -9,7 +9,7 @@ import { useRestaurantProfile, useUpdateRestaurantProfile } from "@/hooks/useRes
 import { resolveImageUrl } from "@/lib/restaurantApi";
 import { useToast } from "@/hooks/use-toast";
 
-const RestaurantSettings = () => {
+const RestaurantSettings = ({ onSavedFirstTime }: { onSavedFirstTime?: () => void } = {}) => {
   const { data: profile, isLoading } = useRestaurantProfile();
   const updateMutation = useUpdateRestaurantProfile();
   const { toast } = useToast();
@@ -54,9 +54,14 @@ const RestaurantSettings = () => {
     if (logoFile) data.logo = logoFile;
     if (coverFile) data.cover_image = coverFile;
 
+    const wasEmptyBefore = !profile?.name;
+
     updateMutation.mutate(data, {
       onSuccess: (updatedProfile) => {
         toast({ title: "Settings saved!" });
+        if (wasEmptyBefore && updatedProfile?.name && onSavedFirstTime) {
+          onSavedFirstTime();
+        }
         setLogoFile(null);
         setCoverFile(null);
         // Update previews from server response so new images render immediately

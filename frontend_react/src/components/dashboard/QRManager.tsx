@@ -9,7 +9,7 @@ import { useRestaurantProfile, useTables, useCreateTable, useDeleteTable } from 
 import { isUnlimitedLimit, useCanAddTable, useSubscription } from "@/hooks/useSubscription";
 import StyledQRCode, { downloadStyledQR, type QRStyle } from "./StyledQRCode";
 
-const PUBLISHED_URL = "https://zenqrmenu.lovable.app";
+const PUBLISHED_URL = "https://zenqrmenu.com";
 
 const QR_STYLES: { key: QRStyle; label: string; desc: string }[] = [
   { key: "minimal", label: "Minimal", desc: "Clean & simple" },
@@ -77,10 +77,23 @@ const getDeleteClass = (style: QRStyle) => {
   }
 };
 
-const QRManager = () => {
+const getNextTableNumber = (tables: Array<{ table_number: number | string }>) => {
+  const usedNumbers = new Set(
+    tables
+      .map((table) => Number(table.table_number))
+      .filter((tableNumber) => Number.isFinite(tableNumber) && tableNumber > 0),
+  );
+
+  let nextTableNumber = 1;
+  while (usedNumbers.has(nextTableNumber)) nextTableNumber += 1;
+  return nextTableNumber;
+};
+
+const QRManager = ({ onFirstQRCreated }: { onFirstQRCreated?: () => void } = {}) => {
   const [qrStyle, setQrStyle] = useState<QRStyle>("minimal");
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [limitMessage, setLimitMessage] = useState("");
+  const [showFirstQRSuccess, setShowFirstQRSuccess] = useState(false);
   const navigate = useNavigate();
   const { data: profile } = useRestaurantProfile();
   const { data: fetchedTables, isLoading: tablesLoading, isError: tablesError } = useTables();
@@ -134,8 +147,14 @@ const QRManager = () => {
                 setShowLimitDialog(true);
                 return;
               }
-              const maxNum = allTables.reduce((max, t) => Math.max(max, Number(t.table_number) || 0), 0);
-              createTableMutation.mutate(maxNum + 1, {
+              const wasEmpty = allTables.length === 0;
+              createTableMutation.mutate(getNextTableNumber(allTables), {
+                onSuccess: () => {
+                  if (wasEmpty) {
+                    setShowFirstQRSuccess(true);
+                    onFirstQRCreated?.();
+                  }
+                },
                 onError: (error: any) => {
                   const msg = String(error?.message || "");
                   const displayLimit = isUnlimitedLimit(canAddLimit) ? tables.length : canAddLimit;
@@ -281,6 +300,28 @@ const QRManager = () => {
             </Button>
             <Button variant="ghost" className="w-full" onClick={() => setShowLimitDialog(false)}>
               Maybe Later
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* First QR Success Dialog */}
+      <Dialog open={showFirstQRSuccess} onOpenChange={setShowFirstQRSuccess}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <Sparkles className="h-6 w-6 text-primary" />
+            </div>
+            <DialogTitle className="text-center text-xl">🎉 Your First QR is Ready!</DialogTitle>
+            <DialogDescription className="text-center">
+              You can now place this QR on your table. Want to add more tables{hasLimit ? ` (up to ${canAddLimit} on your current plan)` : ""}, or polish your menu first?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button variant="hero" className="w-full" onClick={() => setShowFirstQRSuccess(false)}>
+              Add More Tables
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => { setShowFirstQRSuccess(false); navigate("/dashboard?tab=menu"); }}>
+              Optimize My Menu
             </Button>
           </DialogFooter>
         </DialogContent>

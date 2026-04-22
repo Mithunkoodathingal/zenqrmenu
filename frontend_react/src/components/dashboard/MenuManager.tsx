@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Plus,
   Trash2,
@@ -20,7 +22,7 @@ import {
 import { useCategories, useMenuItems, useMenuMutations } from "@/hooks/useMenuData";
 import { resolveMenuImageUrl, type ApiMenuItem, type MenuItemInput } from "@/lib/menuApi";
 import { useToast } from "@/hooks/use-toast";
-import { isUnlimitedLimit, useCanAddMenuItem, useSubscription } from "@/hooks/useSubscription";
+import { hasActivePaidSubscription, isUnlimitedLimit, useCanAddMenuItem, useSubscription } from "@/hooks/useSubscription";
 import { useRestaurantProfile } from "@/hooks/useRestaurantData";
 import { Settings } from "lucide-react";
 
@@ -31,6 +33,7 @@ type MenuItemFormState = {
   category: number | "";
   imageFile: File | null;
   imageUrl: string;
+  is_veg?: boolean;
 };
 
 const createEmptyItemForm = (defaultCategory?: number): MenuItemFormState => ({
@@ -40,9 +43,11 @@ const createEmptyItemForm = (defaultCategory?: number): MenuItemFormState => ({
   category: defaultCategory ?? "",
   imageFile: null,
   imageUrl: "",
+  is_veg: true,
 });
 
-const MenuManager = ({ onNavigateToRestaurant }: { onNavigateToRestaurant?: () => void }) => {
+const MenuManager = ({ onNavigateToRestaurant, onFirstItemCreated }: { onNavigateToRestaurant?: () => void; onFirstItemCreated?: () => void }) => {
+  const navigate = useNavigate();
   const { data: restaurant, isLoading: restaurantLoading } = useRestaurantProfile();
   const { data: categories = [], isLoading: catsLoading } = useCategories();
   const { data: items = [], isLoading: itemsLoading } = useMenuItems();
@@ -50,7 +55,7 @@ const MenuManager = ({ onNavigateToRestaurant }: { onNavigateToRestaurant?: () =
   const { toast } = useToast();
   const { data: subscription } = useSubscription();
   const { allowed: canAddItem, limit: itemLimit, reason: itemGateReason } = useCanAddMenuItem(items.length);
-  const showItemUsage = !!subscription?.is_active && !isUnlimitedLimit(itemLimit);
+  const showItemUsage = hasActivePaidSubscription(subscription) && !isUnlimitedLimit(itemLimit);
 
   const [expandedCats, setExpandedCats] = useState<Set<number>>(new Set());
   const [hasInitializedExpanded, setHasInitializedExpanded] = useState(false);
@@ -60,6 +65,7 @@ const MenuManager = ({ onNavigateToRestaurant }: { onNavigateToRestaurant?: () =
   const [newItem, setNewItem] = useState<MenuItemFormState>(createEmptyItemForm());
   const [editingItem, setEditingItem] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<MenuItemFormState>(createEmptyItemForm());
+  const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
   
 
   useEffect(() => {
@@ -106,6 +112,10 @@ const MenuManager = ({ onNavigateToRestaurant }: { onNavigateToRestaurant?: () =
   };
 
   const handleOpenAddItem = () => {
+    if (!hasActivePaidSubscription(subscription)) {
+      setShowSubscriptionDialog(true);
+      return;
+    }
     if (!canAddItem) {
       toast({ title: "Limit reached", description: itemGateReason, variant: "destructive" });
       return;
@@ -132,14 +142,20 @@ const MenuManager = ({ onNavigateToRestaurant }: { onNavigateToRestaurant?: () =
       description: newItem.description.trim(),
       category: Number(newItem.category),
       is_paused: false,
+      is_veg: newItem.is_veg ?? true,
       ...(newItem.imageFile ? { image: newItem.imageFile } : {}),
     };
+
+    const wasEmpty = items.length === 0;
 
     addItem.mutate(payload, {
       onSuccess: () => {
         resetNewItem();
         setShowAddItem(false);
         setExpandedCats((prev) => new Set(prev).add(Number(payload.category)));
+        if (wasEmpty && onFirstItemCreated) {
+          onFirstItemCreated();
+        }
       },
     });
   };
@@ -166,6 +182,7 @@ const MenuManager = ({ onNavigateToRestaurant }: { onNavigateToRestaurant?: () =
       category: item.category,
       imageFile: null,
       imageUrl: item.image ?? "",
+      is_veg: item.is_veg ?? true,
     });
   };
 
@@ -180,6 +197,7 @@ const MenuManager = ({ onNavigateToRestaurant }: { onNavigateToRestaurant?: () =
       price: Number(editForm.price),
       description: editForm.description.trim(),
       category: Number(editForm.category),
+      is_veg: editForm.is_veg ?? true,
       ...(editForm.imageFile ? { image: editForm.imageFile } : {}),
     };
 
@@ -274,6 +292,27 @@ const MenuManager = ({ onNavigateToRestaurant }: { onNavigateToRestaurant?: () =
               </select>
             </div>
             <div>
+              <Label>Type</Label>
+              <div className="mt-1 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setNewItem({ ...newItem, is_veg: true })}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm font-medium transition-colors ${newItem.is_veg === true ? 'border-green-600 bg-green-50 text-green-700' : 'border-border text-muted-foreground hover:border-green-600'}`}
+                >
+                  <span className="h-3.5 w-3.5 rounded-sm border-2 border-green-600 flex items-center justify-center"><span className="h-1.5 w-1.5 rounded-full bg-green-600" /></span>
+                  Veg
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewItem({ ...newItem, is_veg: false })}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm font-medium transition-colors ${newItem.is_veg === false ? 'border-red-600 bg-red-50 text-red-700' : 'border-border text-muted-foreground hover:border-red-600'}`}
+                >
+                  <span className="h-3.5 w-3.5 rounded-sm border-2 border-red-600 flex items-center justify-center"><span className="h-1.5 w-1.5 rounded-full bg-red-600" /></span>
+                  Non-Veg
+                </button>
+              </div>
+            </div>
+            <div>
               <Label htmlFor="new-item-image">Item Image</Label>
               <Input id="new-item-image" type="file" accept="image/*" className="mt-1" onChange={(e) => setNewItem({ ...newItem, imageFile: e.target.files?.[0] ?? null })} />
               <p className="mt-1 text-xs text-muted-foreground">
@@ -360,6 +399,27 @@ const MenuManager = ({ onNavigateToRestaurant }: { onNavigateToRestaurant?: () =
                                 </select>
                               </div>
                               <div>
+                                <Label>Type</Label>
+                                <div className="mt-1 flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditForm({ ...editForm, is_veg: true })}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm font-medium transition-colors ${editForm.is_veg === true ? 'border-green-600 bg-green-50 text-green-700' : 'border-border text-muted-foreground hover:border-green-600'}`}
+                                  >
+                                    <span className="h-3.5 w-3.5 rounded-sm border-2 border-green-600 flex items-center justify-center"><span className="h-1.5 w-1.5 rounded-full bg-green-600" /></span>
+                                    Veg
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditForm({ ...editForm, is_veg: false })}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm font-medium transition-colors ${editForm.is_veg === false ? 'border-red-600 bg-red-50 text-red-700' : 'border-border text-muted-foreground hover:border-red-600'}`}
+                                  >
+                                    <span className="h-3.5 w-3.5 rounded-sm border-2 border-red-600 flex items-center justify-center"><span className="h-1.5 w-1.5 rounded-full bg-red-600" /></span>
+                                    Non-Veg
+                                  </button>
+                                </div>
+                              </div>
+                              <div>
                                 <Label htmlFor={`edit-item-image-${item.id}`}>Item Image</Label>
                                 <Input id={`edit-item-image-${item.id}`} type="file" accept="image/*" className="mt-1" onChange={(e) => setEditForm({ ...editForm, imageFile: e.target.files?.[0] ?? null })} />
                                 <p className="mt-1 text-xs text-muted-foreground">
@@ -433,6 +493,32 @@ const MenuManager = ({ onNavigateToRestaurant }: { onNavigateToRestaurant?: () =
           );
         })}
       </div>
+
+      <Dialog open={showSubscriptionDialog} onOpenChange={setShowSubscriptionDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Subscription required</DialogTitle>
+            <DialogDescription>
+              Please subscribe to a plan before adding menu items.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              variant="hero"
+              className="w-full"
+              onClick={() => {
+                setShowSubscriptionDialog(false);
+                navigate("/pricing");
+              }}
+            >
+              View plans
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => setShowSubscriptionDialog(false)}>
+              Maybe later
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

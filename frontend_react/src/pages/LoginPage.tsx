@@ -7,6 +7,7 @@ import { QrCode, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiLogin, apiGetUser } from "@/lib/api";
 import { setToken, setRefreshToken, setStoredUser } from "@/lib/auth";
+import { clearStoredSubscriptionStatus } from "@/hooks/useSubscription";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
 
 const LoginPage = () => {
@@ -45,8 +46,9 @@ const LoginPage = () => {
           .catch(() => undefined)) ??
         { username, email: "" };
 
+      clearStoredSubscriptionStatus();
       setStoredUser(user);
-      toast({ title: "Welcome back!", description: `Logged in as ${user.username}` });
+      toast({ title: "Welcome back!", description: `Logged in as ${user.email || user.username}` });
       navigate("/dashboard");
     } catch {
       toast({ title: "Error", description: "Could not connect to server.", variant: "destructive" });

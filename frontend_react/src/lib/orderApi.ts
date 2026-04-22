@@ -1,6 +1,6 @@
 import { authHeaders } from "./auth";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://www.zenqrmenu.com";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.zenqrmenu.com";
 
 // ─── Types ───
 
@@ -35,13 +35,13 @@ export interface Order {
   customer_name?: string;
   customer_phone?: string;
   total_price: number;
-  status: "pending" | "confirmed" | "preparing" | "completed" | "cancelled";
+  status: "pending" | "confirmed" | "preparing" | "ready" | "completed" | "cancelled";
   created_at: string;
   items: OrderItem[];
 }
 
 // Normalize raw backend order to our Order type
-function normalizeOrder(raw: any): Order {
+function normalizeOrder(raw: any, fallbackOrderId?: number): Order {
   const orderItems = (raw.order_items || raw.items || []).map((item: any) => ({
     id: item.id,
     menu_item_id: item.menu_item_id || item.food_item_id,
@@ -52,12 +52,12 @@ function normalizeOrder(raw: any): Order {
   }));
 
   return {
-    id: raw.id,
-    table: raw.table,
+    id: raw.id ?? fallbackOrderId ?? 0,
+    table: Number(raw.table ?? 0),
     table_number: String(raw.table_number || raw.table || ""),
     customer_name: raw.customer_name || undefined,
     customer_phone: raw.customer_phone || undefined,
-    total_price: parseFloat(raw.total_price_cached || raw.total_price || "0"),
+    total_price: parseFloat(raw.total_price_cached || raw.total_price || raw.total || "0"),
     status: raw.status || "pending",
     created_at: raw.created_at || new Date().toISOString(),
     items: orderItems,
@@ -90,9 +90,57 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order | 
   if (!rawBody) return null;
 
   try {
-    return JSON.parse(rawBody);
+    const parsed = JSON.parse(rawBody);
+    return normalizeOrder(parsed);
   } catch {
     return null;
+  }
+}
+
+// ─── Public: Fetch order status by ID (no auth) ───
+
+export async function fetchPublicOrder(orderId: number): Promise<Order | null> {
+  try {
+    const url = `${BASE_URL}/menu/api/orders/${orderId}/public/?_=${Date.now()}`;
+    const res = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      },
+      cache: "no-store",
+    });
+
+    const rawBody = await res.text().catch(() => "");
+    console.log("[fetchPublicOrder] response:", { orderId, status: res.status, body: rawBody });
+
+    if (!res.ok) {
+      console.warn("[fetchPublicOrder] failed:", orderId, res.status, rawBody);
+      return null;
+    }
+
+    if (!rawBody) return null;
+
+    const data = JSON.parse(rawBody);
+    return normalizeOrder(data, orderId);
+  } catch (error) {
+    console.warn("[fetchPublicOrder] error:", orderId, error);
+    return null;
+  }
+}
+
+// ─── Public: Fetch active orders for a table (no auth) ───
+
+export async function fetchTableOrders(tableId: number | string): Promise<Order[]> {
+  try {
+    const res = await fetch(`${BASE_URL}/menu/api/table/${tableId}/orders/`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data.map(normalizeOrder) : [];
+  } catch {
+    return [];
   }
 }
 
@@ -108,6 +156,17 @@ export async function fetchOrders(restaurantId?: number): Promise<Order[]> {
   if (!res.ok) throw new Error("Failed to fetch orders");
   const data = await res.json();
   return Array.isArray(data) ? data.map(normalizeOrder) : [];
+}
+
+// ─── Dashboard: Delete order (auth required) ───
+
+export async function deleteOrder(orderId: number): Promise<void> {
+  const res = await fetch(`${BASE_URL}/menu/api/orders/${orderId}/`, {
+    method: "DELETE",
+    headers: { Accept: "application/json", ...authHeaders() },
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to delete order");
 }
 
 // ─── Dashboard: Update order status (auth required) ───
@@ -129,3 +188,4 @@ export async function updateOrderStatus(
   if (!res.ok) throw new Error("Failed to update order status");
   return res.json();
 }
+

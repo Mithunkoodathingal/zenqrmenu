@@ -5,12 +5,69 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShoppingCart, Plus, Minus, X, Send, Loader2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { ShoppingCart, Plus, Minus, X, Send, Loader2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ChefHat, CheckCircle2, Clock, Utensils, PartyPopper } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePublicMenu } from "@/hooks/useRestaurantData";
 import { resolveImageUrl } from "@/lib/restaurantApi";
-import { createOrder } from "@/lib/orderApi";
+import { createOrder, fetchPublicOrder, type Order } from "@/lib/orderApi";
 import { toast } from "sonner";
+
+const ACTIVE_ORDER_KEY = (tableId: string) => `zenqr_active_order_${tableId}`;
+
+const STATUS_STEPS = [
+  { key: "pending", label: "Order Received", icon: Clock, description: "Waiting for the kitchen to confirm" },
+  { key: "confirmed", label: "Confirmed", icon: CheckCircle2, description: "Kitchen has confirmed your order" },
+  { key: "preparing", label: "Preparing", icon: ChefHat, description: "Your food is being prepared" },
+  { key: "ready", label: "Ready for Delivery", icon: Utensils, description: "Your food is on its way to your table" },
+  { key: "completed", label: "Completed", icon: PartyPopper, description: "Enjoy! Table is ready for the next order" },
+] as const;
+
+function getStatusStepIndex(status: string): number {
+  switch (status) {
+    case "pending":
+      return 0;
+    case "confirmed":
+      return 1;
+    case "preparing":
+      return 2;
+    case "ready":
+      return 3;
+    case "completed":
+      return 4;
+    case "cancelled":
+      return -1;
+    default:
+      return 0;
+  }
+}
+
+function normalizeClientOrder(order: Order): Order {
+  return {
+    ...order,
+    id: Number(order.id),
+    table: Number(order.table ?? 0),
+    table_number: String(order.table_number ?? order.table ?? ""),
+    total_price: Number(order.total_price ?? 0),
+    status: (order.status || "pending") as Order["status"],
+    items: Array.isArray(order.items) ? order.items : [],
+  };
+}
+
+function mergeOrderUpdate(currentOrder: Order, incomingOrder: Order): Order {
+  const normalizedCurrent = normalizeClientOrder(currentOrder);
+  const normalizedIncoming = normalizeClientOrder(incomingOrder);
+
+  return {
+    ...normalizedCurrent,
+    ...normalizedIncoming,
+    id: normalizedIncoming.id || normalizedCurrent.id,
+    items: normalizedIncoming.items.length > 0 ? normalizedIncoming.items : normalizedCurrent.items,
+    customer_name: normalizedIncoming.customer_name ?? normalizedCurrent.customer_name,
+    customer_phone: normalizedIncoming.customer_phone ?? normalizedCurrent.customer_phone,
+    table_number: normalizedIncoming.table_number || normalizedCurrent.table_number,
+    total_price: normalizedIncoming.total_price > 0 ? normalizedIncoming.total_price : normalizedCurrent.total_price,
+  };
+}
 
 type CartItem = {
   id: number;
@@ -32,6 +89,7 @@ const MenuViewPage = () => {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+  const [activeOrders, setActiveOrders] = useState<Order[]>([]);
   const catScrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -70,7 +128,7 @@ const MenuViewPage = () => {
     });
   };
 
-  const { data: menuData, isLoading, isError } = usePublicMenu(tableId || null);
+  const { data: menuData, isLoading, isError, error } = usePublicMenu(tableId || null);
 
   const addToCart = (item: { id: number; name: string; price: number }) => {
     setCart((prev) => {
@@ -90,12 +148,125 @@ const MenuViewPage = () => {
   const totalItems = cart.reduce((s, c) => s + c.quantity, 0);
   const totalPrice = cart.reduce((s, c) => s + c.price * c.quantity, 0);
 
+  // ─── Restore active orders from localStorage on mount ───
+  useEffect(() => {
+    if (!tableId) return;
+    try {
+      const raw = localStorage.getItem(ACTIVE_ORDER_KEY(tableId));
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      const restoredOrders = Array.isArray(saved) ? saved : [saved];
+      const normalizedOrders = restoredOrders
+        .filter((order: Order | null | undefined) => order && Number.isFinite(Number(order.id)))
+        .map((order: Order) => normalizeClientOrder(order));
+
+      if (normalizedOrders.length > 0) {
+        setActiveOrders(normalizedOrders);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [tableId]);
+
+  // ─── Persist whenever activeOrders changes ───
+  useEffect(() => {
+    if (!tableId) return;
+    try {
+      if (activeOrders.length === 0) {
+        localStorage.removeItem(ACTIVE_ORDER_KEY(tableId));
+      } else {
+        localStorage.setItem(ACTIVE_ORDER_KEY(tableId), JSON.stringify(activeOrders));
+      }
+    } catch { /* ignore */ }
+  }, [activeOrders, tableId]);
+
+  // ─── Poll status for any in-flight orders (every 4s) ───
+  // Depend on a stable comma-joined list of in-flight IDs so the interval
+  // is not torn down & recreated on every state update.
+  const inFlightIdsKey = activeOrders
+    .filter((o) => o.status !== "completed" && o.status !== "cancelled")
+    .map((o) => o.id)
+    .sort((a, b) => a - b)
+    .join(",");
+
+
+
+    
+useEffect(() => {
+  if (!tableId || !inFlightIdsKey) return;
+
+  const ids = inFlightIdsKey
+    .split(",")
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id));
+
+  if (ids.length === 0) return;
+
+  let cancelled = false;
+
+  const poll = async () => {
+    try {
+      const updates = await Promise.all(
+        ids.map((id) => fetchPublicOrder(id))
+      );
+
+      if (cancelled) return;
+
+      console.log(
+        "[MenuView] poll updates:",
+        updates.map((u) => u && { id: u.id, status: u.status })
+      );
+
+      const updatesById = new Map(
+        updates
+          .filter((update): update is Order => Boolean(update?.id))
+          .map((update) => [
+            Number(update.id),
+            normalizeClientOrder(update),
+          ])
+      );
+
+      setActiveOrders((prev) => {
+        return prev.map((order) => {
+          const match = updatesById.get(Number(order.id));
+          if (!match) return order;
+
+          return {
+            ...order,
+            ...match,
+          };
+        });
+      });
+
+    } catch (err) {
+      console.warn("[MenuView] poll failed:", err);
+    }
+  };
+
+  // 🔥 Run immediately
+  poll();
+
+  // 🔁 Then poll every 4 seconds
+  const interval = setInterval(poll, 4000);
+
+  // 🧹 Cleanup
+  return () => {
+    cancelled = true;
+    clearInterval(interval);
+  };
+
+}, [tableId, inFlightIdsKey]);
+
+  const dismissOrder = (orderId: number) => {
+    setActiveOrders((prev) => prev.filter((o) => o.id !== orderId));
+  };
+
   const placeOrder = async () => {
     if (cart.length === 0) return;
 
     setIsPlacing(true);
     try {
-      await createOrder({
+      const newOrder = await createOrder({
         restaurant: menuData.restaurant.id,
         table: Number(tableId),
         customer_name: customerName.trim() || undefined,
@@ -107,13 +278,16 @@ const MenuViewPage = () => {
         })),
       });
       setOrderPlaced(true);
+      if (newOrder) {
+        setActiveOrders((prev) => [...prev, normalizeClientOrder(newOrder)]);
+      }
       setTimeout(() => {
         setCart([]);
         setShowCart(false);
         setOrderPlaced(false);
         setCustomerName("");
         setCustomerPhone("");
-      }, 3000);
+      }, 2000);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to place order. Please try again.");
     } finally {
@@ -145,13 +319,17 @@ const MenuViewPage = () => {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="p-8 text-center max-w-sm">
           <h2 className="text-lg font-bold mb-2">Menu Not Found</h2>
-          <p className="text-sm text-muted-foreground">Could not load the menu. The restaurant may not exist or the link is invalid.</p>
+          <p className="text-sm text-muted-foreground">
+            {error instanceof Error ? error.message : "Could not load the menu. The restaurant may not exist or the link is invalid."}
+          </p>
+          <p className="text-xs text-muted-foreground mt-3">Table ID: {tableId}</p>
         </Card>
       </div>
     );
   }
 
   const { restaurant, categories, items } = menuData;
+  const tableLabel = menuData.table_number || tableId;
   const availableItems = items.filter((item) => item.is_available);
   const filteredItems = activeCategory === "all" ? availableItems : availableItems.filter((item) => item.category === activeCategory);
 
@@ -193,11 +371,11 @@ const MenuViewPage = () => {
             <div>
               <h1 className="text-lg font-bold font-heading">{restaurant.name}</h1>
               <p className="text-xs text-muted-foreground -mt-0.5 line-clamp-1">
-                {restaurant.address?.split(",")[0]?.trim() || tableId}
+                {restaurant.address?.split(",")[0]?.trim() || `Table ${tableLabel}`}
               </p>
             </div>
             <Badge variant="outline" className="text-xs font-medium">
-              {tableId}
+              Table {tableLabel}
             </Badge>
           </div>
         </div>
@@ -256,6 +434,100 @@ const MenuViewPage = () => {
         </div>
       </header>
 
+      {/* Kitchen Status Banners — one per active order */}
+      {activeOrders.length > 0 && (
+        <div className="max-w-lg mx-auto px-4 pt-4 space-y-3">
+          {activeOrders.map((order) => (
+            <Card key={order.id} className="p-4 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent shadow-card">
+              {order.status === "completed" ? (
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <PartyPopper className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-sm">Order #{order.id} Completed</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Enjoy your meal! You can keep ordering anytime from the menu below.
+                    </p>
+                    <Button size="sm" variant="outline" className="mt-3 h-8 text-xs" onClick={() => dismissOrder(order.id)}>
+                      Dismiss
+                    </Button>
+                  </div>
+                </div>
+              ) : order.status === "cancelled" ? (
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                    <X className="h-5 w-5 text-destructive" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-sm">Order #{order.id} Cancelled</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Please speak to staff if you need help.</p>
+                    <Button size="sm" variant="outline" className="mt-3 h-8 text-xs" onClick={() => dismissOrder(order.id)}>
+                      Dismiss
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Kitchen Status</p>
+                      <h3 className="font-bold text-sm">Order #{order.id}</h3>
+                    </div>
+                    <Badge variant="secondary" className="text-[10px] capitalize">
+                      {STATUS_STEPS[Math.max(0, getStatusStepIndex(order.status))]?.label || order.status}
+                    </Badge>
+                  </div>
+                  <div className="flex items-start justify-between">
+                    {STATUS_STEPS.slice(0, 4).map((step, idx) => {
+                      const currentIdx = getStatusStepIndex(order.status);
+                      const isDone = idx < currentIdx;
+                      const isCurrent = idx === currentIdx;
+                      const Icon = step.icon;
+                      return (
+                        <div key={step.key} className="flex flex-col items-center flex-1 relative">
+                          {idx > 0 && (
+                            <div
+                              className={`absolute right-1/2 top-3 h-0.5 w-full ${
+                                isDone || isCurrent ? "bg-primary" : "bg-muted"
+                              }`}
+                            />
+                          )}
+                          <div
+                            className={`relative h-6 w-6 rounded-full flex items-center justify-center z-10 transition-colors ${
+                              isDone
+                                ? "bg-primary text-primary-foreground"
+                                : isCurrent
+                                ? "bg-primary text-primary-foreground ring-4 ring-primary/20 animate-pulse"
+                                : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            <Icon className="h-3 w-3" />
+                          </div>
+                          <span
+                            className={`text-[9px] mt-1.5 text-center leading-tight px-0.5 ${
+                              isCurrent ? "text-foreground font-semibold" : "text-muted-foreground"
+                            }`}
+                          >
+                            {step.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3 text-center">
+                    {STATUS_STEPS[Math.max(0, getStatusStepIndex(order.status))]?.description}
+                  </p>
+                </>
+              )}
+            </Card>
+          ))}
+          <p className="text-[11px] text-center text-muted-foreground">
+            Want more? Just add items below and place another order anytime.
+          </p>
+        </div>
+      )}
+
       {/* Menu Items */}
       <main className="max-w-lg mx-auto px-4 py-4 pb-24">
         <div className="space-y-3">
@@ -276,11 +548,14 @@ const MenuViewPage = () => {
                   <div className="flex justify-between gap-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        {item.is_veg !== undefined && (
-                          <span className={`h-3.5 w-3.5 rounded-sm border-2 flex items-center justify-center ${item.is_veg ? 'border-green-600' : 'border-red-600'}`}>
-                            <span className={`h-1.5 w-1.5 rounded-full ${item.is_veg ? 'bg-green-600' : 'bg-red-600'}`} />
-                          </span>
-                        )}
+                        {(() => {
+                          const isVeg = item.is_veg !== false;
+                          return (
+                            <span className={`h-3.5 w-3.5 rounded-sm border-2 flex items-center justify-center ${isVeg ? 'border-green-600' : 'border-red-600'}`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${isVeg ? 'bg-green-600' : 'bg-red-600'}`} />
+                            </span>
+                          );
+                        })()}
                         <h3 className="font-semibold text-sm">{item.name}</h3>
                       </div>
                       {item.description && (

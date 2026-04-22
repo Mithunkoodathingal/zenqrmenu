@@ -148,12 +148,12 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       <Navbar />
 
       {/* Hero */}
-      <section className="gradient-hero">
-        <div className="container py-16 lg:py-24 text-center">
+      <section className="gradient-hero overflow-hidden">
+        <div className="container px-4 py-16 lg:py-24 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -166,7 +166,7 @@ const ContactPage = () => {
             <p className="mt-4 text-lg text-muted-foreground">
               Have questions? Want a demo? We'd love to hear from you. Reach out and we'll respond within hours.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3 justify-center">
+              <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center items-center">
               <a href={`${WHATSAPP_LINK}?text=${encodeURIComponent("Hi, I'd like a free demo of Zen Menu!")}`} target="_blank" rel="noopener noreferrer">
                 <Button variant="hero" size="lg" className="text-base px-8">
                   <MessageCircle className="mr-2 h-5 w-5" /> Chat on WhatsApp
@@ -183,8 +183,8 @@ const ContactPage = () => {
       </section>
 
       {/* Contact Methods */}
-      <section className="py-16 lg:py-20">
-        <div className="container">
+      <section className="py-16 lg:py-20 overflow-hidden">
+        <div className="container px-4">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {contactMethods.map((method, i) => (
               <motion.a
@@ -212,8 +212,8 @@ const ContactPage = () => {
       </section>
 
       {/* Contact Form + Demo CTA */}
-      <section id="contact-form" className="py-16 lg:py-20 bg-muted/50">
-        <div className="container">
+      <section id="contact-form" className="py-16 lg:py-20 bg-muted/50 overflow-hidden">
+        <div className="container px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-start">
             {/* Form */}
             <motion.div
@@ -328,8 +328,8 @@ const ContactPage = () => {
       </section>
 
       {/* Testimonials */}
-      <section className="py-16 lg:py-20">
-        <div className="container">
+      <section className="py-16 lg:py-20 overflow-hidden">
+        <div className="container px-4">
           <motion.div
             initial="hidden"
             whileInView="visible"
@@ -374,8 +374,8 @@ const ContactPage = () => {
       </section>
 
       {/* FAQ */}
-      <section className="py-16 lg:py-20 bg-muted/50">
-        <div className="container max-w-3xl">
+      <section className="py-16 lg:py-20 bg-muted/50 overflow-hidden">
+        <div className="container max-w-3xl px-4">
           <motion.div
             initial="hidden"
             whileInView="visible"
@@ -412,8 +412,8 @@ const ContactPage = () => {
       </section>
 
       {/* Map */}
-      <section className="py-16 lg:py-20">
-        <div className="container">
+      <section className="py-16 lg:py-20 overflow-hidden">
+        <div className="container px-4">
           <motion.div
             initial="hidden"
             whileInView="visible"

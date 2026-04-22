@@ -10,7 +10,7 @@ import Footer from "@/components/Footer";
 import { fetchPlans, createSubscription, verifyPayment, normalizePlan, type Plan } from "@/lib/api";
 import { loadRazorpayScript, openRazorpayCheckout } from "@/lib/razorpay";
 import { getToken } from "@/lib/auth";
-import { persistPlanSubscription, useSubscription } from "@/hooks/useSubscription";
+import { hasActivePaidSubscription, persistPlanSubscription, useSubscription } from "@/hooks/useSubscription";
 
 const iconMap: Record<string, React.ElementType> = {
   Free: Zap,
@@ -67,6 +67,16 @@ const fallbackPlans: Plan[] = [
 
 const normalizePlanName = (value?: string | null) => value?.trim().toLowerCase() ?? "";
 
+const PLAN_RANK: Record<string, number> = {
+  free: 0,
+  basic: 1,
+  pro: 1,
+  standard: 2,
+  enterprise: 3,
+};
+
+const getPlanRank = (name: string) => PLAN_RANK[normalizePlanName(name)] ?? 0;
+
 const PLAN_ALIASES: Record<string, string[]> = {
   free: ["free"],
   basic: ["basic", "pro"],
@@ -90,7 +100,7 @@ const PricingPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: subscription } = useSubscription();
-  const activePlan = subscription?.is_active ? normalizePlanName(subscription.plan) : null;
+  const activePlan = hasActivePaidSubscription(subscription) ? normalizePlanName(subscription?.plan) : null;
   const isLoggedIn = !!getToken();
 
   useEffect(() => {
@@ -104,10 +114,28 @@ const PricingPage = () => {
 
   const normalizedPlans = useMemo(() => plans.map(normalizePlan), [plans]);
 
+  const isCurrentPlanCheck = (planName: string) => {
+    const n = normalizePlanName(planName);
+    return !!activePlan && (PLAN_ALIASES[n] ?? [n]).includes(activePlan);
+  };
+
+  const isLowerPlan = (planName: string) => {
+    if (!activePlan) return false;
+    return getPlanRank(planName) < (PLAN_RANK[activePlan] ?? 0);
+  };
+
   const handleSubscribe = async (plan: Plan) => {
-    if (plan.name === "Free") {
-      navigate("/register");
+    if (isLowerPlan(plan.name)) {
+      toast({ title: "Cannot Downgrade", description: "You cannot switch to a lower plan. Contact support if needed.", variant: "destructive" });
       return;
+    }
+
+    if (plan.name === "Free") {
+      if (!isLoggedIn) {
+        navigate("/register");
+        return;
+      }
+      // Logged-in user on Free plan — fall through to createSubscription to activate it
     }
     if (plan.name === "Enterprise" && plan.price === 0) {
       window.location.href = "mailto:hello@zenqrmenu.com?subject=Enterprise%20Plan%20Inquiry";
@@ -158,7 +186,8 @@ const PricingPage = () => {
         toast({ title: "Login Required", description: "Please log in to subscribe to a plan.", variant: "destructive" });
         navigate("/login");
       } else {
-        toast({ title: "Error", description: "Could not initiate payment. Please try again.", variant: "destructive" });
+        const message = err instanceof Error ? err.message : "Could not initiate payment. Please try again.";
+        toast({ title: "Subscription Error", description: message, variant: "destructive" });
       }
     } finally {
       setPayingPlanId(null);
@@ -194,8 +223,8 @@ const PricingPage = () => {
                 {normalizedPlans.map((plan, i) => {
                 const Icon = iconMap[plan.name] || Zap;
                 const isPaying = payingPlanId === plan.id;
-                const normalizedCardPlan = normalizePlanName(plan.name);
-                const isCurrentPlan = !!activePlan && (PLAN_ALIASES[normalizedCardPlan] ?? [normalizedCardPlan]).includes(activePlan);
+                const isCurrentPlan = isCurrentPlanCheck(plan.name);
+                const isLower = isLowerPlan(plan.name);
 
                 return (
                   <motion.div
@@ -264,10 +293,10 @@ const PricingPage = () => {
                       </ul>
 
                       <Button
-                        variant={isCurrentPlan ? "outline" : plan.popular ? "hero" : "outline"}
+                        variant={isCurrentPlan || isLower ? "outline" : plan.popular ? "hero" : "outline"}
                         className="w-full"
                         onClick={() => handleSubscribe(plan)}
-                        disabled={isPaying || isCurrentPlan}
+                        disabled={isPaying || isCurrentPlan || isLower}
                       >
                         {isPaying ? (
                           <>
@@ -276,12 +305,16 @@ const PricingPage = () => {
                           </>
                         ) : isCurrentPlan ? (
                           "✓ Active Plan"
+                        ) : isLower ? (
+                          "Current Plan is Higher"
                         ) : plan.name === "Free" && !activePlan && !isLoggedIn ? (
                           "Start Free"
                         ) : plan.name === "Enterprise" && plan.price === 0 ? (
                           "Contact Us"
-                        ) : activePlan || isLoggedIn ? (
+                        ) : activePlan ? (
                           "Upgrade"
+                        ) : isLoggedIn ? (
+                          "Subscribe"
                         ) : (
                           "Subscribe Now"
                         )}

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getToken, clearToken, clearStoredUser } from "@/lib/auth";
 import { apiLogout } from "@/lib/api";
+import { clearStoredSubscriptionStatus } from "@/hooks/useSubscription";
 
 const navItems = [
   { label: "Home", path: "/" },
@@ -30,6 +31,7 @@ const Navbar = () => {
   const handleLogout = async () => {
     setMobileOpen(false);
     try { await apiLogout(); } catch { /* ignore */ }
+    clearStoredSubscriptionStatus();
     clearToken();
     clearStoredUser();
     navigate("/login", { replace: true });

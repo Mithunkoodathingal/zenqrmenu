@@ -13,6 +13,7 @@ import {
   type ApiMenuItem,
   type MenuItemInput,
 } from "@/lib/menuApi";
+import { encodeMenuItemDescription } from "@/lib/menuItemType";
 
 export function useCategories() {
   return useQuery<ApiCategory[]>({
@@ -88,9 +89,12 @@ export function useMenuMutations() {
 
             if (typeof data.name === "string") nextItem.name = data.name;
             if (typeof data.price === "number") nextItem.price = data.price;
-            if (typeof data.description === "string") nextItem.description = data.description;
+            if (typeof data.description === "string") {
+              nextItem.description = encodeMenuItemDescription(data.description, data.is_veg);
+            }
             if (typeof data.category === "number") nextItem.category = data.category;
             if (typeof data.image === "string" || data.image === null) nextItem.image = data.image as string | null;
+            if (typeof data.is_veg === "boolean") nextItem.is_veg = data.is_veg;
 
             if (typeof data.is_paused === "boolean") {
               nextItem.is_available = !data.is_paused;
@@ -113,6 +117,12 @@ export function useMenuMutations() {
         corrected.is_available = !data.is_paused;
       } else if (typeof data.is_available === "boolean") {
         corrected.is_available = data.is_available;
+      }
+      if (typeof data.is_veg === "boolean") {
+        corrected.is_veg = data.is_veg;
+      }
+      if (typeof data.description === "string") {
+        corrected.description = data.description;
       }
       qc.setQueryData<ApiMenuItem[]>(["menuItems"], (current = []) =>
         current.map((item) => (item.id === corrected.id ? corrected : item)),

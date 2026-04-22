@@ -1,6 +1,7 @@
 import { authHeaders } from "./auth";
+import { encodeMenuItemDescription, extractMenuItemType, resolveMenuItemIsVeg, stripMenuItemTypeMarker } from "./menuItemType";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://www.zenqrmenu.com";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.zenqrmenu.com";
 
 // ─── Types ───
 
@@ -17,6 +18,7 @@ export interface ApiMenuItem {
   category: number;
   is_available: boolean;
   image?: string | null;
+  is_veg?: boolean;
 }
 
 type RawApiMenuItem = {
@@ -29,12 +31,23 @@ type RawApiMenuItem = {
   available?: boolean;
   is_paused?: boolean;
   image?: string | null;
+  is_veg?: boolean;
+  veg?: boolean;
+  food_type?: string | null;
+  foodType?: string | null;
+  food_item_type?: string | null;
+  foodItemType?: string | null;
+  fooditem_type?: string | null;
+  fooditemType?: string | null;
+  item_type?: string | null;
+  itemType?: string | null;
 };
 
 export type MenuItemInput = Omit<ApiMenuItem, "id" | "image" | "is_available"> & {
   is_available?: boolean;
   is_paused?: boolean;
   image?: string | File | null;
+  is_veg?: boolean;
 };
 
 function normalizeAvailability(item: Pick<RawApiMenuItem, "is_available" | "available" | "is_paused">) {
@@ -43,14 +56,29 @@ function normalizeAvailability(item: Pick<RawApiMenuItem, "is_available" | "avai
 }
 
 function normalizeMenuItem(item: RawApiMenuItem): ApiMenuItem {
+  const normalizedType = extractMenuItemType(item.description);
+
   return {
     id: item.id,
     name: item.name,
     price: Number(item.price),
-    description: item.description ?? "",
+    description: normalizedType.description,
     category: typeof item.category === "object" ? Number(item.category?.id) : Number(item.category),
     is_available: normalizeAvailability(item),
     image: item.image ?? null,
+    is_veg: resolveMenuItemIsVeg(
+      item.description,
+      item.is_veg,
+      item.veg,
+      item.food_type,
+      item.foodType,
+      item.food_item_type,
+      item.foodItemType,
+      item.fooditem_type,
+      item.fooditemType,
+      item.item_type,
+      item.itemType,
+    ),
   };
 }
 
@@ -82,7 +110,32 @@ async function getErrorMessage(res: Response, fallback: string): Promise<string>
 }
 
 function buildMenuItemBody(data: Partial<MenuItemInput>) {
-  const normalizedData: Partial<MenuItemInput> = { ...data };
+  const normalizedData: Record<string, unknown> = { ...data };
+  const isVeg = typeof data.is_veg === "boolean" ? data.is_veg : undefined;
+
+  if (typeof normalizedData.description === "string") {
+    normalizedData.description = encodeMenuItemDescription(
+      stripMenuItemTypeMarker(normalizedData.description),
+      isVeg,
+    );
+  }
+
+  if (typeof isVeg === "boolean") {
+    const itemType = isVeg ? "veg" : "non_veg";
+
+    Object.assign(normalizedData, {
+      is_veg: isVeg,
+      veg: isVeg,
+      food_type: itemType,
+      foodType: itemType,
+      food_item_type: itemType,
+      foodItemType: itemType,
+      fooditem_type: itemType,
+      fooditemType: itemType,
+      item_type: itemType,
+      itemType: itemType,
+    });
+  }
 
   if (typeof normalizedData.is_paused === "boolean" && typeof normalizedData.is_available !== "boolean") {
     normalizedData.is_available = !normalizedData.is_paused;
