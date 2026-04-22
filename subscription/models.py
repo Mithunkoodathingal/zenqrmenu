@@ -61,20 +61,16 @@ class Subscription(models.Model):
         return max(remaining, 0)
 
     # <-- ADD THIS METHOD
-    def has_active_subscription(self) -> bool:
-        """
-        Convenience helper used by views/templates.
-        Returns True if subscription is marked active and the end_date is in the future (or today).
-        """
+    def has_active_subscription(self):
+        from django.utils import timezone
+
         if not self.is_active:
             return False
+
         if not self.end_date:
             return False
-        # use timezone-aware comparison
-        return self.end_date >= timezone.now()
 
-    def __str__(self):
-        return f"{self.restaurant} - {self.plan}"
+        return self.end_date >= timezone.now()
 
 
 class PaymentTransaction(models.Model):  # <-- NEW

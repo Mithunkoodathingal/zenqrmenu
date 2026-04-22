@@ -2187,8 +2187,15 @@ def menu_items_api(request):
     is_valid, result = check_subscription_access(request.user)
 
     if not is_valid:
-        return JsonResponse({"success": False, "error": result}, status=403)
-
+        return JsonResponse({
+            "success": False,
+            "error": result,
+            "debug": {
+                "user": request.user.id,
+                "restaurant": restaurant.id,
+            }
+        }, status=403)
+    
     plan = result
 
     if request.method == 'GET':
@@ -2322,7 +2329,14 @@ def create_table_api(request):
         is_valid, result = check_subscription_access(request.user)
 
         if not is_valid:
-            return JsonResponse({"success": False, "error": result}, status=403)
+            return JsonResponse({
+                "success": False,
+                "error": result,
+                "debug": {
+                    "user": request.user.id,
+                    "restaurant": restaurant.id,
+                }
+            }, status=403)
 
         plan = result
 
