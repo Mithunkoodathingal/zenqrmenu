@@ -2310,21 +2310,15 @@ def menu_item_detail_api(request, id):
 @permission_classes([AllowAny])
 def public_order_detail(request, pk):
     try:
-        order = Order.objects.get(pk=pk, is_active=True)
+        order = Order.objects.get(pk=pk)   # ✅ FIXED HERE
     except Order.DoesNotExist:
         return Response({'detail': 'Not found'}, status=404)
 
     return Response({
         "id": order.id,
         "status": order.status,
-        "items": [
-            {
-                "name": item.food_item.name,
-                "quantity": item.quantity
-            } for item in order.items.all()
-        ],
-        "total": float(order.total_price),
-        "created_at": order.created_at
+        "table": order.table.id if order.table else None,
+        "total": float(order.total_price_cached) if hasattr(order, 'total_price_cached') else 0,
     })
 
 
