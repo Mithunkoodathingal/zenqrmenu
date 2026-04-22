@@ -102,7 +102,7 @@ urlpatterns = [
 
     path('menu/api/items/', menu_items_api),
     path('menu/api/items/<int:id>/', menu_item_detail_api),
-    path('api/orders/<int:pk>/public/', public_order_detail, name='public-order-detail'),
+    path('menu/api/orders/<int:pk>/public/',public_order_detail, name='public-order-detail'),
 
     path('menu/api/tables/', create_table_api),
     path('menu/api/tables/<int:table_id>/', delete_table_api),
