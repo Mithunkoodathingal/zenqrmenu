@@ -1,10 +1,13 @@
+
+from subscription.models import Subscription
+
 def check_subscription_access(restaurant):
-    try:
-        sub = restaurant.subscription
+    subscription = Subscription.objects.filter(
+        restaurant=restaurant,
+        is_active=True
+    ).first()
 
-        if not sub.is_active:
-            return False, "Subscription inactive"
+    if not subscription:
+        return False, "No active subscription"
 
-        return True, sub.plan
-    except:
-        return False, "No subscription"
+    return True, subscription.plan

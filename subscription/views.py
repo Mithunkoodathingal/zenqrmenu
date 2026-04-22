@@ -83,7 +83,7 @@ def create_subscription(request, plan_id):
             messages.error(request, "Free plan already used for this restaurant. Choose a paid plan or contact support.")
             return redirect('subscription:subscription_plans')
 
-        subscription, created = Subscription.objects.get_or_create(restaurant=restaurant)
+        subscription, created = Subscription.objects.filter(user=request.user)
         # Ensure stale plan doesn't stay on the subscription (could be from an earlier try).
         # We will only attach the plan after successful payment (tx.plan is authoritative).
         if subscription.plan is not None:
@@ -98,7 +98,7 @@ def create_subscription(request, plan_id):
         return redirect('dashboard')
 
     # Paid plan -> create/prepare subscription record and Razorpay order
-    subscription, created = Subscription.objects.get_or_create(restaurant=restaurant)
+    subscription, created = Subscription.objects.filter(user=request.user)
     # Do NOT assign subscription.plan yet — wait until payment successful
     if hasattr(subscription, 'auto_renew'):
         subscription.auto_renew = auto_renew
@@ -461,7 +461,7 @@ def api_create_subscription(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Validate plan
+        # ✅ Validate plan
         try:
             plan = SubscriptionPlan.objects.get(id=plan_id)
         except SubscriptionPlan.DoesNotExist:
@@ -472,19 +472,10 @@ def api_create_subscription(request):
 
         user = request.user
 
-        # Validate restaurant
-        try:
-            restaurant = Restaurant.objects.get(owner=user)
-        except Restaurant.DoesNotExist:
-            return Response(
-                {"success": False, "error": "No restaurant found for this user"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # ✅ Get or create subscription
+        subscription, _ = Subscription.objects.get_or_create(user=user)
 
-        # Get or create subscription
-        subscription, _ = Subscription.objects.get_or_create(restaurant=restaurant)
-
-        # 🔥 Prevent downgrade to free if already on paid
+        # 🔥 Prevent downgrade
         if subscription.plan and subscription.plan.price > 0 and plan.price == 0:
             return Response(
                 {"success": False, "error": "Cannot downgrade to free plan"},
@@ -505,21 +496,16 @@ def api_create_subscription(request):
         # ================= PAID PLAN =================
         order_amount = int(plan.price * 100)
 
-        try:
-            order = razorpay_client.order.create({
-                "amount": order_amount,
-                "currency": "INR",
-                "payment_capture": 1,
-            })
-        except Exception as e:
-            logger.error(f"Razorpay order error: {str(e)}")
-            return Response(
-                {"success": False, "error": "Payment gateway error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        order = razorpay_client.order.create({
+            "amount": order_amount,
+            "currency": "INR",
+            "payment_capture": 1,
+        })
 
-        # Create transaction
-        tx = PaymentTransaction.objects.create(
+        # ❌ DO NOT set plan here
+
+        # ✅ Store transaction (pending)
+        PaymentTransaction.objects.create(
             subscription=subscription,
             plan=plan,
             razorpay_order_id=order["id"],
@@ -540,7 +526,7 @@ def api_create_subscription(request):
         logger.error(f"Subscription API error: {str(e)}")
 
         return Response(
-            {"success": False, "error": "Something went wrong"},
+            {"success": False, "error": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -560,6 +546,7 @@ def api_verify_payment(request):
             "error": "Missing payment data"
         }, status=400)
 
+    # ✅ Verify signature
     try:
         razorpay_client.utility.verify_payment_signature({
             "razorpay_order_id": order_id,
@@ -573,27 +560,44 @@ def api_verify_payment(request):
         }, status=400)
 
     try:
-        tx = PaymentTransaction.objects.get(razorpay_order_id=order_id)
+        tx = PaymentTransaction.objects.select_related("subscription", "plan").get(
+            razorpay_order_id=order_id
+        )
     except PaymentTransaction.DoesNotExist:
         return JsonResponse({
             "success": False,
             "error": "Transaction not found"
         }, status=404)
 
+    # 🔒 SECURITY: ensure this payment belongs to current user
+    if tx.subscription.user != request.user:
+        return JsonResponse({
+            "success": False,
+            "error": "Unauthorized transaction"
+        }, status=403)
+
+    # 🔁 Prevent duplicate activation
     if tx.status == "paid":
         return JsonResponse({"success": True})
 
     subscription = tx.subscription
     plan = tx.plan
 
+    # ✅ Activate subscription ONLY now
     subscription.plan = plan
     subscription.activate()
 
+    # ✅ Update transaction
     tx.status = "paid"
     tx.razorpay_payment_id = payment_id
     tx.save()
 
-    return JsonResponse({"success": True})
+    return JsonResponse({
+        "success": True,
+        "message": "Subscription activated successfully"
+    })
+
+
 
 
 

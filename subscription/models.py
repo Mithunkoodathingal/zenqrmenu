@@ -2,6 +2,8 @@
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 class SubscriptionPlan(models.Model):
     name = models.CharField(max_length=100)
@@ -16,6 +18,7 @@ class SubscriptionPlan(models.Model):
 
 
 class Subscription(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)  # NEW
     restaurant = models.OneToOneField('restaurant.Restaurant', on_delete=models.CASCADE)
     plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True, blank=True)
     start_date = models.DateTimeField(null=True, blank=True)
