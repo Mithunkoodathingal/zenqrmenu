@@ -83,11 +83,11 @@ const isReady = !isLoadingProfile && !isLoadingSubscription;
 const needsRestaurantSetup =
   isReady && (!restaurantProfile || !restaurantProfile.id);
 
-// STEP 2: Subscription required
+// STEP 2: Plan selection (FREE included for upgrade flow)
 const needsPlanSelection =
   isReady &&
   !needsRestaurantSetup &&
-  (!subscription || !subscription.is_active);
+  (!subscription || !subscription.plan || subscription.plan === "free");
 
 // FINAL STEP
 const onboardingStep: 0 | 1 | 2 =

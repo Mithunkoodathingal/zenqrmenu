@@ -2775,3 +2775,15 @@ def google_login(request):
 
     except Exception as e:
         return Response({"error": str(e)}, status=400)
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_detail_api(request):
+    return Response({
+        "user": {
+            "id": request.user.id,
+            "email": request.user.email,
+            "username": request.user.username,
+        }
+    })

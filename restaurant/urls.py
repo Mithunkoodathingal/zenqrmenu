@@ -124,6 +124,7 @@ urlpatterns = [
     path('api/login/', api_login),
     path('api/user/', api_user),
     path('api/logout/', api_logout),
+    path('api/auth/user/', user_detail_api),
 
     path("api/auth/google/", google_login),
 
