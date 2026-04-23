@@ -37,6 +37,7 @@ import datetime
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 import time
+from rest_framework.parsers import MultiPartParser, FormParser
 from io import BytesIO
 from django.core.files import File
 from django.http import JsonResponse
@@ -2175,16 +2176,20 @@ def category_detail_api(request, id):
 
 
 
+
+
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def menu_items_api(request):
 
-    restaurant = get_user_restaurant(request.user)
-    if not restaurant:
+    # ✅ Get restaurant safely
+    try:
+        restaurant = Restaurant.objects.get(owner=request.user)
+    except Restaurant.DoesNotExist:
         return JsonResponse({"error": "Restaurant not found"}, status=404)
 
-    # ✅ CHECK SUBSCRIPTION
-    is_valid, result = check_subscription_access(request.user)
+    # ✅ FIX: pass restaurant (NOT user)
+    is_valid, result = check_subscription_access(restaurant)
 
     if not is_valid:
         return JsonResponse({
@@ -2195,24 +2200,35 @@ def menu_items_api(request):
                 "restaurant": restaurant.id,
             }
         }, status=403)
-    
+
     plan = result
 
+    # ========================
+    # ✅ GET MENU ITEMS
+    # ========================
     if request.method == 'GET':
         items = FoodItem.objects.filter(restaurant=restaurant)
 
-        return JsonResponse([{
-            "id": i.id,
-            "name": i.name,
-            "price": float(i.price),
-            "description": i.description,
-            "category": i.category.id if i.category else None,
-            "is_available": not i.is_paused,
-            "image": i.image.url if i.image else None
-        } for i in items], safe=False)
+        data = []
+        for i in items:
+            data.append({
+                "id": i.id,
+                "name": i.name,
+                "price": float(i.price),
+                "description": i.description,
+                "category": i.category.id if i.category else None,
+                "is_available": not i.is_paused,
+                "image": i.image.url if i.image else None
+            })
 
+        return JsonResponse(data, safe=False)
+
+    # ========================
+    # ✅ CREATE MENU ITEM
+    # ========================
     if request.method == 'POST':
 
+        # ✅ Plan limit check
         if plan.menu_item_limit:
             count = FoodItem.objects.filter(restaurant=restaurant).count()
             if count >= plan.menu_item_limit:
@@ -2221,26 +2237,50 @@ def menu_items_api(request):
                     "error": f"Limit reached ({plan.menu_item_limit})"
                 }, status=403)
 
+        # ✅ Get data safely
         name = request.data.get("name", "").strip().title()
         price = request.data.get("price")
+        description = request.data.get("description", "")
         category_id = request.data.get("category")
+        image = request.FILES.get("image")
 
+        # ✅ Validation
+        if not name or not price:
+            return JsonResponse({
+                "error": "Name and price are required"
+            }, status=400)
+
+        # ✅ Category validation
         category = Category.objects.filter(
             id=category_id,
             restaurant=restaurant
         ).first()
 
         if not category:
-            return JsonResponse({"error": "Invalid category"}, status=400)
+            return JsonResponse({
+                "error": "Invalid category"
+            }, status=400)
 
-        item = FoodItem.objects.create(
-            name=name,
-            price=price,
-            restaurant=restaurant,
-            category=category
-        )
+        # ✅ Create item
+        try:
+            item = FoodItem.objects.create(
+                name=name,
+                price=price,
+                description=description,
+                restaurant=restaurant,
+                category=category,
+                image=image
+            )
+        except Exception as e:
+            return JsonResponse({
+                "error": "Failed to create item",
+                "details": str(e)
+            }, status=500)
 
-        return JsonResponse({"id": item.id}, status=201)
+        return JsonResponse({
+            "success": True,
+            "id": item.id
+        }, status=201)
     
 
 @api_view(['PATCH', 'DELETE'])

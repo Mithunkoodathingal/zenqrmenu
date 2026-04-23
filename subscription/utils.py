@@ -2,6 +2,7 @@
 
 from django.utils import timezone
 from subscription.models import Subscription, SubscriptionPlan
+from restaurant.models import Restaurant
 
 
 def ensure_free_subscription(user, restaurant):
@@ -42,26 +43,15 @@ def ensure_free_subscription(user, restaurant):
     return subscription
 
 
-def check_subscription_access(restaurant):
-    user = restaurant.owner
+def check_subscription_access(user):
+    try:
+        restaurant = Restaurant.objects.get(owner=user)
+    except Restaurant.DoesNotExist:
+        return False, "Restaurant not found"
 
-    subscription = Subscription.objects.filter(
-        user=user
-    ).select_related("plan").first()
+    subscription = getattr(restaurant, 'subscription', None)
 
-    if not subscription:
-        return False, "No subscription found"
+    if not subscription or not subscription.is_active:
+        return False, "No active subscription"
 
-    # ❌ NOT ACTIVE
-    if not subscription.has_active_subscription():
-        return False, "Subscription expired or inactive"
-
-    # ❌ EXPIRED
-    if not subscription.end_date or subscription.end_date < timezone.now():
-        return False, "Subscription expired"
-
-    # ❌ PLAN MISSING
-    if not subscription.plan:
-        return False, "No plan assigned"
-
-    return True, subscription.plan
+    return True, subscription

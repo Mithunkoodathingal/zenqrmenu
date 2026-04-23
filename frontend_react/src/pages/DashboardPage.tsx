@@ -81,10 +81,9 @@ const isReady = !isLoadingProfile && !isLoadingSubscription;
 
 // STEP 1: Restaurant must exist
 const needsRestaurantSetup =
-  isReady &&
-  (!restaurantProfile || !restaurantProfile.name);
+  isReady && (!restaurantProfile || !restaurantProfile.id);
 
-// STEP 2: Subscription required ONLY if restaurant exists
+// STEP 2: Subscription required
 const needsPlanSelection =
   isReady &&
   !needsRestaurantSetup &&
@@ -92,10 +91,13 @@ const needsPlanSelection =
 
 // FINAL STEP
 const onboardingStep: 0 | 1 | 2 =
-  !isReady ? 0 :
   needsRestaurantSetup ? 1 :
   needsPlanSelection ? 2 :
   0;
+
+console.log("STEP:", onboardingStep);
+console.log("Restaurant:", restaurantProfile);
+console.log("Subscription:", subscription);
 
 
 // ================= AUTH RESTORE =================
@@ -323,15 +325,25 @@ const onboardingStep: 0 | 1 | 2 =
 
       {/* Main */}
       <main className="flex-1 lg:ml-64 lg:p-8 p-4 pt-28 lg:pt-8 overflow-auto">
-        {/* Show Restaurant Settings when navigated there during onboarding */}
-        {onboardingStep > 0 && activeTab === "restaurant" ? (
-          <RestaurantSettings onSavedFirstTime={() => setActiveTab("menu")} />
+
+        {/* ⛔ WAIT until data is ready */}
+        {!isReady ? (
+          <div>Loading...</div>
         ) : onboardingStep > 0 ? (
-          <OnboardingWizard
-            currentStep={onboardingStep as 1 | 2}
-            onGoToRestaurant={() => setActiveTab("restaurant")}
-          />
+
+          /* 🔥 ONBOARDING FLOW */
+          activeTab === "restaurant" ? (
+            <RestaurantSettings onSavedFirstTime={() => setActiveTab("menu")} />
+          ) : (
+            <OnboardingWizard
+              currentStep={onboardingStep as 1 | 2}
+              onGoToRestaurant={() => setActiveTab("restaurant")}
+            />
+          )
+
         ) : (
+
+          /* ✅ NORMAL APP */
           <>
             {activeTab === "menu" && (
               <MenuManager
@@ -340,7 +352,9 @@ const onboardingStep: 0 | 1 | 2 =
               />
             )}
 
-            {activeTab === "orders" && <OrdersManager onPendingCountChange={setPendingOrderCount} />}
+            {activeTab === "orders" && (
+              <OrdersManager onPendingCountChange={setPendingOrderCount} />
+            )}
 
             {activeTab === "qr" && <QRManager />}
 
@@ -351,6 +365,7 @@ const onboardingStep: 0 | 1 | 2 =
             {activeTab === "analytics" && <AnalyticsDashboard />}
           </>
         )}
+
       </main>
     </div>
   );
