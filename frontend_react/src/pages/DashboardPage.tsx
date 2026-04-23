@@ -77,19 +77,21 @@ const DashboardPage = () => {
 // ================= ONBOARDING LOGIC =================
 
 // ⛔ Wait until BOTH APIs are loaded
+// WAIT until data loads
 const isReady = !isLoadingProfile && !isLoadingSubscription;
 
-// STEP 1: Restaurant must exist
+// 🚨 Step 1: No restaurant → MUST go to wizard
 const needsRestaurantSetup =
-  isReady && (!restaurantProfile || !restaurantProfile.id);
+  isReady &&
+  (!restaurantProfile || !restaurantProfile.id);
 
-// STEP 2: Plan selection (FREE included for upgrade flow)
+// 🚨 Step 2: Restaurant exists but no subscription
 const needsPlanSelection =
   isReady &&
-  !needsRestaurantSetup &&
-  (!subscription || !subscription.plan || subscription.plan === "free");
+  restaurantProfile &&
+  (!subscription || !subscription.plan);
 
-// FINAL STEP
+// FINAL
 const onboardingStep: 0 | 1 | 2 =
   needsRestaurantSetup ? 1 :
   needsPlanSelection ? 2 :

@@ -607,7 +607,11 @@ def subscription_status(request):
     restaurant = get_user_restaurant(request.user)
 
     if not restaurant:
-        return JsonResponse({"error": "Restaurant not found"}, status=404)
+        return JsonResponse({
+            "plan": None,
+            "table_limit": None,
+            "is_active": False
+        })
 
     is_valid, plan = check_subscription_access(restaurant)
 

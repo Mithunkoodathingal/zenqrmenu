@@ -525,31 +525,7 @@ class CustomLogoutView(View):
         logout(request)
         return redirect("login")
 
-# -----------------------
-# Restaurant / table CRUD
-# -----------------------
 
-def create_restaurant(request):
-    if request.method == 'POST':
-        # collect POST values
-        name = request.POST.get('name')
-        address = request.POST.get('address')
-        about = request.POST.get('about', '')
-
-        cover = request.FILES.get('cover_image')   # may be None
-        logo = request.FILES.get('logo')           # may be None
-
-        Restaurant.objects.create(
-            owner=request.user,
-            name=name,
-            address=address,
-            about=about,
-            cover_image=cover,
-            logo=logo,
-        )
-        return redirect('dashboard')
-
-    return render(request, 'restaurant/create_restaurant.html')
 
 
 

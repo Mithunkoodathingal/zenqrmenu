@@ -67,7 +67,7 @@ urlpatterns = [
     # ================= TABLE / QR =================
     path('table/new/', TableCreateView.as_view(), name='table_create'),
     # path('tables/', create_table_qr_view, name='create_table_qr'),
-    path('create-restaurant/', create_restaurant, name='create_restaurant'),
+    # path('create-restaurant/', create_restaurant, name='create_restaurant'),
     path('download_qr/<int:table_id>/', download_qr_code, name='download_qr'),
 
     # ================= PASSWORD RESET =================
