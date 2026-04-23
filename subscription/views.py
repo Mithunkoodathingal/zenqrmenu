@@ -26,6 +26,7 @@ import razorpay
 from .models import SubscriptionPlan, Subscription, PaymentTransaction
 from restaurant.models import Restaurant
 from django.http import JsonResponse
+from restaurant.views import get_user_restaurant
 
 logger = logging.getLogger(__name__)
 
@@ -599,26 +600,27 @@ def api_verify_payment(request):
 
 
 
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def subscription_status(request):
 
-    is_valid, result = check_subscription_access(request.user)
+    restaurant = get_user_restaurant(request.user)
+
+    if not restaurant:
+        return JsonResponse({"error": "Restaurant not found"}, status=404)
+
+    is_valid, plan = check_subscription_access(restaurant)
 
     if not is_valid:
         return JsonResponse({
             "is_active": False,
-            "error": result
+            "error": plan
         }, status=403)
 
-    plan = result
-
     return JsonResponse({
-        "plan": getattr(plan, "name", "free"),
-        "menu_item_limit": getattr(plan, "menu_item_limit", 0),
-        "table_limit": getattr(plan, "table_limit", 0),
+        "plan": plan.name,
+        "menu_item_limit": None,   # ✅ unlimited for ALL plans
+        "table_limit": plan.table_limit,
         "is_active": True
     })
 

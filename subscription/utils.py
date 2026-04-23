@@ -43,15 +43,10 @@ def ensure_free_subscription(user, restaurant):
     return subscription
 
 
-def check_subscription_access(user):
-    try:
-        restaurant = Restaurant.objects.get(owner=user)
-    except Restaurant.DoesNotExist:
-        return False, "Restaurant not found"
-
-    subscription = getattr(restaurant, 'subscription', None)
+def check_subscription_access(restaurant):
+    subscription = getattr(restaurant, "subscription", None)
 
     if not subscription or not subscription.is_active:
         return False, "No active subscription"
 
-    return True, subscription
+    return True, subscription.plan   # ✅ RETURN PLAN

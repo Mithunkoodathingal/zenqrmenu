@@ -29,13 +29,13 @@ urlpatterns = [
     path('terms-and-conditions/', terms_conditions, name='terms_conditions'),
 
     # ================= DASHBOARD =================
-    path('dashboard/', dashboard, name='dashboard'),
-    path('manage-menu/', manage_menu, name='manage_menu'),
+    # path('dashboard/', dashboard, name='dashboard'),
+    # path('manage-menu/', manage_menu, name='manage_menu'),
     path('menu-preview/', menu_preview, name='menu_preview'),
     path('ajax/toggle-item-availability/', toggle_item_availability, name='toggle_item_availability'),
 
     # ================= PUBLIC MENU =================
-    path('menu/<int:restaurant_id>/<int:table_id>/', menu_view, name='menu_view'),
+    # path('menu/<int:restaurant_id>/<int:table_id>/', menu_view, name='menu_view'),
     path('menu/<int:restaurant_id>/<int:table_id>/item/<int:pk>/', product_detail_view, name='product_detail'),
     path('menu/<int:restaurant_id>/<int:table_id>/item/<int:pk>/html/', product_detail_html, name='product_detail_html'),
     path('menu/<int:restaurant_id>/<int:table_id>/item/<int:pk>/json/', product_json, name='product_json'),
@@ -66,7 +66,7 @@ urlpatterns = [
 
     # ================= TABLE / QR =================
     path('table/new/', TableCreateView.as_view(), name='table_create'),
-    path('tables/', create_table_qr_view, name='create_table_qr'),
+    # path('tables/', create_table_qr_view, name='create_table_qr'),
     path('create-restaurant/', create_restaurant, name='create_restaurant'),
     path('download_qr/<int:table_id>/', download_qr_code, name='download_qr'),
 

@@ -705,121 +705,121 @@ class FoodItemDeleteView(LoginRequiredMixin, DeleteView):
 # -----------------------
 # Dashboard / menu
 # -----------------------
-@login_required
-def dashboard(request):
-    """
-    Dashboard shows subscription summary and scannable QR tiles.
-    """
-    try:
-        restaurant = request.user.restaurant
-    except Restaurant.DoesNotExist:
-        return render(request, 'restaurant/create_restaurant.html')
+# @login_required
+# def dashboard(request):
+#     """
+#     Dashboard shows subscription summary and scannable QR tiles.
+#     """
+#     try:
+#         restaurant = request.user.restaurant
+#     except Restaurant.DoesNotExist:
+#         return render(request, 'restaurant/create_restaurant.html')
 
-    subscription = None
-    subscription_active = False
-    allowed_table_limit = 0
-    allowed_table_ids = []
+#     subscription = None
+#     subscription_active = False
+#     # allowed_table_limit = 0
+#     allowed_table_ids = []
 
-    try:
-        subscription = restaurant.subscription
-        if subscription and subscription.has_active_subscription():
-            subscription_active = True
-            allowed_table_limit = subscription.plan.table_limit if subscription.plan else 0
-            # first N tables by id are allowed
-            allowed_table_ids = list(
-                Table.objects.filter(restaurant=restaurant)
-                .order_by('id')[:allowed_table_limit]
-                .values_list('id', flat=True)
-            )
-    except Subscription.DoesNotExist:
-        subscription = None
+#     try:
+#         subscription = restaurant.subscription
+#         if subscription and subscription.has_active_subscription():
+#             subscription_active = True
+#             # allowed_table_limit = subscription.plan.table_limit if subscription.plan else 0
+#             # first N tables by id are allowed
+#             allowed_table_ids = list(
+#                 Table.objects.filter(restaurant=restaurant)
+#                 # .order_by('id')[:allowed_table_limit]
+#                 .values_list('id', flat=True)
+#             )
+#     except Subscription.DoesNotExist:
+#         subscription = None
 
-    # All tables for the restaurant
-    tables_qs = Table.objects.filter(restaurant=restaurant).order_by('id')
-    tables = []
-    scannable_tables = []
-    for t in tables_qs:
-        t.is_scannable = (t.id in allowed_table_ids) and subscription_active
-        tables.append(t)
-        if t.is_scannable:
-            scannable_tables.append(t)
+#     # All tables for the restaurant
+#     tables_qs = Table.objects.filter(restaurant=restaurant).order_by('id')
+#     tables = []
+#     scannable_tables = []
+#     for t in tables_qs:
+#         t.is_scannable = (t.id in allowed_table_ids) and subscription_active
+#         tables.append(t)
+#         if t.is_scannable:
+#             scannable_tables.append(t)
 
-    total_tables_created = tables_qs.count()
-    scannable_count = len(scannable_tables)
-    remaining_slots = max((allowed_table_limit - total_tables_created), 0) if subscription_active else 0
+#     total_tables_created = tables_qs.count()
+#     scannable_count = len(scannable_tables)
+#     remaining_slots = max((allowed_table_limit - total_tables_created), 0) if subscription_active else 0
 
-    categories = Category.objects.filter(restaurant=restaurant)
+#     categories = Category.objects.filter(restaurant=restaurant)
 
-    context = {
-        'restaurant': restaurant,
-        'tables': tables,
-        'scannable_tables': scannable_tables,      # <-- added
-        'categories': categories,
-        'subscription': subscription,
-        'subscription_active': subscription_active,
-        'allowed_table_limit': allowed_table_limit,
-        'total_tables_created': total_tables_created,
-        'scannable_count': scannable_count,
-        'remaining_slots': remaining_slots,
-    }
-    return render(request, 'restaurant/dashboard.html', context)
+#     context = {
+#         'restaurant': restaurant,
+#         'tables': tables,
+#         'scannable_tables': scannable_tables,      # <-- added
+#         'categories': categories,
+#         'subscription': subscription,
+#         'subscription_active': subscription_active,
+#         'allowed_table_limit': allowed_table_limit,
+#         'total_tables_created': total_tables_created,
+#         'scannable_count': scannable_count,
+#         'remaining_slots': remaining_slots,
+#     }
+#     return render(request, 'restaurant/dashboard.html', context)
 
 
 # Add near the other views in restaurant/views.py
 
-@login_required
-def manage_menu(request):
-    """
-    Render the Manage Menu page: categories, items, tables list (with scannable badges).
-    NOTE: This intentionally does NOT include the subscription summary (dashboard shows that).
-    """
-    try:
-        restaurant = request.user.restaurant
-    except Restaurant.DoesNotExist:
-        return render(request, 'restaurant/create_restaurant.html')
+# @login_required
+# def manage_menu(request):
+#     """
+#     Render the Manage Menu page: categories, items, tables list (with scannable badges).
+#     NOTE: This intentionally does NOT include the subscription summary (dashboard shows that).
+#     """
+#     try:
+#         restaurant = request.user.restaurant
+#     except Restaurant.DoesNotExist:
+#         return render(request, 'restaurant/create_restaurant.html')
 
-    # determine subscription + allowed table ids (same logic as dashboard)
-    subscription = None
-    subscription_active = False
-    allowed_table_limit = 0
-    allowed_table_ids = []
-    try:
-        subscription = restaurant.subscription
-        if subscription and subscription.has_active_subscription():
-            subscription_active = True
-            allowed_table_limit = subscription.plan.table_limit if subscription.plan else 0
-            allowed_table_ids = list(
-                Table.objects.filter(restaurant=restaurant).order_by('id')[:allowed_table_limit]
-                .values_list('id', flat=True)
-            )
-    except Subscription.DoesNotExist:
-        subscription = None
+#     # determine subscription + allowed table ids (same logic as dashboard)
+#     subscription = None
+#     subscription_active = False
+#     allowed_table_limit = 0
+#     allowed_table_ids = []
+#     try:
+#         subscription = restaurant.subscription
+#         if subscription and subscription.has_active_subscription():
+#             subscription_active = True
+#             allowed_table_limit = subscription.plan.table_limit if subscription.plan else 0
+#             allowed_table_ids = list(
+#                 Table.objects.filter(restaurant=restaurant).order_by('id')[:allowed_table_limit]
+#                 .values_list('id', flat=True)
+#             )
+#     except Subscription.DoesNotExist:
+#         subscription = None
 
-    # Tables annotated with is_scannable
-    tables_qs = Table.objects.filter(restaurant=restaurant).order_by('id')
-    tables = []
-    for t in tables_qs:
-        t.is_scannable = (t.id in allowed_table_ids) and subscription_active
-        tables.append(t)
+#     # Tables annotated with is_scannable
+#     tables_qs = Table.objects.filter(restaurant=restaurant).order_by('id')
+#     tables = []
+#     for t in tables_qs:
+#         t.is_scannable = (t.id in allowed_table_ids) and subscription_active
+#         tables.append(t)
 
-    total_tables_created = tables_qs.count()
-    scannable_count = sum(1 for t in tables if t.is_scannable)
-    remaining_slots = max((allowed_table_limit - total_tables_created), 0) if subscription_active else 0
+#     total_tables_created = tables_qs.count()
+#     scannable_count = sum(1 for t in tables if t.is_scannable)
+#     remaining_slots = max((allowed_table_limit - total_tables_created), 0) if subscription_active else 0
 
-    categories = Category.objects.filter(restaurant=restaurant)
+#     categories = Category.objects.filter(restaurant=restaurant)
 
-    context = {
-        'restaurant': restaurant,
-        'tables': tables,
-        'categories': categories,
-        'subscription': subscription,
-        'subscription_active': subscription_active,
-        'allowed_table_limit': allowed_table_limit,
-        'total_tables_created': total_tables_created,
-        'scannable_count': scannable_count,
-        'remaining_slots': remaining_slots,
-    }
-    return render(request, 'restaurant/manage_menu.html', context)
+#     context = {
+#         'restaurant': restaurant,
+#         'tables': tables,
+#         'categories': categories,
+#         'subscription': subscription,
+#         'subscription_active': subscription_active,
+#         'allowed_table_limit': allowed_table_limit,
+#         'total_tables_created': total_tables_created,
+#         'scannable_count': scannable_count,
+#         'remaining_slots': remaining_slots,
+#     }
+    # return render(request, 'restaurant/manage_menu.html', context)
 
 
 @login_required
@@ -858,122 +858,122 @@ def _user_is_restaurant_owner(request, restaurant):
         pass
     return False
 
-def menu_view(request, restaurant_id, table_id):
-    restaurant = get_object_or_404(Restaurant, id=restaurant_id)
-    table = get_object_or_404(Table, id=table_id, restaurant=restaurant)
+# def menu_view(request, restaurant_id, table_id):
+#     restaurant = get_object_or_404(Restaurant, id=restaurant_id)
+#     table = get_object_or_404(Table, id=table_id, restaurant=restaurant)
 
-    # subscription / allowed-table checks (unchanged)
-    try:
-            subscription = restaurant.subscription
+#     # subscription / allowed-table checks (unchanged)
+#     try:
+#             subscription = restaurant.subscription
 
-            if not subscription.has_active_subscription():
-                return render(
-                    request,
-                    "subscription/expired.html",
-                    {
-                        "restaurant": restaurant,
-                        "reason": "expired"
-                    },
-                    status=403
-                )
+#             if not subscription.has_active_subscription():
+#                 return render(
+#                     request,
+#                     "subscription/expired.html",
+#                     {
+#                         "restaurant": restaurant,
+#                         "reason": "expired"
+#                     },
+#                     status=403
+#                 )
 
-            allowed_limit = subscription.plan.table_limit if subscription.plan else 0
-            allowed_table_ids = list(
-                Table.objects
-                .filter(restaurant=restaurant)
-                .order_by('id')[:allowed_limit]
-                .values_list('id', flat=True)
-            )
+#             allowed_limit = subscription.plan.table_limit if subscription.plan else 0
+#             allowed_table_ids = list(
+#                 Table.objects
+#                 .filter(restaurant=restaurant)
+#                 .order_by('id')[:allowed_limit]
+#                 .values_list('id', flat=True)
+#             )
 
-            if table.id not in allowed_table_ids:
-                return render(
-                    request,
-                    "subscription/expired.html",
-                    {
-                        "restaurant": restaurant,
-                        "reason": "table_limit"
-                    },
-                    status=403
-                )
+#             if table.id not in allowed_table_ids:
+#                 return render(
+#                     request,
+#                     "subscription/expired.html",
+#                     {
+#                         "restaurant": restaurant,
+#                         "reason": "table_limit"
+#                     },
+#                     status=403
+#                 )
 
-    except Subscription.DoesNotExist:
-            return render(
-                request,
-                "subscription/expired.html",
-                {
-                    "restaurant": restaurant,
-                    "reason": "no_subscription"
-                },
-                status=403
-            )
+#     except Subscription.DoesNotExist:
+#             return render(
+#                 request,
+#                 "subscription/expired.html",
+#                 {
+#                     "restaurant": restaurant,
+#                     "reason": "no_subscription"
+#                 },
+#                 status=403
+#             )
 
 
-    is_owner = _user_is_restaurant_owner(request, restaurant)
+#     is_owner = _user_is_restaurant_owner(request, restaurant)
 
-    # Prefetch into category.active_items (owner -> all, public -> only not paused)
-    if is_owner:
-        categories = Category.objects.filter(restaurant=restaurant).prefetch_related(
-            Prefetch(
-                'fooditem_set',
-                queryset=FoodItem.objects.select_related('category').order_by('id'),
-                to_attr='active_items'
-            )
-        )
-        food_items = FoodItem.objects.filter(category__restaurant=restaurant).select_related('category').order_by('id')
-    else:
-        categories = Category.objects.filter(restaurant=restaurant).prefetch_related(
-            Prefetch(
-                'fooditem_set',
-                queryset=FoodItem.objects.filter(is_paused=False).select_related('category').order_by('id'),
-                to_attr='active_items'
-            )
-        )
-        food_items = FoodItem.objects.filter(category__restaurant=restaurant, is_paused=False).select_related('category').order_by('id')
+#     # Prefetch into category.active_items (owner -> all, public -> only not paused)
+#     if is_owner:
+#         categories = Category.objects.filter(restaurant=restaurant).prefetch_related(
+#             Prefetch(
+#                 'fooditem_set',
+#                 queryset=FoodItem.objects.select_related('category').order_by('id'),
+#                 to_attr='active_items'
+#             )
+#         )
+#         food_items = FoodItem.objects.filter(category__restaurant=restaurant).select_related('category').order_by('id')
+#     else:
+#         categories = Category.objects.filter(restaurant=restaurant).prefetch_related(
+#             Prefetch(
+#                 'fooditem_set',
+#                 queryset=FoodItem.objects.filter(is_paused=False).select_related('category').order_by('id'),
+#                 to_attr='active_items'
+#             )
+#         )
+#         food_items = FoodItem.objects.filter(category__restaurant=restaurant, is_paused=False).select_related('category').order_by('id')
 
-    # Defensive extra-check: if prefetch produced active_items but it somehow contains paused items
-    # or if some categories didn't prefetch correctly, normalize them here for public users.
-    if is_owner:
-        categories = Category.objects.filter(restaurant=restaurant).prefetch_related(
-            Prefetch(
-                'fooditem_set',
-                queryset=FoodItem.objects.select_related('category').order_by('id'),
-                to_attr='active_items'
-            )
-        )
-        food_items = FoodItem.objects.filter(
-            category__restaurant=restaurant
-        ).select_related('category').order_by('id')
-    else:
-        categories = Category.objects.filter(restaurant=restaurant).prefetch_related(
-            Prefetch(
-                'fooditem_set',
-                queryset=FoodItem.objects.filter(is_paused=False)
-                .select_related('category')
-                .order_by('id'),
-                to_attr='active_items'
-            )
-        )
-        food_items = FoodItem.objects.filter(
-            category__restaurant=restaurant,
-            is_paused=False
-        ).select_related('category').order_by('id')
+#     # Defensive extra-check: if prefetch produced active_items but it somehow contains paused items
+#     # or if some categories didn't prefetch correctly, normalize them here for public users.
+#     if is_owner:
+#         categories = Category.objects.filter(restaurant=restaurant).prefetch_related(
+#             Prefetch(
+#                 'fooditem_set',
+#                 queryset=FoodItem.objects.select_related('category').order_by('id'),
+#                 to_attr='active_items'
+#             )
+#         )
+#         food_items = FoodItem.objects.filter(
+#             category__restaurant=restaurant
+#         ).select_related('category').order_by('id')
+#     else:
+#         categories = Category.objects.filter(restaurant=restaurant).prefetch_related(
+#             Prefetch(
+#                 'fooditem_set',
+#                 queryset=FoodItem.objects.filter(is_paused=False)
+#                 .select_related('category')
+#                 .order_by('id'),
+#                 to_attr='active_items'
+#             )
+#         )
+#         food_items = FoodItem.objects.filter(
+#             category__restaurant=restaurant,
+#             is_paused=False
+#         ).select_related('category').order_by('id')
 
-    # -------- Safety normalization --------
-    if not is_owner:
-        for cat in categories:
-            ai = getattr(cat, 'active_items', [])
-            cat.active_items = [i for i in ai if not getattr(i, 'is_paused', False)]
+#     # -------- Safety normalization --------
+#     if not is_owner:
+#         for cat in categories:
+#             ai = getattr(cat, 'active_items', [])
+#             cat.active_items = [i for i in ai if not getattr(i, 'is_paused', False)]
 
-    return render(
-        request,
-        'restaurant/menu.html',
-        {
-            'restaurant': restaurant,
-            'table': table,
-            'categories': categories,
-            'food_items': food_items,
-        }
-    )
+#     return render(
+#         request,
+#         'restaurant/menu.html',
+#         {
+#             'restaurant': restaurant,
+#             'table': table,
+#             'categories': categories,
+#             'food_items': food_items,
+#         }
+#     )
 
 @require_POST
 @login_required
@@ -1020,54 +1020,54 @@ def toggle_item_availability(request):
 # at top of views.py ensure you have request available imports and logger already defined
 # logger = logging.getLogger(__name__)
 
-@login_required
-def create_table_qr_view(request):
-    """
-    List tables and mark which are scannable.
-    If a table is scannable and QR is missing, generate it.
-    """
-    restaurant = get_object_or_404(Restaurant, owner=request.user)
-    logger.info(f"[QR] Loading tables for restaurant {restaurant.id}")
+# @login_required
+# def create_table_qr_view(request):
+#     """
+#     List tables and mark which are scannable.
+#     If a table is scannable and QR is missing, generate it.
+#     """
+#     restaurant = get_object_or_404(Restaurant, owner=request.user)
+#     logger.info(f"[QR] Loading tables for restaurant {restaurant.id}")
 
-    subscription = None
-    allowed_table_ids = []
-    allowed_table_limit = 0
-    subscription_active = False
+#     subscription = None
+#     allowed_table_ids = []
+#     allowed_table_limit = 0
+#     subscription_active = False
 
-    try:
-        subscription = restaurant.subscription
-        if subscription and subscription.has_active_subscription():
-            subscription_active = True
-            allowed_table_limit = subscription.plan.table_limit if subscription.plan else 0
-            allowed_table_ids = list(
-                Table.objects.filter(restaurant=restaurant)
-                .order_by("id")[:allowed_table_limit]
-                .values_list("id", flat=True)
-            )
-    except Subscription.DoesNotExist:
-        logger.warning(f"[QR] No subscription for restaurant {restaurant.id}")
+#     try:
+#         subscription = restaurant.subscription
+#         if subscription and subscription.has_active_subscription():
+#             subscription_active = True
+#             allowed_table_limit = subscription.plan.table_limit if subscription.plan else 0
+#             allowed_table_ids = list(
+#                 Table.objects.filter(restaurant=restaurant)
+#                 .order_by("id")[:allowed_table_limit]
+#                 .values_list("id", flat=True)
+#             )
+#     except Subscription.DoesNotExist:
+#         logger.warning(f"[QR] No subscription for restaurant {restaurant.id}")
 
-    tables = Table.objects.filter(restaurant=restaurant).order_by("id")
+#     tables = Table.objects.filter(restaurant=restaurant).order_by("id")
 
-    for table in tables:
-        table.is_scannable = subscription_active and table.id in allowed_table_ids
+#     for table in tables:
+#         table.is_scannable = subscription_active and table.id in allowed_table_ids
 
-        if table.is_scannable:
-            try:
-                if not table.qr_code or not default_storage.exists(table.qr_code.name):
-                    logger.info(f"[QR] Generating QR for table {table.id}")
-                    generate_qr_code(table, force=False)
-            except Exception as e:
-                logger.exception(f"[QR][ERROR] Failed QR for table {table.id}: {e}")
+#         if table.is_scannable:
+#             try:
+#                 if not table.qr_code or not default_storage.exists(table.qr_code.name):
+#                     logger.info(f"[QR] Generating QR for table {table.id}")
+#                     generate_qr_code(table, force=False)
+#             except Exception as e:
+#                 logger.exception(f"[QR][ERROR] Failed QR for table {table.id}: {e}")
 
-    context = {
-        "restaurant": restaurant,
-        "tables": tables,
-        "subscription": subscription,
-        "subscription_active": subscription_active,
-        "allowed_table_limit": allowed_table_limit,
-    }
-    return render(request, "restaurant/create_table_qr.html", context)
+#     context = {
+#         "restaurant": restaurant,
+#         "tables": tables,
+#         "subscription": subscription,
+#         "subscription_active": subscription_active,
+#         "allowed_table_limit": allowed_table_limit,
+#     }
+#     return render(request, "restaurant/create_table_qr.html", context)
 
 
 
@@ -2228,40 +2228,28 @@ def menu_items_api(request):
     # ========================
     if request.method == 'POST':
 
-        # ✅ Plan limit check
-        if plan.menu_item_limit:
-            count = FoodItem.objects.filter(restaurant=restaurant).count()
-            if count >= plan.menu_item_limit:
-                return JsonResponse({
-                    "success": False,
-                    "error": f"Limit reached ({plan.menu_item_limit})"
-                }, status=403)
+        # ❌ REMOVE menu_item_limit restriction for free plan
+        # (free = unlimited items)
 
-        # ✅ Get data safely
         name = request.data.get("name", "").strip().title()
         price = request.data.get("price")
         description = request.data.get("description", "")
         category_id = request.data.get("category")
         image = request.FILES.get("image")
 
-        # ✅ Validation
         if not name or not price:
             return JsonResponse({
                 "error": "Name and price are required"
             }, status=400)
 
-        # ✅ Category validation
         category = Category.objects.filter(
             id=category_id,
             restaurant=restaurant
         ).first()
 
         if not category:
-            return JsonResponse({
-                "error": "Invalid category"
-            }, status=400)
+            return JsonResponse({"error": "Invalid category"}, status=400)
 
-        # ✅ Create item
         try:
             item = FoodItem.objects.create(
                 name=name,
@@ -2345,14 +2333,28 @@ def public_order_detail(request, pk):
 
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from django.http import JsonResponse
+from restaurant.models import Table
+from subscription.utils import check_subscription_access
+import qrcode
+from io import BytesIO
+from django.core.files import File
+
+
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def create_table_api(request):
 
+    # ✅ Get restaurant
     restaurant = get_user_restaurant(request.user)
     if not restaurant:
         return JsonResponse({"error": "Restaurant not found"}, status=404)
 
+    # ========================
+    # ✅ GET TABLES
+    # ========================
     if request.method == 'GET':
         tables = Table.objects.filter(restaurant=restaurant).order_by('table_number')
 
@@ -2364,40 +2366,54 @@ def create_table_api(request):
 
         return JsonResponse(data, safe=False)
 
+    # ========================
+    # ✅ CREATE TABLE
+    # ========================
     if request.method == 'POST':
 
-        is_valid, result = check_subscription_access(request.user)
+        # ✅ FIX: pass restaurant
+        is_valid, plan = check_subscription_access(restaurant)
 
         if not is_valid:
             return JsonResponse({
                 "success": False,
-                "error": result,
+                "error": plan,
                 "debug": {
                     "user": request.user.id,
                     "restaurant": restaurant.id,
                 }
             }, status=403)
 
-        plan = result
+        # ✅ Get current count
+        table_count = Table.objects.filter(restaurant=restaurant).count()
 
-        count = Table.objects.filter(restaurant=restaurant).count()
+        # ✅ Apply limit ONLY if exists
+        if plan.table_limit is not None:
+            if table_count >= plan.table_limit:
+                return JsonResponse({
+                    "success": False,
+                    "error": f"Table limit reached ({plan.table_limit})"
+                }, status=403)
 
-        if count >= plan.table_limit:
-            return JsonResponse({
-                "success": False,
-                "error": f"Table limit reached ({plan.table_limit})"
-            }, status=403)
-
+        # ✅ Validate input
         table_number = request.data.get("table_number")
 
         if not table_number:
             return JsonResponse({"error": "table_number is required"}, status=400)
 
+        # Optional: prevent duplicates
+        if Table.objects.filter(restaurant=restaurant, table_number=table_number).exists():
+            return JsonResponse({
+                "error": "Table number already exists"
+            }, status=400)
+
+        # ✅ Create table
         table = Table.objects.create(
             restaurant=restaurant,
             table_number=table_number
         )
 
+        # ✅ Generate QR
         qr_url = request.build_absolute_uri(f"/menu/table/{table.id}/")
 
         qr = qrcode.make(qr_url)
@@ -2409,12 +2425,12 @@ def create_table_api(request):
         table.qr_code.save(file_name, File(buffer), save=True)
 
         return JsonResponse({
+            "success": True,
             "id": table.id,
             "table_number": table.table_number,
             "qr_code": table.qr_code.url,
             "qr_url": qr_url
         }, status=201)
-    
 
 
 @api_view(['DELETE'])
