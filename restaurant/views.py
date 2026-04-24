@@ -2500,35 +2500,48 @@ def public_menu(request, restaurant_id):
 
 
 
-@api_view(['GET', 'PATCH'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def restaurant_profile(request):
+    try:
+        restaurant = Restaurant.objects.filter(owner=request.user).first()
 
-    restaurant, created = Restaurant.objects.get_or_create(
-        owner=request.user
-    )
+        if not restaurant:
+            return JsonResponse({
+                "success": True,
+                "restaurant": None
+            })
 
-    # 🔥 AUTO CREATE FREE SUBSCRIPTION
-    ensure_free_subscription(request.user, restaurant)
+        # ✅ get subscription safely
+        subscription = Subscription.objects.filter(
+            restaurant=restaurant,
+            is_active=True,
+            is_cancelled=False
+        ).select_related("plan").first()
 
-    if request.method == 'GET':
-        serializer = RestaurantSerializer(restaurant, context={'request': request})
-        return Response(serializer.data)
+        return JsonResponse({
+            "success": True,
+            "restaurant": {
+                "id": restaurant.id,
+                "name": restaurant.name,
+                "cuisine": restaurant.cuisine,
+                "address": restaurant.address,
+                "phone": restaurant.phone_number,
+                "image": restaurant.image.url if restaurant.image else None,
+            },
+            "subscription": {
+                "plan": subscription.plan.name if subscription else None,
+                "is_active": subscription.is_active if subscription else False,
+                "table_limit": getattr(subscription.plan, "table_limit", None) if subscription else None,
+            }
+        })
 
-    elif request.method == 'PATCH':
-        serializer = RestaurantSerializer(
-            restaurant,
-            data=request.data,
-            partial=True,
-            context={'request': request}
-        )
-
-        if serializer.is_valid():
-            serializer.save(owner=request.user)
-            return Response(serializer.data)
-
-        return Response(serializer.errors, status=400)
-    
+    except Exception as e:
+        print("❌ RESTAURANT API ERROR:", str(e))
+        return JsonResponse({
+            "success": False,
+            "error": "Internal server error"
+        }, status=500)
 
 
 ##################### Order APIs ##################################
