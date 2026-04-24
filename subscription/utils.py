@@ -6,7 +6,7 @@ from restaurant.models import Restaurant
 from datetime import timedelta
 
 def ensure_free_subscription(user, restaurant):
-    free_plan = SubscriptionPlan.objects.get(name="FREE")
+    free_plan = SubscriptionPlan.objects.get(name="Free")
 
     if not free_plan:
         raise Exception("Free plan not configured")
@@ -50,7 +50,6 @@ def check_subscription_access(restaurant):
     subscription = Subscription.objects.filter(
         restaurant=restaurant,
         is_active=True,
-        is_cancelled=False
     ).select_related("plan").first()
 
     if not subscription:

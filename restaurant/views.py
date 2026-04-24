@@ -1639,75 +1639,75 @@ def order_confirmation(request, order_id):
 # -----------------------
 # Kitchen views / polling
 # -----------------------
-@login_required
-def kitchen_interface(request):
-    """
-    Render kitchen interface page with open orders.
-    Preserves previous behaviour:
-      - selects open orders (is_completed=False)
-      - prefetches order_items__food_item and selected_addons, table
-      - annotates total_price using expression
-      - populates order.local_time for template display
-    Adds defensive subscription lookups so templates can show/hide subscription-protected actions.
-    """
-    try:
-        restaurant = request.user.restaurant
-    except Restaurant.DoesNotExist:
-        # user has no restaurant; render page with empty orders for UX
-        return render(request, 'restaurant/kitchen.html', {
-            'orders': [],
-            'subscription': None,
-            'subscription_active': False,
-        })
+# @login_required
+# def kitchen_interface(request):
+#     """
+#     Render kitchen interface page with open orders.
+#     Preserves previous behaviour:
+#       - selects open orders (is_completed=False)
+#       - prefetches order_items__food_item and selected_addons, table
+#       - annotates total_price using expression
+#       - populates order.local_time for template display
+#     Adds defensive subscription lookups so templates can show/hide subscription-protected actions.
+#     """
+#     try:
+#         restaurant = request.user.restaurant
+#     except Restaurant.DoesNotExist:
+#         # user has no restaurant; render page with empty orders for UX
+#         return render(request, 'restaurant/kitchen.html', {
+#             'orders': [],
+#             'subscription': None,
+#             'subscription_active': False,
+#         })
 
-    total_expr = ExpressionWrapper(
-        Sum(F('order_items__quantity') * F('order_items__food_item__price')),
-        output_field=DecimalField(max_digits=12, decimal_places=2)
-    )
+#     total_expr = ExpressionWrapper(
+#         Sum(F('order_items__quantity') * F('order_items__food_item__price')),
+#         output_field=DecimalField(max_digits=12, decimal_places=2)
+#     )
 
-    orders = (
-        Order.objects
-        .filter(restaurant=restaurant, is_completed=False)
-        .prefetch_related('order_items__food_item', 'order_items__selected_addons', 'table')
-        .annotate(total_price=total_expr)
-        .order_by('created_at')
-    )
+#     orders = (
+#         Order.objects
+#         .filter(restaurant=restaurant, is_completed=False)
+#         .prefetch_related('order_items__food_item', 'order_items__selected_addons', 'table')
+#         .annotate(total_price=total_expr)
+#         .order_by('created_at')
+#     )
 
-    # set a local_time attribute for template
-    for order in orders:
-        try:
-            order.local_time = timezone.localtime(order.created_at)
-        except Exception:
-            order.local_time = order.created_at
+#     # set a local_time attribute for template
+#     for order in orders:
+#         try:
+#             order.local_time = timezone.localtime(order.created_at)
+#         except Exception:
+#             order.local_time = order.created_at
 
-    # Defensive subscription detection (so templates using these variables keep working).
-    subscription = None
-    subscription_active = False
-    try:
-        subscription = getattr(request.user, 'subscription', None) or getattr(restaurant, 'subscription', None)
-        if not subscription:
-            # try related managers if present
-            if hasattr(restaurant, 'subscriptions'):
-                subscription = getattr(restaurant, 'subscriptions').order_by('-end_date').first()
-            elif hasattr(request.user, 'subscriptions'):
-                subscription = getattr(request.user, 'subscriptions').order_by('-end_date').first()
+#     # Defensive subscription detection (so templates using these variables keep working).
+#     subscription = None
+#     subscription_active = False
+#     try:
+#         subscription = getattr(request.user, 'subscription', None) or getattr(restaurant, 'subscription', None)
+#         if not subscription:
+#             # try related managers if present
+#             if hasattr(restaurant, 'subscriptions'):
+#                 subscription = getattr(restaurant, 'subscriptions').order_by('-end_date').first()
+#             elif hasattr(request.user, 'subscriptions'):
+#                 subscription = getattr(request.user, 'subscriptions').order_by('-end_date').first()
 
-        if subscription:
-            end_date = getattr(subscription, 'end_date', None) or getattr(subscription, 'expires_at', None) or getattr(subscription, 'valid_until', None)
-            if end_date:
-                subscription_active = end_date >= timezone.now()
-            else:
-                subscription_active = bool(getattr(subscription, 'is_active', False) or getattr(subscription, 'active', False))
-    except Exception:
-        logger.debug("Subscription lookup failed: %s", traceback.format_exc())
-        subscription = subscription or None
-        subscription_active = False
+#         if subscription:
+#             end_date = getattr(subscription, 'end_date', None) or getattr(subscription, 'expires_at', None) or getattr(subscription, 'valid_until', None)
+#             if end_date:
+#                 subscription_active = end_date >= timezone.now()
+#             else:
+#                 subscription_active = bool(getattr(subscription, 'is_active', False) or getattr(subscription, 'active', False))
+#     except Exception:
+#         logger.debug("Subscription lookup failed: %s", traceback.format_exc())
+#         subscription = subscription or None
+#         subscription_active = False
 
-    return render(request, 'restaurant/kitchen.html', {
-        'orders': orders,
-        'subscription': subscription,
-        'subscription_active': subscription_active,
-    })
+#     return render(request, 'restaurant/kitchen.html', {
+#         'orders': orders,
+#         'subscription': subscription,
+#         'subscription_active': subscription_active,
+#     })
 
 
 @login_required
@@ -2563,6 +2563,9 @@ def restaurant_profile(request):
                     address=request.data.get("address", ""),
                     phone_number=request.data.get("phone", "")
                 )
+
+                ensure_free_subscription(request.user, restaurant)  # 🔥 ADD THIS
+
             else:
                 if name is not None:
                     restaurant.name = name
@@ -2584,10 +2587,42 @@ def restaurant_profile(request):
                 "message": "Saved"
             })
 
+            # AFTER restaurant.save()
+
+        subscription = Subscription.objects.filter(
+            restaurant=restaurant,
+            is_active=True,
+        ).select_related("plan").first()
+
+        plan = subscription.plan if subscription else None
+
+        return JsonResponse({
+            "success": True,
+            "restaurant": {
+                "id": restaurant.id,
+                "name": restaurant.name,
+                "cuisine": restaurant.cuisine,
+                "address": restaurant.address,
+                "phone": restaurant.phone_number,
+                "image": restaurant.image.url if restaurant.image else None,
+            },
+            "subscription": {
+                "plan": plan.name if plan else None,
+                "is_active": subscription.is_active if subscription else False,
+                "table_limit": getattr(plan, "table_limit", None) if plan else None,
+            }
+        })
+
+
     except Exception as e:
         import traceback
         print("❌ ERROR:", str(e))
         traceback.print_exc()
+
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)
 
 
 ##################### Order APIs ##################################
