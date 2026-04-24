@@ -206,20 +206,14 @@ export async function apiLogout(): Promise<{ success: boolean }> {
   return res.json();
 }
 
-export async function apiGetUser(): Promise<CurrentUserResponse> {
-  const res = await fetch(`${BASE_URL}/api/auth/user/`, {
-    credentials: "include",
-    headers: { "Accept": "application/json" },
-  });
 
-  if (!res.ok) {
-    return { authenticated: false };
-  }
 
-  const contentType = res.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    return { authenticated: false };
-  }
+export const apiGetUser = async () => {
+  const token = getToken(); // MUST exist
 
-  return res.json();
-}
+  return fetch("/api/auth/user/", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }).then(res => res.json());
+};

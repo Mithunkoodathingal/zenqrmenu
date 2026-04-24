@@ -30,6 +30,7 @@ export default function GoogleSignInButton() {
   const handleCredentialResponse = useCallback(
     async (response: { credential: string }) => {
       setLoading(true);
+
       try {
         const res = await fetch(`${BASE_URL}/api/auth/google/`, {
           method: "POST",
@@ -37,36 +38,46 @@ export default function GoogleSignInButton() {
           body: JSON.stringify({ id_token: response.credential }),
         });
 
-        const contentType = res.headers.get("content-type") || "";
-        if (!contentType.includes("application/json")) {
-          throw new Error("Invalid response from server");
-        }
-
         const data = await res.json();
+
+        console.log("GOOGLE RESPONSE:", data);//=============================DEBUG===
 
         if (!res.ok) {
           throw new Error(data.error || data.detail || "Google login failed");
         }
 
-        const accessToken = data.access ?? data.access_token ?? data.token ?? data.key;
-        if (accessToken) setToken(accessToken);
-        if (data.refresh) setRefreshToken(data.refresh);
+        // ✅ Store tokens
+        const accessToken = data.access;
+          if (accessToken) setToken(accessToken);
+          if (data.refresh) setRefreshToken(data.refresh);
 
-        const user =
-          data.user ??
-          (await apiGetUser()
-            .then((session) => session.user)
-            .catch(() => undefined)) ??
-          { username: data.email || "User", email: data.email || "" };
+          // ✅ NO EXTRA apiGetUser CALL NEEDED
+          const user = data.user;
 
-        clearStoredSubscriptionStatus();
-        setStoredUser(user);
+          if (!user) {
+            throw new Error("User not returned from server");
+          }
 
-        toast({ title: "Welcome!", description: `Signed in as ${user.email || user.username}` });
-        navigate("/dashboard");
+          clearStoredSubscriptionStatus();
+          setStoredUser(user);
+
+          toast({
+            title: "Welcome!",
+            description: `Signed in as ${user.email || user.username}`,
+          });
+
+          navigate("/dashboard");
+
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Google sign-in failed";
-        toast({ title: "Error", description: message, variant: "destructive" });
+        const message =
+          err instanceof Error ? err.message : "Google sign-in failed";
+
+        toast({
+          title: "Error",
+          description: message,
+          variant: "destructive",
+        });
+
       } finally {
         setLoading(false);
       }
