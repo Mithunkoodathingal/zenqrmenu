@@ -3,50 +3,57 @@
 from django.utils import timezone
 from subscription.models import Subscription, SubscriptionPlan
 from restaurant.models import Restaurant
-
+from datetime import timedelta
 
 def ensure_free_subscription(user, restaurant):
-    # Get free plan
-    free_plan = SubscriptionPlan.objects.filter(price=0).first()
+    free_plan = SubscriptionPlan.objects.get(name="FREE")
 
     if not free_plan:
         raise Exception("Free plan not configured")
 
-    # Get or create subscription
-    subscription, created = Subscription.objects.get_or_create(
+    subscription = Subscription.objects.filter(
         user=user,
-        defaults={
-            "restaurant": restaurant,
-            "plan": free_plan,
-            "start_date": timezone.now(),
-            "end_date": timezone.now() + timezone.timedelta(days=3650),
-            "is_active": True,
-            "was_free_trial": True,
-        }
-    )
+        restaurant=restaurant
+    ).first()
 
-    # 🔥 IMPORTANT: ensure restaurant is linked
-    if not subscription.restaurant:
+    # ✅ If no subscription → create properly
+    if not subscription:
+        subscription = Subscription.objects.create(
+            user=user,
+            restaurant=restaurant,
+            plan=free_plan,
+            start_date=timezone.now(),
+            end_date=timezone.now() + timedelta(days=365),
+            is_active=True,
+            was_free_trial=True,
+        )
+        return subscription
+
+    # ✅ FIX: ALWAYS ensure restaurant is linked
+    if subscription.restaurant != restaurant:
         subscription.restaurant = restaurant
-        subscription.save(update_fields=["restaurant"])
 
-    # 🔥 DO NOT override existing plan
-    # Only activate if completely inactive AND no plan
+    # ✅ FIX: ensure free plan if missing
     if not subscription.plan:
         subscription.plan = free_plan
-        subscription.start_date = timezone.now()
-        subscription.end_date = timezone.now() + timezone.timedelta(days=3650)
+
+    # ✅ FIX: ensure active
+    if not subscription.is_active:
         subscription.is_active = True
-        subscription.was_free_trial = True
-        subscription.save()
+
+    subscription.save()
 
     return subscription
 
 
 def check_subscription_access(restaurant):
-    subscription = getattr(restaurant, "subscription", None)
+    subscription = Subscription.objects.filter(
+        restaurant=restaurant,
+        is_active=True,
+        is_cancelled=False
+    ).select_related("plan").first()
 
-    if not subscription or not subscription.is_active:
+    if not subscription:
         return False, "No active subscription"
 
-    return True, subscription.plan   # ✅ RETURN PLAN
+    return True, subscription.plan

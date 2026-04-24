@@ -42,7 +42,7 @@ from io import BytesIO
 from django.core.files import File
 from django.http import JsonResponse
 from subscription.utils import check_subscription_access, ensure_free_subscription
-from subscription.models import Subscription
+from subscription.models import sub
 from django.contrib.auth.models import User
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
@@ -532,39 +532,39 @@ class CustomLogoutView(View):
 # -----------------------
 # TableCreateView (with subscription guard)
 # -----------------------
-class TableCreateView(LoginRequiredMixin, CreateView):
-    model = Table
-    fields = ['table_number']
-    template_name = 'restaurant/table_form.html'
-    success_url = reverse_lazy('create_table_qr')
+# class TableCreateView(LoginRequiredMixin, CreateView):
+#     model = Table
+#     fields = ['table_number']
+#     template_name = 'restaurant/table_form.html'
+#     success_url = reverse_lazy('create_table_qr')
 
-    # restaurant/views.py (inside TableCreateView)
+#     # restaurant/views.py (inside TableCreateView)
 
-    def dispatch(self, request, *args, **kwargs):
-        self.restaurant = get_object_or_404(Restaurant, owner=request.user)
-        try:
-            subscription = self.restaurant.subscription
-        except Subscription.DoesNotExist:
-            messages.error(request, "You need an active subscription to create tables.")
-            return redirect("subscription:subscription_plans")
+#     def dispatch(self, request, *args, **kwargs):
+#         self.restaurant = get_object_or_404(Restaurant, owner=request.user)
+#         try:
+#             subscription = self.restaurant.subscription
+#         except Subscription.DoesNotExist:
+#             messages.error(request, "You need an active subscription to create tables.")
+#             return redirect("subscription:subscription_plans")
 
 
-        # Ensure subscription has a plan attached
-        if not subscription.plan:
-            messages.error(request, "Subscription is missing a plan. Please contact support or re-subscribe.")
-            return redirect("subscription:subscription_plans")
+#         # Ensure subscription has a plan attached
+#         if not subscription.plan:
+#             messages.error(request, "Subscription is missing a plan. Please contact support or re-subscribe.")
+#             return redirect("subscription:subscription_plans")
 
-        # Ensure subscription is active and not expired
-        if not subscription.is_active or (subscription.end_date and subscription.end_date < timezone.now()):
-            messages.error(request, "Your subscription expired. Please renew.")
-            return redirect("subscription:subscription_plans")
+#         # Ensure subscription is active and not expired
+#         if not subscription.is_active or (subscription.end_date and subscription.end_date < timezone.now()):
+#             messages.error(request, "Your subscription expired. Please renew.")
+#             return redirect("subscription:subscription_plans")
 
-        # Ensure there are remaining table slots
-        if subscription.remaining_tables() <= 0:
-            messages.error(request, "You reached your table limit. Upgrade your plan.")
-            return redirect("subscription:subscription_plans")
+#         # Ensure there are remaining table slots
+#         if subscription.remaining_tables() <= 0:
+#             messages.error(request, "You reached your table limit. Upgrade your plan.")
+#             return redirect("subscription:subscription_plans")
 
-        return super().dispatch(request, *args, **kwargs)
+#         return super().dispatch(request, *args, **kwargs)
 
 
     def form_valid(self, form):
@@ -2240,6 +2240,10 @@ def menu_items_api(request):
                 "error": "Failed to create item",
                 "details": str(e)
             }, status=500)
+
+        print("USER:", request.user.id)
+        print("RESTAURANT:", restaurant.id)
+
 
         return JsonResponse({
             "success": True,

@@ -148,8 +148,8 @@ const DashboardPage = () => {
 
         // ✅ 2. Fetch from API
         const [catRes, itemRes] = await Promise.all([
-          authFetch(`${BASE_URL}/menu/categories/`),
-          authFetch(`${BASE_URL}/menu/items/`)
+          authFetch(`${BASE_URL}/menu/api/categories/`),
+          authFetch(`${BASE_URL}/menu/api/items/`)
         ]);
 
         if (!catRes.ok || !itemRes.ok) {
