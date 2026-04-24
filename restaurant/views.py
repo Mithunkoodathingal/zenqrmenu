@@ -42,7 +42,7 @@ from io import BytesIO
 from django.core.files import File
 from django.http import JsonResponse
 from subscription.utils import check_subscription_access, ensure_free_subscription
-from subscription.models import sub
+from subscription.models import Subscription
 from django.contrib.auth.models import User
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
