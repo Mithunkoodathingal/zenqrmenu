@@ -2495,12 +2495,14 @@ def public_menu(request, restaurant_id):
     })
 
 
-############ Customer Profile #########################
+############ Restaurant Profile #########################
 
 
 
 
 from rest_framework.parsers import MultiPartParser, FormParser
+
+
 
 @api_view(['GET', 'POST', 'PATCH'])
 @permission_classes([IsAuthenticated])
@@ -2510,43 +2512,45 @@ def restaurant_profile(request):
         restaurant = Restaurant.objects.filter(owner=request.user).first()
 
         # ========================
-        # ✅ GET RESTAURANT
+        # ✅ GET
         # ========================
         if request.method == 'GET':
 
             if not restaurant:
                 return JsonResponse({
                     "success": True,
-                    "restaurant": None
+                    "restaurant": None,
+                    "subscription": None
                 })
 
             subscription = Subscription.objects.filter(
                 restaurant=restaurant,
-                is_active=True,
-                is_cancelled=False
+                is_active=True
             ).select_related("plan").first()
 
-            plan = subscription.plan if subscription else None
+            plan = subscription.plan if subscription and subscription.plan else None
 
             return JsonResponse({
                 "success": True,
                 "restaurant": {
                     "id": restaurant.id,
                     "name": restaurant.name,
-                    "cuisine": restaurant.cuisine,
+                    "cuisine": restaurant.cuisine_type,   # ✅ FIXED
                     "address": restaurant.address,
-                    "phone": restaurant.phone_number,
-                    "image": restaurant.image.url if restaurant.image else None,
+                    "phone": restaurant.phone,            # ✅ FIXED
+                    "logo": restaurant.logo.url if restaurant.logo else None,   # ✅ FIXED
+                    "cover_image": restaurant.cover_image.url if restaurant.cover_image else None,
+                    "about": restaurant.about,
                 },
                 "subscription": {
-                "plan": plan.name if plan else None,
-                "is_active": subscription.is_active if subscription else False,
-                "table_limit": getattr(plan, "table_limit", None) if plan else None,
-            }
+                    "plan": plan.name if plan else None,
+                    "is_active": subscription.is_active if subscription else False,
+                    "table_limit": getattr(plan, "table_limit", None) if plan else None,
+                }
             })
 
         # ========================
-        # ✅ CREATE OR UPDATE
+        # ✅ CREATE / UPDATE
         # ========================
         if request.method in ['POST', 'PATCH']:
 
@@ -2554,69 +2558,57 @@ def restaurant_profile(request):
             cuisine = request.data.get("cuisine")
             address = request.data.get("address")
             phone = request.data.get("phone")
+            about = request.data.get("about")
 
             if not restaurant:
                 restaurant = Restaurant.objects.create(
                     owner=request.user,
-                    name=request.data.get("name", ""),
-                    cuisine=request.data.get("cuisine", ""),
-                    address=request.data.get("address", ""),
-                    phone_number=request.data.get("phone", "")
+                    name=name or "",
+                    cuisine_type=cuisine or "",   # ✅ FIXED
+                    address=address or "",
+                    phone=phone or "",           # ✅ FIXED
+                    about=about or ""
                 )
-
-                ensure_free_subscription(request.user, restaurant)  # 🔥 ADD THIS
-
             else:
                 if name is not None:
                     restaurant.name = name
                 if cuisine is not None:
-                    restaurant.cuisine = cuisine
+                    restaurant.cuisine_type = cuisine   # ✅ FIXED
                 if address is not None:
                     restaurant.address = address
                 if phone is not None:
-                    restaurant.phone_number = phone
+                    restaurant.phone = phone            # ✅ FIXED
+                if about is not None:
+                    restaurant.about = about
 
-            image = request.FILES.get("image")
-            if image:
-                restaurant.image = image
+            # ✅ FILE UPLOADS
+            logo = request.FILES.get("image")  # frontend sends "image"
+            cover = request.FILES.get("cover_image")
+
+            if logo:
+                restaurant.logo = logo
+
+            if cover:
+                restaurant.cover_image = cover
 
             restaurant.save()
 
             return JsonResponse({
                 "success": True,
-                "message": "Saved"
+                "restaurant": {
+                    "id": restaurant.id,
+                    "name": restaurant.name,
+                    "cuisine": restaurant.cuisine_type,
+                    "address": restaurant.address,
+                    "phone": restaurant.phone,
+                    "logo": restaurant.logo.url if restaurant.logo else None,
+                    "cover_image": restaurant.cover_image.url if restaurant.cover_image else None,
+                    "about": restaurant.about,
+                }
             })
-
-            # AFTER restaurant.save()
-
-        subscription = Subscription.objects.filter(
-            restaurant=restaurant,
-            is_active=True,
-        ).select_related("plan").first()
-
-        plan = subscription.plan if subscription else None
-
-        return JsonResponse({
-            "success": True,
-            "restaurant": {
-                "id": restaurant.id,
-                "name": restaurant.name,
-                "cuisine": restaurant.cuisine,
-                "address": restaurant.address,
-                "phone": restaurant.phone_number,
-                "image": restaurant.image.url if restaurant.image else None,
-            },
-            "subscription": {
-                "plan": plan.name if plan else None,
-                "is_active": subscription.is_active if subscription else False,
-                "table_limit": getattr(plan, "table_limit", None) if plan else None,
-            }
-        })
-
 
     except Exception as e:
         import traceback
-        print("❌ ERROR:", str(e))
         traceback.print_exc()
 
         return JsonResponse({

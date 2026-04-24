@@ -71,8 +71,7 @@ const RestaurantSettings = ({
       const wasEmptyBefore = !profile?.name;
 
       const res = await fetch("/menu/api/restaurant/", {
-        method: "PATCH",
-        body: formData,
+        method: "GET",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("access")}`,
         },
