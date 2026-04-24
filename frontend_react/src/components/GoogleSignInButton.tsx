@@ -47,6 +47,10 @@ export default function GoogleSignInButton() {
         }
 
         // ✅ Store tokens
+        
+        localStorage.setItem("access", data.access);
+        localStorage.setItem("refresh", data.refresh);
+
         const accessToken = data.access;
           if (accessToken) setToken(accessToken);
           if (data.refresh) setRefreshToken(data.refresh);

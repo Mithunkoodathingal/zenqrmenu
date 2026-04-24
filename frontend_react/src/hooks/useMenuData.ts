@@ -19,7 +19,7 @@ export function useCategories() {
   return useQuery<ApiCategory[]>({
     queryKey: ["categories"],
     queryFn: fetchCategories,
-    retry: (count, error) => error.message !== "LOGIN_REQUIRED" && count < 2,
+    retry: (count, error: any) => error.message !== "LOGIN_REQUIRED" && count < 2,
   });
 }
 
@@ -27,7 +27,7 @@ export function useMenuItems() {
   return useQuery<ApiMenuItem[]>({
     queryKey: ["menuItems"],
     queryFn: fetchMenuItems,
-    retry: (count, error) => error.message !== "LOGIN_REQUIRED" && count < 2,
+    retry: (count, error: any) => error.message !== "LOGIN_REQUIRED" && count < 2,
   });
 }
 

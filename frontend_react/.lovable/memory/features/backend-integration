@@ -18,7 +18,7 @@ Subscription/Payment endpoints:
 - GET  /subscription/api/plans/
 - POST /subscription/api/create/
 - POST /subscription/api/verify/
-- GET  /menu/api/subscription/ — returns { plan, menu_item_limit, table_limit, is_active }
+- GET  /subscription/api/subscription/ — returns { plan, menu_item_limit, table_limit, is_active }
 
 Menu CRUD endpoints (JWT Bearer token):
 - GET/POST        /menu/api/categories/

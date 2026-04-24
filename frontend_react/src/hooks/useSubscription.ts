@@ -115,7 +115,7 @@ export function useSubscription() {
       }
     },
     initialData: getStoredSubscriptionStatus,
-    retry: (count, error) => error.message !== "LOGIN_REQUIRED" && count < 2,
+    retry: (count, error: any) => error.message !== "LOGIN_REQUIRED" && count < 2,
     staleTime: 60_000, // cache for 1 min
   });
 }

@@ -462,7 +462,7 @@ def api_create_subscription(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # ✅ Validate plan
+        # ✅ VALIDATE PLAN
         try:
             plan = SubscriptionPlan.objects.get(id=plan_id)
         except SubscriptionPlan.DoesNotExist:
@@ -473,11 +473,23 @@ def api_create_subscription(request):
 
         user = request.user
 
-        # ✅ Get or create subscription
-        subscription, _ = Subscription.objects.get_or_create(user=user)
+        # 🔥 CRITICAL FIX: ALWAYS GET RESTAURANT
+        restaurant = Restaurant.objects.filter(owner=user).first()
 
-        # 🔥 Prevent downgrade
-        if subscription.plan and subscription.plan.price > 0 and plan.price == 0:
+        if not restaurant:
+            return Response(
+                {"success": False, "error": "Create restaurant first"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 🔥 GET EXISTING SUBSCRIPTION (BY RESTAURANT)
+        subscription = Subscription.objects.filter(
+            restaurant=restaurant,
+            is_active=True
+        ).first()
+
+        # ================= PREVENT DOWNGRADE =================
+        if subscription and subscription.plan and subscription.plan.price > 0 and plan.price == 0:
             return Response(
                 {"success": False, "error": "Cannot downgrade to free plan"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -485,8 +497,17 @@ def api_create_subscription(request):
 
         # ================= FREE PLAN =================
         if plan.price == 0:
-            subscription.plan = plan
-            subscription.activate()
+            if not subscription:
+                subscription = Subscription.objects.create(
+                    user=user,
+                    restaurant=restaurant,
+                    plan=plan,
+                    is_active=True
+                )
+            else:
+                subscription.plan = plan
+                subscription.is_active = True
+                subscription.save()
 
             return Response({
                 "success": True,
@@ -503,9 +524,15 @@ def api_create_subscription(request):
             "payment_capture": 1,
         })
 
-        # ❌ DO NOT set plan here
+        # 🔥 CREATE OR UPDATE SUBSCRIPTION (IMPORTANT)
+        if not subscription:
+            subscription = Subscription.objects.create(
+                user=user,
+                restaurant=restaurant,
+                is_active=False  # will activate after payment
+            )
 
-        # ✅ Store transaction (pending)
+        # ✅ STORE TRANSACTION
         PaymentTransaction.objects.create(
             subscription=subscription,
             plan=plan,

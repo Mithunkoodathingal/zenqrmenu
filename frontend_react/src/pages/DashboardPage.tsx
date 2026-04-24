@@ -105,17 +105,17 @@ const DashboardPage = () => {
   const isReady = !isLoadingProfile && !isLoadingSubscription;
 
   // 🚨 Step 1: No restaurant → MUST go to wizard
+  const restaurant = restaurantProfile?.restaurant;
+
   const needsRestaurantSetup =
     isReady &&
-    (!restaurantProfile || !restaurantProfile.id);
+    (!restaurant || !restaurant.name);
 
-  // 🚨 Step 2: Restaurant exists but no subscription
   const needsPlanSelection =
     isReady &&
-    restaurantProfile &&
+    restaurant &&
     (!subscription || subscription.plan === "Free");
 
-  // FINAL
   const onboardingStep: 0 | 1 | 2 =
     needsRestaurantSetup ? 1 :
     needsPlanSelection ? 2 :
@@ -274,6 +274,7 @@ const DashboardPage = () => {
     storedUser?.username?.trim() ||
     storedUser?.email?.split("@")[0] ||
     "User";
+    
 
   const sidebarItems = [
     { key: "menu" as const, icon: Utensils, label: "Manage Menu" },
@@ -409,13 +410,13 @@ const DashboardPage = () => {
 
       {/* Main */}
       <main className="flex-1 lg:ml-64 lg:p-8 p-4 pt-28 lg:pt-8 overflow-auto">
+      
 
         {/* ⛔ WAIT until data is ready */}
         {!isReady ? (
           <div>Loading...</div>
         ) : onboardingStep > 0 ? (
 
-          /* 🔥 ONBOARDING FLOW */
           activeTab === "restaurant" ? (
             <RestaurantSettings onSavedFirstTime={() => setActiveTab("menu")} />
           ) : (
@@ -427,25 +428,11 @@ const DashboardPage = () => {
 
         ) : (
 
-          /* ✅ NORMAL APP */
           <>
-            {activeTab === "menu" && (
-              <MenuManager
-                onNavigateToRestaurant={() => setActiveTab("restaurant")}
-                onFirstItemCreated={() => setActiveTab("qr")}
-              />
-            )}
-
-            {activeTab === "orders" && (
-              <OrdersManager onPendingCountChange={setPendingOrderCount} />
-            )}
-
+            {activeTab === "menu" && <MenuManager />}
+            {activeTab === "orders" && <OrdersManager />}
             {activeTab === "qr" && <QRManager />}
-
-            {activeTab === "restaurant" && (
-              <RestaurantSettings onSavedFirstTime={() => setActiveTab("menu")} />
-            )}
-
+            {activeTab === "restaurant" && <RestaurantSettings />}
             {activeTab === "analytics" && <AnalyticsDashboard />}
           </>
         )}

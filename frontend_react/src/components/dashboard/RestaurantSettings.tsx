@@ -34,6 +34,8 @@ const RestaurantSettings = ({
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
+  const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.zenqrmenu.com";
+
   // Initialize form from profile data
   if (profile && !initialized) {
     setName(profile.name || "");
@@ -65,16 +67,15 @@ const RestaurantSettings = ({
       formData.append("address", address);
       formData.append("phone", phone);
 
-      if (logoFile) formData.append("image", logoFile);
+      if (logoFile) formData.append("logo", logoFile);
       if (coverFile) formData.append("cover_image", coverFile);
 
-      const wasEmptyBefore = !profile?.name;
-
-      const res = await fetch("/menu/api/restaurant/", {
-        method: "GET",
+      const res = await fetch(`${BASE_URL}/menu/api/restaurant/`, {
+        method: "PATCH",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("access")}`,
+          Authorization: `Bearer ${localStorage.getItem("access") || ""}`,
         },
+        body: formData,
       });
 
       if (!res.ok) throw new Error("Failed to save");
@@ -83,11 +84,8 @@ const RestaurantSettings = ({
 
       toast({ title: "Settings saved!" });
 
-      // ✅ REFRESH DATA (THIS FIXES EVERYTHING)
-      queryClient.invalidateQueries({ queryKey: ["restaurant"] });
-
-      // ✅ onboarding step
-      if (wasEmptyBefore && data?.restaurant?.name && onSavedFirstTime) {
+      // ✅ ALWAYS move forward after first valid save
+      if (data?.restaurant?.name && onSavedFirstTime) {
         onSavedFirstTime();
       }
 
@@ -97,7 +95,7 @@ const RestaurantSettings = ({
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err?.message || "Failed to save",
+        description: err.message || "Failed to save",
         variant: "destructive",
       });
     }

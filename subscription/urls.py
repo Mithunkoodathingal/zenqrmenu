@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/plans/', subscription_plans_api, name='subscription_plans_api'),
     path('api/create/', api_create_subscription),
     path('api/verify/', api_verify_payment),
+    path('api/subscription/', subscription_status),
 
     # path('create/<int:plan_id>/', create_subscription, name='create_subscription'),  # Subscribe & pay
     path('webhook/', payment_success_webhook, name='payment_webhook'),
