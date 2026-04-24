@@ -29,7 +29,7 @@ from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseForbid
 from django.db import IntegrityError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes
 from django.core.exceptions import ValidationError
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, F, DecimalField, ExpressionWrapper, Q
@@ -2500,8 +2500,11 @@ def public_menu(request, restaurant_id):
 
 
 
+from rest_framework.parsers import MultiPartParser, FormParser
+
 @api_view(['GET', 'POST', 'PATCH'])
 @permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
 def restaurant_profile(request):
     try:
         restaurant = Restaurant.objects.filter(owner=request.user).first()
@@ -2545,38 +2548,44 @@ def restaurant_profile(request):
         # ========================
         if request.method in ['POST', 'PATCH']:
 
-            # 🔥 If no restaurant → CREATE
+            name = request.data.get("name")
+            cuisine = request.data.get("cuisine")
+            address = request.data.get("address")
+            phone = request.data.get("phone")
+
             if not restaurant:
                 restaurant = Restaurant.objects.create(
-                    owner=request.user
+                    owner=request.user,
+                    name=request.data.get("name", ""),
+                    cuisine=request.data.get("cuisine", ""),
+                    address=request.data.get("address", ""),
+                    phone_number=request.data.get("phone", "")
                 )
+            else:
+                if name is not None:
+                    restaurant.name = name
+                if cuisine is not None:
+                    restaurant.cuisine = cuisine
+                if address is not None:
+                    restaurant.address = address
+                if phone is not None:
+                    restaurant.phone_number = phone
 
-            # 🔥 Update fields safely
-            restaurant.name = request.data.get("name", restaurant.name)
-            restaurant.cuisine = request.data.get("cuisine", restaurant.cuisine)
-            restaurant.address = request.data.get("address", restaurant.address)
-            restaurant.phone_number = request.data.get("phone", restaurant.phone_number)
-
-            if 'image' in request.FILES:
-                restaurant.image = request.FILES['image']
+            image = request.FILES.get("image")
+            if image:
+                restaurant.image = image
 
             restaurant.save()
 
             return JsonResponse({
                 "success": True,
-                "message": "Restaurant saved successfully",
-                "restaurant": {
-                    "id": restaurant.id,
-                    "name": restaurant.name,
-                }
+                "message": "Saved"
             })
 
     except Exception as e:
-        print("❌ RESTAURANT API ERROR:", str(e))
-        return JsonResponse({
-            "success": False,
-            "error": "Internal server error"
-        }, status=500)
+        import traceback
+        print("❌ ERROR:", str(e))
+        traceback.print_exc()
 
 
 ##################### Order APIs ##################################
