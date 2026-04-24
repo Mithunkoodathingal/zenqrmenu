@@ -2500,41 +2500,76 @@ def public_menu(request, restaurant_id):
 
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def restaurant_profile(request):
     try:
         restaurant = Restaurant.objects.filter(owner=request.user).first()
 
-        if not restaurant:
+        # ========================
+        # ✅ GET RESTAURANT
+        # ========================
+        if request.method == 'GET':
+
+            if not restaurant:
+                return JsonResponse({
+                    "success": True,
+                    "restaurant": None
+                })
+
+            subscription = Subscription.objects.filter(
+                restaurant=restaurant,
+                is_active=True,
+                is_cancelled=False
+            ).select_related("plan").first()
+
             return JsonResponse({
                 "success": True,
-                "restaurant": None
+                "restaurant": {
+                    "id": restaurant.id,
+                    "name": restaurant.name,
+                    "cuisine": restaurant.cuisine,
+                    "address": restaurant.address,
+                    "phone": restaurant.phone_number,
+                    "image": restaurant.image.url if restaurant.image else None,
+                },
+                "subscription": {
+                    "plan": subscription.plan.name if subscription else None,
+                    "is_active": subscription.is_active if subscription else False,
+                    "table_limit": getattr(subscription.plan, "table_limit", None) if subscription else None,
+                }
             })
 
-        # ✅ get subscription safely
-        subscription = Subscription.objects.filter(
-            restaurant=restaurant,
-            is_active=True,
-            is_cancelled=False
-        ).select_related("plan").first()
+        # ========================
+        # ✅ CREATE OR UPDATE
+        # ========================
+        if request.method in ['POST', 'PATCH']:
 
-        return JsonResponse({
-            "success": True,
-            "restaurant": {
-                "id": restaurant.id,
-                "name": restaurant.name,
-                "cuisine": restaurant.cuisine,
-                "address": restaurant.address,
-                "phone": restaurant.phone_number,
-                "image": restaurant.image.url if restaurant.image else None,
-            },
-            "subscription": {
-                "plan": subscription.plan.name if subscription else None,
-                "is_active": subscription.is_active if subscription else False,
-                "table_limit": getattr(subscription.plan, "table_limit", None) if subscription else None,
-            }
-        })
+            # 🔥 If no restaurant → CREATE
+            if not restaurant:
+                restaurant = Restaurant.objects.create(
+                    owner=request.user
+                )
+
+            # 🔥 Update fields safely
+            restaurant.name = request.data.get("name", restaurant.name)
+            restaurant.cuisine = request.data.get("cuisine", restaurant.cuisine)
+            restaurant.address = request.data.get("address", restaurant.address)
+            restaurant.phone_number = request.data.get("phone", restaurant.phone_number)
+
+            if 'image' in request.FILES:
+                restaurant.image = request.FILES['image']
+
+            restaurant.save()
+
+            return JsonResponse({
+                "success": True,
+                "message": "Restaurant saved successfully",
+                "restaurant": {
+                    "id": restaurant.id,
+                    "name": restaurant.name,
+                }
+            })
 
     except Exception as e:
         print("❌ RESTAURANT API ERROR:", str(e))
