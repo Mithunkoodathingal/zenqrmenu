@@ -2526,6 +2526,8 @@ def restaurant_profile(request):
                 is_cancelled=False
             ).select_related("plan").first()
 
+            plan = subscription.plan if subscription else None
+
             return JsonResponse({
                 "success": True,
                 "restaurant": {
@@ -2537,10 +2539,10 @@ def restaurant_profile(request):
                     "image": restaurant.image.url if restaurant.image else None,
                 },
                 "subscription": {
-                    "plan": subscription.plan.name if subscription else None,
-                    "is_active": subscription.is_active if subscription else False,
-                    "table_limit": getattr(subscription.plan, "table_limit", None) if subscription else None,
-                }
+                "plan": plan.name if plan else None,
+                "is_active": subscription.is_active if subscription else False,
+                "table_limit": getattr(plan, "table_limit", None) if plan else None,
+            }
             })
 
         # ========================

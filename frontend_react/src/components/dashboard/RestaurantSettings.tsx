@@ -7,9 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Image as ImageIcon, Loader2, Save } from "lucide-react";
 import { useRestaurantProfile, useUpdateRestaurantProfile } from "@/hooks/useRestaurantData";
 import { resolveImageUrl } from "@/lib/restaurantApi";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
-const RestaurantSettings = ({ onSavedFirstTime }: { onSavedFirstTime?: () => void } = {}) => {
+const RestaurantSettings = ({
+    onSavedFirstTime,
+  }: {
+    onSavedFirstTime?: () => void;
+  }) => {
   const { data: profile, isLoading } = useRestaurantProfile();
   const updateMutation = useUpdateRestaurantProfile();
   const { toast } = useToast();
@@ -23,6 +28,8 @@ const RestaurantSettings = ({ onSavedFirstTime }: { onSavedFirstTime?: () => voi
   const [logoPreview, setLogoPreview] = useState<string>("");
   const [coverPreview, setCoverPreview] = useState<string>("");
   const [initialized, setInitialized] = useState(false);
+
+  const queryClient = useQueryClient();
 
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -49,42 +56,61 @@ const RestaurantSettings = ({ onSavedFirstTime }: { onSavedFirstTime?: () => voi
     }
   };
 
-  const handleSave = () => {
-    const data: Record<string, unknown> = { name, cuisine_type: cuisineType, address, phone };
-    if (logoFile) data.logo = logoFile;
-    if (coverFile) data.cover_image = coverFile;
+  const handleSave = async () => {
+    try {
+      const formData = new FormData();
 
-    const wasEmptyBefore = !profile?.name;
+      formData.append("name", name);
+      formData.append("cuisine", cuisineType);
+      formData.append("address", address);
+      formData.append("phone", phone);
 
-    updateMutation.mutate(data, {
-      onSuccess: (updatedProfile) => {
-        toast({ title: "Settings saved!" });
-        if (wasEmptyBefore && updatedProfile?.name && onSavedFirstTime) {
-          onSavedFirstTime();
-        }
-        setLogoFile(null);
-        setCoverFile(null);
-        // Update previews from server response so new images render immediately
-        if (updatedProfile.logo) {
-          setLogoPreview(resolveImageUrl(updatedProfile.logo) || "");
-        }
-        if (updatedProfile.cover_image) {
-          setCoverPreview(resolveImageUrl(updatedProfile.cover_image) || "");
-        }
-      },
-      onError: (err) => {
-        toast({ title: "Error", description: err.message, variant: "destructive" });
-      },
-    });
+      if (logoFile) formData.append("image", logoFile);
+      if (coverFile) formData.append("cover_image", coverFile);
+
+      const wasEmptyBefore = !profile?.name;
+
+      const res = await fetch("/menu/api/restaurant/", {
+        method: "PATCH",
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access")}`,
+        },
+      });
+
+      if (!res.ok) throw new Error("Failed to save");
+
+      const data = await res.json();
+
+      toast({ title: "Settings saved!" });
+
+      // ✅ REFRESH DATA (THIS FIXES EVERYTHING)
+      queryClient.invalidateQueries({ queryKey: ["restaurant"] });
+
+      // ✅ onboarding step
+      if (wasEmptyBefore && data?.restaurant?.name && onSavedFirstTime) {
+        onSavedFirstTime();
+      }
+
+      setLogoFile(null);
+      setCoverFile(null);
+
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.message || "Failed to save",
+        variant: "destructive",
+      });
+    }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
-  }
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      );
+    }
 
   return (
     <div className="max-w-2xl">

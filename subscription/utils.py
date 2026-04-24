@@ -12,9 +12,9 @@ def ensure_free_subscription(user, restaurant):
         raise Exception("Free plan not configured")
 
     subscription = Subscription.objects.filter(
-        user=user,
-        restaurant=restaurant
-    ).first()
+            user=user,
+            restaurant=restaurant
+        ).first()
 
     # ✅ If no subscription → create properly
     if not subscription:
