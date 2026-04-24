@@ -55,7 +55,7 @@ urlpatterns = [
     path('orders/completed/', completed_orders, name='completed_orders'),
 
     # ================= KITCHEN =================
-    path('kitchen/', kitchen_interface, name='kitchen_interface'),
+    # path('kitchen/', kitchen_interface, name='kitchen_interface'),
     path('kitchen/orders/json/', orders_json, name='orders_json'),
 
     # ================= CRUD =================
