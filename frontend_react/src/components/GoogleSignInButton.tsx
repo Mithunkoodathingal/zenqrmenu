@@ -7,7 +7,6 @@ import { clearStoredSubscriptionStatus } from "@/hooks/useSubscription";
 import { Loader2 } from "lucide-react";
 
 const GOOGLE_CLIENT_ID = "886773285585-fg35vj7ot1884qvkp64q9l7n8gst3tfn.apps.googleusercontent.com";
-
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.zenqrmenu.com";
 
 declare global {
@@ -49,10 +48,9 @@ export default function GoogleSignInButton() {
           throw new Error(data.error || data.detail || "Google login failed");
         }
 
-        // ✅ Store tokens
-        const accessToken = data.access;
-          if (accessToken) setToken(accessToken);
-          if (data.refresh) setRefreshToken(data.refresh);
+        const accessToken = data.access ?? data.access_token ?? data.token ?? data.key;
+        if (accessToken) setToken(accessToken);
+        if (data.refresh) setRefreshToken(data.refresh);
 
         const user =
           data.user ??

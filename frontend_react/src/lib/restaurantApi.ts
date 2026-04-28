@@ -68,45 +68,6 @@ type RawMenuItem = {
   itemType?: string | null;
 };
 
-function getToken() {
-  const token = localStorage.getItem("access");
-  if (!token) throw new Error("LOGIN_REQUIRED");
-  return token;
-}
-
-async function authFetch(url: string, options: RequestInit = {}) {
-  const token = getToken();
-
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      ...(options.headers || {}),
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  const text = await res.text();
-
-  let data;
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    console.error("❌ NOT JSON RESPONSE:", text);
-    throw new Error("Server returned invalid response");
-  }
-
-  if (res.status === 401) {
-    throw new Error("LOGIN_REQUIRED");
-  }
-
-  if (!res.ok) {
-    throw new Error(data?.error || "Request failed");
-  }
-  console.log("API CALL:", url);
-  return data;
-}
-
-
 function toNumber(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim()) {
@@ -230,48 +191,46 @@ export function resolveImageUrl(image?: string | null): string | undefined {
 
 // ─── Restaurant Profile (auth required) ───
 
-export async function fetchRestaurantProfile() {
-  return authFetch(`${BASE_URL}/menu/api/restaurant/`, {
-    method: "GET",
+export async function fetchRestaurantProfile(): Promise<RestaurantProfile> {
+  const res = await fetch(`${BASE_URL}/menu/api/restaurant/`, {
+    headers: { Accept: "application/json", ...authHeaders() },
+    credentials: "include",
   });
+  if (res.status === 401) throw new Error("LOGIN_REQUIRED");
+  if (!res.ok) throw new Error("Failed to fetch restaurant profile");
+  return res.json();
 }
 
 export async function updateRestaurantProfile(
   data: Record<string, unknown>
 ): Promise<RestaurantProfile> {
+  const headers: Record<string, string> = { Accept: "application/json", ...authHeaders() };
   const hasFile = Object.values(data).some((v) => v instanceof File);
 
   let body: BodyInit;
-  let headers: Record<string, string> = {
-    Accept: "application/json",
-  };
-
   if (hasFile) {
     const formData = new FormData();
-
     Object.entries(data).forEach(([key, value]) => {
       if (value === undefined) return;
-      if (value === null) {
-        formData.append(key, "");
-      } else if (value instanceof File) {
-        formData.append(key, value);
-      } else {
-        formData.append(key, String(value));
-      }
+      if (value === null) { formData.append(key, ""); return; }
+      if (value instanceof File) { formData.append(key, value); return; }
+      formData.append(key, String(value));
     });
-
     body = formData;
-    // ❌ DO NOT set Content-Type (browser handles it)
   } else {
     headers["Content-Type"] = "application/json";
     body = JSON.stringify(data);
   }
 
-  return authFetch(`${BASE_URL}/menu/api/restaurant/`, {
+  const res = await fetch(`${BASE_URL}/menu/api/restaurant/`, {
     method: "PATCH",
     headers,
+    credentials: "include",
     body,
   });
+  if (res.status === 401) throw new Error("LOGIN_REQUIRED");
+  if (!res.ok) throw new Error("Failed to update restaurant profile");
+  return res.json();
 }
 
 // ─── Tables (auth required) ───

@@ -96,6 +96,6 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
       res = await fetch(url, { ...options, headers });
     }
   }
-  console.log("API CALL:", url);
+
   return res;
 }

@@ -7,14 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Image as ImageIcon, Loader2, Save } from "lucide-react";
 import { useRestaurantProfile, useUpdateRestaurantProfile } from "@/hooks/useRestaurantData";
 import { resolveImageUrl } from "@/lib/restaurantApi";
-import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
-const RestaurantSettings = ({
-    onSavedFirstTime,
-  }: {
-    onSavedFirstTime?: () => void;
-  }) => {
+const RestaurantSettings = ({ onSavedFirstTime }: { onSavedFirstTime?: () => void } = {}) => {
   const { data: profile, isLoading } = useRestaurantProfile();
   const updateMutation = useUpdateRestaurantProfile();
   const { toast } = useToast();
@@ -29,12 +24,8 @@ const RestaurantSettings = ({
   const [coverPreview, setCoverPreview] = useState<string>("");
   const [initialized, setInitialized] = useState(false);
 
-  const queryClient = useQueryClient();
-
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
-
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.zenqrmenu.com";
 
   // Initialize form from profile data
   if (profile && !initialized) {
@@ -58,56 +49,42 @@ const RestaurantSettings = ({
     }
   };
 
-  const handleSave = async () => {
-    try {
-      const formData = new FormData();
+  const handleSave = () => {
+    const data: Record<string, unknown> = { name, cuisine_type: cuisineType, address, phone };
+    if (logoFile) data.logo = logoFile;
+    if (coverFile) data.cover_image = coverFile;
 
-      formData.append("name", name);
-      formData.append("cuisine", cuisineType);
-      formData.append("address", address);
-      formData.append("phone", phone);
+    const wasEmptyBefore = !profile?.name;
 
-      if (logoFile) formData.append("logo", logoFile);
-      if (coverFile) formData.append("cover_image", coverFile);
-
-      const res = await fetch(`${BASE_URL}/menu/api/restaurant/`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("access") || ""}`,
-        },
-        body: formData,
-      });
-
-      if (!res.ok) throw new Error("Failed to save");
-
-      const data = await res.json();
-
-      toast({ title: "Settings saved!" });
-
-      // ✅ ALWAYS move forward after first valid save
-      if (data?.restaurant?.name && onSavedFirstTime) {
-        onSavedFirstTime();
-      }
-
-      setLogoFile(null);
-      setCoverFile(null);
-
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to save",
-        variant: "destructive",
-      });
-    }
+    updateMutation.mutate(data, {
+      onSuccess: (updatedProfile) => {
+        toast({ title: "Settings saved!" });
+        if (wasEmptyBefore && updatedProfile?.name && onSavedFirstTime) {
+          onSavedFirstTime();
+        }
+        setLogoFile(null);
+        setCoverFile(null);
+        // Update previews from server response so new images render immediately
+        if (updatedProfile.logo) {
+          setLogoPreview(resolveImageUrl(updatedProfile.logo) || "");
+        }
+        if (updatedProfile.cover_image) {
+          setCoverPreview(resolveImageUrl(updatedProfile.cover_image) || "");
+        }
+      },
+      onError: (err) => {
+        toast({ title: "Error", description: err.message, variant: "destructive" });
+      },
+    });
   };
 
-    if (isLoading) {
-      return (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
-      );
-    }
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl">

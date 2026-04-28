@@ -13,7 +13,7 @@ export function useRestaurantProfile() {
   return useQuery({
     queryKey: ["restaurantProfile"],
     queryFn: fetchRestaurantProfile,
-    retry: (count, error: any) => error.message !== "LOGIN_REQUIRED" && count < 2,
+    retry: (count, error) => error.message !== "LOGIN_REQUIRED" && count < 2,
   });
 }
 
@@ -32,7 +32,7 @@ export function useTables() {
   return useQuery({
     queryKey: ["tables"],
     queryFn: fetchTables,
-    retry: (count, error: any) => error.message !== "LOGIN_REQUIRED" && count < 2,
+    retry: (count, error) => error.message !== "LOGIN_REQUIRED" && count < 2,
   });
 }
 

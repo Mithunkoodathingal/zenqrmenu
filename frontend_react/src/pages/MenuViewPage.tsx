@@ -189,73 +189,67 @@ const MenuViewPage = () => {
     .sort((a, b) => a - b)
     .join(",");
 
+  useEffect(() => {
+    if (!tableId || !inFlightIdsKey) return;
+    const ids = inFlightIdsKey.split(",").map((id) => Number(id)).filter(Number.isFinite);
+    if (ids.length === 0) return;
 
+    let cancelled = false;
 
-    
-useEffect(() => {
-  if (!tableId || !inFlightIdsKey) return;
+    const poll = async () => {
+      try {
+        const updates = await Promise.all(ids.map((id) => fetchPublicOrder(id)));
+        if (cancelled) return;
+        console.log("[MenuView] poll updates:", updates.map((u) => u && { id: u.id, status: u.status }));
+        const updatesById = new Map(
+          updates
+            .filter((update): update is Order => Boolean(update?.id))
+            .map((update) => [Number(update.id), normalizeClientOrder(update)])
+        );
 
-  const ids = inFlightIdsKey
-    .split(",")
-    .map((id) => Number(id))
-    .filter((id) => Number.isFinite(id));
+        setActiveOrders((prev) => {
+          let hasChanged = false;
 
-  if (ids.length === 0) return;
+          const nextOrders = prev.map((order) => {
+            const currentOrder = normalizeClientOrder(order);
+            const match = updatesById.get(Number(currentOrder.id));
+            if (!match) return currentOrder;
 
-  let cancelled = false;
+            const nextOrder = mergeOrderUpdate(currentOrder, match);
+            const orderChanged =
+              nextOrder.status !== currentOrder.status ||
+              nextOrder.total_price !== currentOrder.total_price ||
+              nextOrder.table !== currentOrder.table ||
+              nextOrder.table_number !== currentOrder.table_number ||
+              nextOrder.customer_name !== currentOrder.customer_name ||
+              nextOrder.customer_phone !== currentOrder.customer_phone ||
+              nextOrder.items.length !== currentOrder.items.length;
 
-  const poll = async () => {
-    try {
-      const updates = await Promise.all(
-        ids.map((id) => fetchPublicOrder(id))
-      );
+            if (orderChanged) {
+              hasChanged = true;
+              console.log(`[MenuView] order #${currentOrder.id} status: ${currentOrder.status} -> ${nextOrder.status}`);
+              return nextOrder;
+            }
 
-      if (cancelled) return;
+            return currentOrder;
+          });
 
-      console.log(
-        "[MenuView] poll updates:",
-        updates.map((u) => u && { id: u.id, status: u.status })
-      );
-
-      const updatesById = new Map(
-        updates
-          .filter((update): update is Order => Boolean(update?.id))
-          .map((update) => [
-            Number(update.id),
-            normalizeClientOrder(update),
-          ])
-      );
-
-      setActiveOrders((prev) => {
-        return prev.map((order) => {
-          const match = updatesById.get(Number(order.id));
-          if (!match) return order;
-
-          return {
-            ...order,
-            ...match,
-          };
+          return hasChanged ? [...nextOrders] : prev;
         });
-      });
+      } catch (err) {
+        console.warn("[MenuView] poll failed:", err);
+      }
+    };
 
-    } catch (err) {
-      console.warn("[MenuView] poll failed:", err);
-    }
-  };
+    // Fire immediately, then every 4s.
+    poll();
+    const interval = setInterval(poll, 4000);
 
-  // 🔥 Run immediately
-  poll();
-
-  // 🔁 Then poll every 4 seconds
-  const interval = setInterval(poll, 4000);
-
-  // 🧹 Cleanup
-  return () => {
-    cancelled = true;
-    clearInterval(interval);
-  };
-
-}, [tableId, inFlightIdsKey]);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [tableId, inFlightIdsKey]);
 
   const dismissOrder = (orderId: number) => {
     setActiveOrders((prev) => prev.filter((o) => o.id !== orderId));

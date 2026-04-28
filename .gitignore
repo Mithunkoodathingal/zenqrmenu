@@ -4,10 +4,9 @@
 secrets.json
 .history
 
-
 # Django file uploads & runtime
 /media/
-/staticfiles/
+staticfiles/
 
 
 # IDE/editor
@@ -18,3 +17,7 @@ __pycache__/
 
 # local sqlite (if used)
 db.sqlite3
+
+# frontend
+
+frontend_react/

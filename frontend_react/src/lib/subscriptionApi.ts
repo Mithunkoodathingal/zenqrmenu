@@ -11,7 +11,7 @@ export interface SubscriptionStatus {
 }
 
 export async function fetchSubscriptionStatus(): Promise<SubscriptionStatus> {
-  const res = await fetch(`${BASE_URL}/subscription/api/subscription/`, {
+  const res = await fetch(`${BASE_URL}/menu/api/subscription/`, {
     headers: { Accept: "application/json", ...authHeaders() },
     credentials: "include",
   });

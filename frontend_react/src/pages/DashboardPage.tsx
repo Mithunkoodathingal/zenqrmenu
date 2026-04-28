@@ -11,13 +11,11 @@ import OrdersManager from "@/components/dashboard/OrdersManager";
 import QRManager from "@/components/dashboard/QRManager";
 import RestaurantSettings from "@/components/dashboard/RestaurantSettings";
 import OnboardingWizard from "@/components/dashboard/OnboardingWizard";
-import { getStoredUser, getToken, setStoredUser, clearStoredUser, clearToken, authFetch } from "@/lib/auth";
+import { getStoredUser, getToken, setStoredUser, clearStoredUser, clearToken } from "@/lib/auth";
 import { apiGetUser, apiLogout } from "@/lib/api";
 import { fetchOrders } from "@/lib/orderApi";
 import { clearStoredSubscriptionStatus, hasActivePaidSubscription, useSubscription } from "@/hooks/useSubscription";
 import { useRestaurantProfile } from "@/hooks/useRestaurantData";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.zenqrmenu.com";
 
 const PlanBadge = () => {
   const { data: subscription } = useSubscription();
@@ -76,99 +74,61 @@ const DashboardPage = () => {
   const { data: subscription, isLoading: isLoadingSubscription } = useSubscription();
 
   // Determine onboarding step
-// ================= ONBOARDING LOGIC =================
+  // User needs to pick a plan if: no subscription, inactive, free, or auto-assigned with 0 table limit
+  const needsPlanSelection = !isLoadingSubscription && (
+    !subscription?.is_active ||
+    !subscription?.plan ||
+    subscription.plan === "free" ||
+    subscription.table_limit === 0
+  );
+  const needsRestaurantSetup = !isLoadingProfile && restaurantProfile && !restaurantProfile.name;
+  const onboardingStep: 0 | 1 | 2 = needsPlanSelection ? 1 : needsRestaurantSetup ? 2 : 0;
 
-// ⛔ Wait until BOTH APIs are loaded
-const isReady = !isLoadingProfile && !isLoadingSubscription;
+  // Restore auth from local storage or backend session on refresh
+  useEffect(() => {
+    let cancelled = false;
 
-// ✅ FIX: correct data shape
-const restaurant = restaurantProfile;
+    const restoreSession = async () => {
+      const storedUser = getStoredUser();
+      const token = getToken();
 
-// 🚨 Step 1: No restaurant → MUST go to wizard
-const needsRestaurantSetup =
-  isReady &&
-  (!restaurant || !restaurant.name);
+      if (storedUser && token) return;
 
-// 🚨 Step 2: Has restaurant but no valid plan
-const needsPlanSelection =
-  isReady &&
-  restaurant &&
-  (!subscription || subscription.plan === "Free");
+      try {
+        const res = await apiGetUser();
+        if (cancelled) return;
 
-// 🎯 Final step
-const onboardingStep: 0 | 1 | 2 =
-  needsRestaurantSetup ? 1 :
-  needsPlanSelection ? 2 :
-  0;
+        if (res.authenticated) {
+          if (res.user) {
+            const currentUser = getStoredUser();
+            const currentKey = currentUser?.email || currentUser?.username || "";
+            const nextKey = res.user.email || res.user.username || "";
 
-console.log("STEP:", onboardingStep);
-console.log("Restaurant:", restaurant);
-console.log("Subscription:", subscription);
+            if (currentKey && nextKey && currentKey !== nextKey) {
+              clearStoredSubscriptionStatus();
+            }
 
-
-// ================= AUTH RESTORE =================
-
-useEffect(() => {
-  let cancelled = false;
-
-  const restoreSession = async () => {
-    const storedUser = getStoredUser();
-    const token = getToken();
-
-    try {
-      // ✅ Always validate session from backend
-      const res = await apiGetUser();
-      if (cancelled) return;
-
-      if (res && res.user) {
-        const currentUser = getStoredUser();
-
-        const currentKey =
-          currentUser?.email || currentUser?.username || "";
-
-        const nextKey =
-          res.user.email || res.user.username || "";
-
-        // 🔥 Reset subscription cache if user changed
-        if (currentKey && nextKey && currentKey !== nextKey) {
-          clearStoredSubscriptionStatus();
-        }
-
-        setStoredUser(res.user);
-      } else {
-        // ❌ Not authenticated
-        if (!storedUser || !token) {
-          navigate("/login", { replace: true });
+            setStoredUser(res.user);
+          }
           return;
         }
+
+        if (!storedUser && !token) {
+          navigate("/login", { replace: true });
+        }
+      } catch {
+        if (!cancelled && !storedUser && !token) {
+          navigate("/login", { replace: true });
+        }
       }
+    };
 
-      // ✅ Fetch menu data (safe)
-      const [catRes, itemRes] = await Promise.all([
-        authFetch(`${BASE_URL}/menu/api/categories/`),
-        authFetch(`${BASE_URL}/menu/api/items/`)
-      ]);
+    restoreSession();
 
-      if (!catRes.ok || !itemRes.ok) {
-        console.warn("Menu API failed", catRes.status, itemRes.status);
-      }
-
-    } catch (err) {
-      console.warn("Session restore failed:", err);
-
-      if (!cancelled) {
-        navigate("/login", { replace: true });
-      }
-    }
-  };
-
-  restoreSession();
-
-  return () => {
-    cancelled = true;
-  };
-}, [navigate]);
-
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
 
   // Fetch pending order count on mount & poll
   useEffect(() => {
@@ -206,14 +166,7 @@ useEffect(() => {
   };
 
   const storedUser = getStoredUser();
-
-  console.log("Stored User:", storedUser); //=============================<<< ERROR LOGGING IN CONSOLE =========
-
-  const accountLabel =
-    storedUser?.username?.trim() ||
-    storedUser?.email?.split("@")[0] ||
-    "User";
-    
+  const accountLabel = storedUser?.email || storedUser?.username || "Account";
 
   const sidebarItems = [
     { key: "menu" as const, icon: Utensils, label: "Manage Menu" },
@@ -349,33 +302,34 @@ useEffect(() => {
 
       {/* Main */}
       <main className="flex-1 lg:ml-64 lg:p-8 p-4 pt-28 lg:pt-8 overflow-auto">
-      
-
-        {/* ⛔ WAIT until data is ready */}
-        {!isReady ? (
-          <div>Loading...</div>
+        {/* Show Restaurant Settings when navigated there during onboarding */}
+        {onboardingStep > 0 && activeTab === "restaurant" ? (
+          <RestaurantSettings onSavedFirstTime={() => setActiveTab("menu")} />
         ) : onboardingStep > 0 ? (
-
-          activeTab === "restaurant" ? (
-            <RestaurantSettings onSavedFirstTime={() => setActiveTab("menu")} />
-          ) : (
-            <OnboardingWizard
-              currentStep={onboardingStep as 1 | 2}
-              onGoToRestaurant={() => setActiveTab("restaurant")}
-            />
-          )
-
+          <OnboardingWizard
+            currentStep={onboardingStep as 1 | 2}
+            onGoToRestaurant={() => setActiveTab("restaurant")}
+          />
         ) : (
-
           <>
-            {activeTab === "menu" && <MenuManager />}
-            {activeTab === "orders" && <OrdersManager />}
+            {activeTab === "menu" && (
+              <MenuManager
+                onNavigateToRestaurant={() => setActiveTab("restaurant")}
+                onFirstItemCreated={() => setActiveTab("qr")}
+              />
+            )}
+
+            {activeTab === "orders" && <OrdersManager onPendingCountChange={setPendingOrderCount} />}
+
             {activeTab === "qr" && <QRManager />}
-            {activeTab === "restaurant" && <RestaurantSettings />}
+
+            {activeTab === "restaurant" && (
+              <RestaurantSettings onSavedFirstTime={() => setActiveTab("menu")} />
+            )}
+
             {activeTab === "analytics" && <AnalyticsDashboard />}
           </>
         )}
-
       </main>
     </div>
   );
