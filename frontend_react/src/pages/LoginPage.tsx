@@ -18,78 +18,44 @@ const LoginPage = () => {
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      setLoading(true);
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await apiLogin({ username, password });
 
-      try {
-        const res = await apiLogin({ username, password });
-
-        if (res.error === "Email not verified") {
-          navigate("/verify-email", { state: { email: res.email || "" } });
-          return;
-        }
-
-        if (res.error) {
-          toast({
-            title: "Login Failed",
-            description: res.error,
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // ✅ store tokens
-        const accessToken = res.access ?? res.token ?? res.access_token ?? res.jwt;
-        if (accessToken) setToken(accessToken);
-        if (res.refresh) setRefreshToken(res.refresh);
-
-        // ✅ get real user ONCE
-        // ✅ get user (handles Google + normal login)
-        console.log("LOGIN RESPONSE:", res);
-        console.log("TOKEN:", accessToken);
-
-        const user = res.user;
-
-        if (!user) {
-          toast({
-            title: "Error",
-            description: "User not returned from server",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-
-        if (!user || (!user.email && !user.username)) {
-          console.error("Invalid user response:", user);
-          toast({
-            title: "Error",
-            description: "Failed to fetch user data",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        clearStoredSubscriptionStatus();
-        setStoredUser(user);
-
-        toast({
-          title: "Welcome back!",
-          description: `Logged in as ${user.email || user.username}`,
-        });
-
-        navigate("/dashboard");
-
-      } catch {
-        toast({
-          title: "Error",
-          description: "Could not connect to server.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+      // Handle email not verified (403)
+      if (res.error === "Email not verified") {
+        navigate("/verify-email", { state: { email: res.email || "" } });
+        return;
       }
-    };
+
+      if (res.error) {
+        toast({ title: "Login Failed", description: res.error, variant: "destructive" });
+        return;
+      }
+
+      // Store tokens
+      const accessToken = res.access ?? res.token ?? res.access_token ?? res.jwt;
+      if (accessToken) setToken(accessToken);
+      if (res.refresh) setRefreshToken(res.refresh);
+
+      const user =
+        res.user ??
+        (await apiGetUser()
+          .then((session) => session.user)
+          .catch(() => undefined)) ??
+        { username, email: "" };
+
+      clearStoredSubscriptionStatus();
+      setStoredUser(user);
+      toast({ title: "Welcome back!", description: `Logged in as ${user.email || user.username}` });
+      navigate("/dashboard");
+    } catch {
+      toast({ title: "Error", description: "Could not connect to server.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen gradient-hero flex items-center justify-center p-4">

@@ -11,33 +11,17 @@ import OrdersManager from "@/components/dashboard/OrdersManager";
 import QRManager from "@/components/dashboard/QRManager";
 import RestaurantSettings from "@/components/dashboard/RestaurantSettings";
 import OnboardingWizard from "@/components/dashboard/OnboardingWizard";
-import { getStoredUser, getToken, setStoredUser, clearStoredUser, clearToken } from "@/lib/auth";
+import { getStoredUser, getToken, setStoredUser, clearStoredUser, clearToken, authFetch } from "@/lib/auth";
 import { apiGetUser, apiLogout } from "@/lib/api";
 import { fetchOrders } from "@/lib/orderApi";
 import { clearStoredSubscriptionStatus, hasActivePaidSubscription, useSubscription } from "@/hooks/useSubscription";
 import { useRestaurantProfile } from "@/hooks/useRestaurantData";
-import { authFetch } from "@/lib/auth";
 
-
-// 👇 ADD HERE
-
-type ApiUserResponse = {
-  user?: {
-    email: string;
-    username: string;
-  };
-  email?: string;
-  username?: string;
-};
-
-function extractUser(res: ApiUserResponse) {
-  return res.user ? res.user : res;
-}
-
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.zenqrmenu.com";
 
 const PlanBadge = () => {
   const { data: subscription } = useSubscription();
-  const planName = subscription?.plan || "Free";
+  const planName = subscription?.plan || "free";
   const isActive = hasActivePaidSubscription(subscription);
   const displayName = planName.charAt(0).toUpperCase() + planName.slice(1);
 
@@ -91,144 +75,99 @@ const DashboardPage = () => {
   const { data: restaurantProfile, isLoading: isLoadingProfile } = useRestaurantProfile();
   const { data: subscription, isLoading: isLoadingSubscription } = useSubscription();
 
-  const [categories, setCategories] = useState([]);
-  const [items, setItems] = useState([]);
-  const [menuLoaded, setMenuLoaded] = useState(false);
-
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.zenqrmenu.com";
-
   // Determine onboarding step
-  // ================= ONBOARDING LOGIC =================
+// ================= ONBOARDING LOGIC =================
 
-  // ⛔ Wait until BOTH APIs are loaded
-  // WAIT until data loads
-  const isReady = !isLoadingProfile && !isLoadingSubscription;
+// ⛔ Wait until BOTH APIs are loaded
+const isReady = !isLoadingProfile && !isLoadingSubscription;
 
-  // 🚨 Step 1: No restaurant → MUST go to wizard
-  const restaurant = restaurantProfile?.restaurant;
+// ✅ FIX: correct data shape
+const restaurant = restaurantProfile;
 
-  const needsRestaurantSetup =
-    isReady &&
-    (!restaurant || !restaurant.name);
+// 🚨 Step 1: No restaurant → MUST go to wizard
+const needsRestaurantSetup =
+  isReady &&
+  (!restaurant || !restaurant.name);
 
-  const needsPlanSelection =
-    isReady &&
-    restaurant &&
-    (!subscription || subscription.plan === "Free");
+// 🚨 Step 2: Has restaurant but no valid plan
+const needsPlanSelection =
+  isReady &&
+  restaurant &&
+  (!subscription || subscription.plan === "Free");
 
-  const onboardingStep: 0 | 1 | 2 =
-    needsRestaurantSetup ? 1 :
-    needsPlanSelection ? 2 :
-    0;
+// 🎯 Final step
+const onboardingStep: 0 | 1 | 2 =
+  needsRestaurantSetup ? 1 :
+  needsPlanSelection ? 2 :
+  0;
 
-
-  console.log("STEP:", onboardingStep);
-  console.log("Restaurant:", restaurantProfile);
-  console.log("Subscription:", subscription);
+console.log("STEP:", onboardingStep);
+console.log("Restaurant:", restaurant);
+console.log("Subscription:", subscription);
 
 
 // ================= AUTH RESTORE =================
 
+useEffect(() => {
+  let cancelled = false;
 
-  useEffect(() => {
-    if (!restaurantProfile?.id || menuLoaded) return;
+  const restoreSession = async () => {
+    const storedUser = getStoredUser();
+    const token = getToken();
 
-    const loadMenu = async () => {
-      try {
-        // ✅ 1. Try cache first
-        const cachedMenu = localStorage.getItem("menu_cache");
+    try {
+      // ✅ Always validate session from backend
+      const res = await apiGetUser();
+      if (cancelled) return;
 
-        if (cachedMenu) {
-          const parsed = JSON.parse(cachedMenu);
-          setCategories(parsed.categories || []);
-          setItems(parsed.items || []);
-          setMenuLoaded(true);
-          return;
+      if (res && res.user) {
+        const currentUser = getStoredUser();
+
+        const currentKey =
+          currentUser?.email || currentUser?.username || "";
+
+        const nextKey =
+          res.user.email || res.user.username || "";
+
+        // 🔥 Reset subscription cache if user changed
+        if (currentKey && nextKey && currentKey !== nextKey) {
+          clearStoredSubscriptionStatus();
         }
 
-        // ✅ 2. Fetch from API
-        const [catRes, itemRes] = await Promise.all([
-          authFetch(`${BASE_URL}/menu/api/categories/`),
-          authFetch(`${BASE_URL}/menu/api/items/`)
-        ]);
-
-        if (!catRes.ok || !itemRes.ok) {
-          console.warn("Menu API failed", catRes.status, itemRes.status);
-          return;
-        }
-
-        const categoriesData = await catRes.json();
-        const itemsData = await itemRes.json();
-
-        setCategories(categoriesData || []);
-        setItems(itemsData || []);
-
-        // ✅ 3. Save cache HERE (correct scope)
-        localStorage.setItem(
-          "menu_cache",
-          JSON.stringify({
-            categories: categoriesData,
-            items: itemsData
-          })
-        );
-
-        setMenuLoaded(true);
-
-      } catch (err) {
-        console.warn("Menu load failed:", err);
-      }
-    };
-
-    loadMenu();
-  }, [restaurantProfile?.id, menuLoaded]);
-
-
-  useEffect(() => {
-      let cancelled = false;
-
-      const restoreSession = async () => {
-        const storedUser = getStoredUser();
-        const token = getToken();
-
-        // ✅ INSTANT UI (no waiting)
-        if (storedUser && token) return;
-
-        if (!token) {
+        setStoredUser(res.user);
+      } else {
+        // ❌ Not authenticated
+        if (!storedUser || !token) {
           navigate("/login", { replace: true });
           return;
         }
+      }
 
-        try {
-          const user = await apiGetUser();
+      // ✅ Fetch menu data (safe)
+      const [catRes, itemRes] = await Promise.all([
+        authFetch(`${BASE_URL}/menu/api/categories/`),
+        authFetch(`${BASE_URL}/menu/api/items/`)
+      ]);
 
-          if (cancelled) return;
+      if (!catRes.ok || !itemRes.ok) {
+        console.warn("Menu API failed", catRes.status, itemRes.status);
+      }
 
-          if (!user?.email && !user?.username) {
-            clearToken();
-            clearStoredUser();
-            navigate("/login", { replace: true });
-            return;
-          }
+    } catch (err) {
+      console.warn("Session restore failed:", err);
 
-          setStoredUser(user);
+      if (!cancelled) {
+        navigate("/login", { replace: true });
+      }
+    }
+  };
 
-        } catch (err) {
-          console.warn("Session restore failed:", err);
+  restoreSession();
 
-          if (!cancelled) {
-            clearToken();
-            clearStoredUser();
-            navigate("/login", { replace: true });
-          }
-        }
-      };
-
-      restoreSession();
-
-      return () => {
-        cancelled = true;
-      };
-    }, [navigate]);
+  return () => {
+    cancelled = true;
+  };
+}, [navigate]);
 
 
   // Fetch pending order count on mount & poll
@@ -345,7 +284,7 @@ const DashboardPage = () => {
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-foreground ring-2 ring-primary">
-              {accountLabel?.charAt(0)?.toUpperCase() || "Z"}
+              {(accountLabel[0] || "Z").toUpperCase()}
             </div>
             <span className="flex-1 text-left truncate">{accountLabel}</span>
             <ChevronUp className={`h-4 w-4 transition-transform shrink-0 ${showAccountMenu ? "rotate-180" : ""}`} />

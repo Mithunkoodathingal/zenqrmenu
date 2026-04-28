@@ -26,7 +26,7 @@ const fallbackPlans: Plan[] = [
     name: "Free",
     price: 0,
     period: "/month",
-    features: ["1 Restaurant", "Unlimited items", "1 QR code", "Basic analytics"],
+    features: ["1 Restaurant", "Up to 20 menu items", "5 QR codes", "Basic analytics"],
   },
   {
     id: "basic",

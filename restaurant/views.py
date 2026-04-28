@@ -42,7 +42,6 @@ from io import BytesIO
 from django.core.files import File
 from django.http import JsonResponse
 from subscription.utils import check_subscription_access, ensure_free_subscription
-from subscription.models import Subscription
 from django.contrib.auth.models import User
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
@@ -87,8 +86,9 @@ from .models import (
     AddOn,
 )
 
-
-GOOGLE_CLIENT_ID = "886773285585-fg35vj7ot1884qvkp64q9l7n8gst3tfn.apps.googleusercontent.com"
+from subscription.models import Subscription
+import traceback
+from allauth.account.models import EmailAddress
 
 logger = logging.getLogger(__name__)
 
@@ -2806,40 +2806,30 @@ def password_reset_confirm(request):
 
 
 
-
 @api_view(['POST'])
 def google_login(request):
     id_token_from_frontend = request.data.get("id_token")
 
     if not id_token_from_frontend:
-        return Response({"error": "No token provided"}, status=400)
+        return Response({"error": "No token"}, status=400)
 
     try:
         idinfo = id_token.verify_oauth2_token(
             id_token_from_frontend,
             google_requests.Request(),
-            GOOGLE_CLIENT_ID
+            "886773285585-fg35vj7ot1884qvkp64q9l7n8gst3tfn.apps.googleusercontent.com"
         )
 
-        email = idinfo.get('email')
+        email = idinfo['email']
 
-        if not email:
-            return Response({"error": "Email not available"}, status=400)
+        users = User.objects.filter(email=email)
 
-        user = User.objects.filter(email=email).first()
-
-        if not user:
-            base_username = email.split("@")[0]
-            username = base_username
-            counter = 1
-
-            while User.objects.filter(username=username).exists():
-                username = f"{base_username}{counter}"
-                counter += 1
-
+        if users.exists():
+            user = users.first()   # ✅ pick first user
+        else:
             user = User.objects.create(
                 email=email,
-                username=username
+                username=email.split("@")[0]
             )
 
         refresh = RefreshToken.for_user(user)
@@ -2847,20 +2837,10 @@ def google_login(request):
         return Response({
             "access": str(refresh.access_token),
             "refresh": str(refresh),
-            "user": {
-                "id": user.id,
-                "email": user.email,
-                "username": user.username,
-            }
         })
-
-    except ValueError:
-        return Response({"error": "Invalid Google token"}, status=400)
 
     except Exception as e:
         return Response({"error": str(e)}, status=400)
-    
-        
     
 
 @api_view(['GET'])

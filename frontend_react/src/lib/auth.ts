@@ -4,11 +4,6 @@ const ACCESS_KEY = "zen_access_token";
 const REFRESH_KEY = "zen_refresh_token";
 const USER_KEY = "zen_user";
 
-type StoredUser = {
-  email?: string;
-  username?: string;
-};
-
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.zenqrmenu.com";
 
 export function getToken(): string | null {
@@ -39,32 +34,22 @@ export function authHeaders(): Record<string, string> {
 }
 
 /** Persist user info across refreshes */
-
-//*======================NEWLY UPDATED =============================================
-
-export const getStoredUser = (): StoredUser | null => {
+export function getStoredUser(): { username: string; email: string } | null {
   try {
-    const user = localStorage.getItem(USER_KEY);
-    return user ? JSON.parse(user) : null;
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
-};
+}
 
-export const setStoredUser = (user: StoredUser): void => {
-  if (!user?.email && !user?.username) {
-    console.warn("❌ Prevented storing invalid user:", user);
-    return;
-  }
+export function setStoredUser(user: { username: string; email: string }): void {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
 
-  localStorage.setItem("zen_user", JSON.stringify(user));
-};
-
-export const clearStoredUser = (): void => {
+export function clearStoredUser(): void {
   localStorage.removeItem(USER_KEY);
-};
-//*=====================================================================================
-
+}
 
 /** Refresh the access token using the refresh token */
 export async function refreshAccessToken(): Promise<boolean> {
@@ -114,4 +99,3 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
   console.log("API CALL:", url);
   return res;
 }
-

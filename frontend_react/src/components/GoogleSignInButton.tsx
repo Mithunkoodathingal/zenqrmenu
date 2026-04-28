@@ -7,6 +7,7 @@ import { clearStoredSubscriptionStatus } from "@/hooks/useSubscription";
 import { Loader2 } from "lucide-react";
 
 const GOOGLE_CLIENT_ID = "886773285585-fg35vj7ot1884qvkp64q9l7n8gst3tfn.apps.googleusercontent.com";
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.zenqrmenu.com";
 
 declare global {
@@ -30,7 +31,6 @@ export default function GoogleSignInButton() {
   const handleCredentialResponse = useCallback(
     async (response: { credential: string }) => {
       setLoading(true);
-
       try {
         const res = await fetch(`${BASE_URL}/api/auth/google/`, {
           method: "POST",
@@ -38,50 +38,37 @@ export default function GoogleSignInButton() {
           body: JSON.stringify({ id_token: response.credential }),
         });
 
-        const data = await res.json();
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          throw new Error("Invalid response from server");
+        }
 
-        console.log("GOOGLE RESPONSE:", data);//=============================DEBUG===
+        const data = await res.json();
 
         if (!res.ok) {
           throw new Error(data.error || data.detail || "Google login failed");
         }
 
         // ✅ Store tokens
-        
-        localStorage.setItem("access", data.access);
-        localStorage.setItem("refresh", data.refresh);
-
         const accessToken = data.access;
           if (accessToken) setToken(accessToken);
           if (data.refresh) setRefreshToken(data.refresh);
 
-          // ✅ NO EXTRA apiGetUser CALL NEEDED
-          const user = data.user;
+        const user =
+          data.user ??
+          (await apiGetUser()
+            .then((session) => session.user)
+            .catch(() => undefined)) ??
+          { username: data.email || "User", email: data.email || "" };
 
-          if (!user) {
-            throw new Error("User not returned from server");
-          }
+        clearStoredSubscriptionStatus();
+        setStoredUser(user);
 
-          clearStoredSubscriptionStatus();
-          setStoredUser(user);
-
-          toast({
-            title: "Welcome!",
-            description: `Signed in as ${user.email || user.username}`,
-          });
-
-          navigate("/dashboard");
-
+        toast({ title: "Welcome!", description: `Signed in as ${user.email || user.username}` });
+        navigate("/dashboard");
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Google sign-in failed";
-
-        toast({
-          title: "Error",
-          description: message,
-          variant: "destructive",
-        });
-
+        const message = err instanceof Error ? err.message : "Google sign-in failed";
+        toast({ title: "Error", description: message, variant: "destructive" });
       } finally {
         setLoading(false);
       }
