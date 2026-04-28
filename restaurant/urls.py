@@ -117,6 +117,7 @@ urlpatterns = [
 
     path('api/auth/login/', api_login),
     path('api/auth/refresh/', TokenRefreshView.as_view()),
+    path('api/auth/logout/', api_logout),
 
 
 
