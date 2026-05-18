@@ -29,8 +29,8 @@ urlpatterns = [
     path('terms-and-conditions/', terms_conditions, name='terms_conditions'),
 
     # ================= DASHBOARD =================
-    # path('dashboard/', dashboard, name='dashboard'),
-    # path('manage-menu/', manage_menu, name='manage_menu'),
+    path('dashboard/', dashboard, name='dashboard'),
+    path('manage-menu/', manage_menu, name='manage_menu'),
     path('menu-preview/', menu_preview, name='menu_preview'),
     path('ajax/toggle-item-availability/', toggle_item_availability, name='toggle_item_availability'),
 

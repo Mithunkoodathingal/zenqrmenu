@@ -49,9 +49,9 @@ CSRF_TRUSTED_ORIGINS = [
 
 
 # When behind a reverse proxy (Heroku, AWS ALB, etc.), enable:
-USE_X_FORWARDED_HOST = config('USE_X_FORWARDED_HOST', default=False, cast=bool)
-if USE_X_FORWARDED_HOST:
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# USE_X_FORWARDED_HOST = config('USE_X_FORWARDED_HOST', default=False, cast=bool)
+# if USE_X_FORWARDED_HOST:
+#     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Trusted origins for CSRF (comma-separated), used for secure cookie handling + POSTs from frontends.
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
@@ -484,9 +484,9 @@ RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET', default='')
 # Security related flags (production defaults)
 # -------------------------
 # Encourage HTTPS in production. You can override via .env
-SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=not DEBUG, cast=bool)
-SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=(not DEBUG), cast=bool)
-CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=(not DEBUG), cast=bool)
+SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=(False), cast=bool)
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=(False), cast=bool)
 
 # HSTS - set to a reasonable default. If enabling, ensure SSL is fully working.
 SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=31536000, cast=int)  # 1 year
@@ -568,11 +568,11 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 
-SESSION_COOKIE_SAMESITE = "None"
-SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 
-CSRF_COOKIE_SAMESITE = "None"
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 
 # Optional: if you need file uploads to be served from a cloud storage (S3, etc.), configure here.
 

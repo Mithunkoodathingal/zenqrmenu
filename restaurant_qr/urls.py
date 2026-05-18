@@ -19,7 +19,7 @@ from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from django.urls import path, include
 from django.conf import settings
-from restaurant.views import MySignupView, login_view, CustomLogoutView, signup_thankyou
+# from restaurant.views import MySignupView, login_view, CustomLogoutView, signup_thankyou
 
 urlpatterns = [
     path('admin/', admin.site.urls),

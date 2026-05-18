@@ -681,121 +681,121 @@ class FoodItemDeleteView(LoginRequiredMixin, DeleteView):
 # -----------------------
 # Dashboard / menu
 # -----------------------
-# @login_required
-# def dashboard(request):
-#     """
-#     Dashboard shows subscription summary and scannable QR tiles.
-#     """
-#     try:
-#         restaurant = request.user.restaurant
-#     except Restaurant.DoesNotExist:
-#         return render(request, 'restaurant/create_restaurant.html')
+@login_required
+def dashboard(request):
+    """
+    Dashboard shows subscription summary and scannable QR tiles.
+    """
+    try:
+        restaurant = request.user.restaurant
+    except Restaurant.DoesNotExist:
+        return render(request, 'restaurant/create_restaurant.html')
 
-#     subscription = None
-#     subscription_active = False
-#     # allowed_table_limit = 0
-#     allowed_table_ids = []
+    subscription = None
+    subscription_active = False
+    # allowed_table_limit = 0
+    allowed_table_ids = []
 
-#     try:
-#         subscription = restaurant.subscription
-#         if subscription and subscription.has_active_subscription():
-#             subscription_active = True
-#             # allowed_table_limit = subscription.plan.table_limit if subscription.plan else 0
-#             # first N tables by id are allowed
-#             allowed_table_ids = list(
-#                 Table.objects.filter(restaurant=restaurant)
-#                 # .order_by('id')[:allowed_table_limit]
-#                 .values_list('id', flat=True)
-#             )
-#     except Subscription.DoesNotExist:
-#         subscription = None
+    try:
+        subscription = restaurant.subscription
+        if subscription and subscription.has_active_subscription():
+            subscription_active = True
+            # allowed_table_limit = subscription.plan.table_limit if subscription.plan else 0
+            # first N tables by id are allowed
+            allowed_table_ids = list(
+                Table.objects.filter(restaurant=restaurant)
+                # .order_by('id')[:allowed_table_limit]
+                .values_list('id', flat=True)
+            )
+    except Subscription.DoesNotExist:
+        subscription = None
 
-#     # All tables for the restaurant
-#     tables_qs = Table.objects.filter(restaurant=restaurant).order_by('id')
-#     tables = []
-#     scannable_tables = []
-#     for t in tables_qs:
-#         t.is_scannable = (t.id in allowed_table_ids) and subscription_active
-#         tables.append(t)
-#         if t.is_scannable:
-#             scannable_tables.append(t)
+    # All tables for the restaurant
+    tables_qs = Table.objects.filter(restaurant=restaurant).order_by('id')
+    tables = []
+    scannable_tables = []
+    for t in tables_qs:
+        t.is_scannable = (t.id in allowed_table_ids) and subscription_active
+        tables.append(t)
+        if t.is_scannable:
+            scannable_tables.append(t)
 
-#     total_tables_created = tables_qs.count()
-#     scannable_count = len(scannable_tables)
-#     remaining_slots = max((allowed_table_limit - total_tables_created), 0) if subscription_active else 0
+    total_tables_created = tables_qs.count()
+    scannable_count = len(scannable_tables)
+    remaining_slots = max((allowed_table_limit - total_tables_created), 0) if subscription_active else 0
 
-#     categories = Category.objects.filter(restaurant=restaurant)
+    categories = Category.objects.filter(restaurant=restaurant)
 
-#     context = {
-#         'restaurant': restaurant,
-#         'tables': tables,
-#         'scannable_tables': scannable_tables,      # <-- added
-#         'categories': categories,
-#         'subscription': subscription,
-#         'subscription_active': subscription_active,
-#         'allowed_table_limit': allowed_table_limit,
-#         'total_tables_created': total_tables_created,
-#         'scannable_count': scannable_count,
-#         'remaining_slots': remaining_slots,
-#     }
-#     return render(request, 'restaurant/dashboard.html', context)
+    context = {
+        'restaurant': restaurant,
+        'tables': tables,
+        'scannable_tables': scannable_tables,      # <-- added
+        'categories': categories,
+        'subscription': subscription,
+        'subscription_active': subscription_active,
+        'allowed_table_limit': allowed_table_limit,
+        'total_tables_created': total_tables_created,
+        'scannable_count': scannable_count,
+        'remaining_slots': remaining_slots,
+    }
+    return render(request, 'restaurant/dashboard.html', context)
 
 
 # Add near the other views in restaurant/views.py
 
-# @login_required
-# def manage_menu(request):
-#     """
-#     Render the Manage Menu page: categories, items, tables list (with scannable badges).
-#     NOTE: This intentionally does NOT include the subscription summary (dashboard shows that).
-#     """
-#     try:
-#         restaurant = request.user.restaurant
-#     except Restaurant.DoesNotExist:
-#         return render(request, 'restaurant/create_restaurant.html')
+@login_required
+def manage_menu(request):
+    """
+    Render the Manage Menu page: categories, items, tables list (with scannable badges).
+    NOTE: This intentionally does NOT include the subscription summary (dashboard shows that).
+    """
+    try:
+        restaurant = request.user.restaurant
+    except Restaurant.DoesNotExist:
+        return render(request, 'restaurant/create_restaurant.html')
 
-#     # determine subscription + allowed table ids (same logic as dashboard)
-#     subscription = None
-#     subscription_active = False
-#     allowed_table_limit = 0
-#     allowed_table_ids = []
-#     try:
-#         subscription = restaurant.subscription
-#         if subscription and subscription.has_active_subscription():
-#             subscription_active = True
-#             allowed_table_limit = subscription.plan.table_limit if subscription.plan else 0
-#             allowed_table_ids = list(
-#                 Table.objects.filter(restaurant=restaurant).order_by('id')[:allowed_table_limit]
-#                 .values_list('id', flat=True)
-#             )
-#     except Subscription.DoesNotExist:
-#         subscription = None
+    # determine subscription + allowed table ids (same logic as dashboard)
+    subscription = None
+    subscription_active = False
+    allowed_table_limit = 0
+    allowed_table_ids = []
+    try:
+        subscription = restaurant.subscription
+        if subscription and subscription.has_active_subscription():
+            subscription_active = True
+            allowed_table_limit = subscription.plan.table_limit if subscription.plan else 0
+            allowed_table_ids = list(
+                Table.objects.filter(restaurant=restaurant).order_by('id')[:allowed_table_limit]
+                .values_list('id', flat=True)
+            )
+    except Subscription.DoesNotExist:
+        subscription = None
 
-#     # Tables annotated with is_scannable
-#     tables_qs = Table.objects.filter(restaurant=restaurant).order_by('id')
-#     tables = []
-#     for t in tables_qs:
-#         t.is_scannable = (t.id in allowed_table_ids) and subscription_active
-#         tables.append(t)
+    # Tables annotated with is_scannable
+    tables_qs = Table.objects.filter(restaurant=restaurant).order_by('id')
+    tables = []
+    for t in tables_qs:
+        t.is_scannable = (t.id in allowed_table_ids) and subscription_active
+        tables.append(t)
 
-#     total_tables_created = tables_qs.count()
-#     scannable_count = sum(1 for t in tables if t.is_scannable)
-#     remaining_slots = max((allowed_table_limit - total_tables_created), 0) if subscription_active else 0
+    total_tables_created = tables_qs.count()
+    scannable_count = sum(1 for t in tables if t.is_scannable)
+    remaining_slots = max((allowed_table_limit - total_tables_created), 0) if subscription_active else 0
 
-#     categories = Category.objects.filter(restaurant=restaurant)
+    categories = Category.objects.filter(restaurant=restaurant)
 
-#     context = {
-#         'restaurant': restaurant,
-#         'tables': tables,
-#         'categories': categories,
-#         'subscription': subscription,
-#         'subscription_active': subscription_active,
-#         'allowed_table_limit': allowed_table_limit,
-#         'total_tables_created': total_tables_created,
-#         'scannable_count': scannable_count,
-#         'remaining_slots': remaining_slots,
-#     }
-    # return render(request, 'restaurant/manage_menu.html', context)
+    context = {
+        'restaurant': restaurant,
+        'tables': tables,
+        'categories': categories,
+        'subscription': subscription,
+        'subscription_active': subscription_active,
+        'allowed_table_limit': allowed_table_limit,
+        'total_tables_created': total_tables_created,
+        'scannable_count': scannable_count,
+        'remaining_slots': remaining_slots,
+    }
+    return render(request, 'restaurant/manage_menu.html', context)
 
 
 @login_required
@@ -2176,6 +2176,8 @@ def menu_items_api(request):
                 "restaurant": restaurant.id,
             }
         }, status=403)
+    
+        # return JsonResponse({"success": False, "error": result}, status=403)
 
     plan = result
 
@@ -2363,6 +2365,8 @@ def create_table_api(request):
                     "restaurant": restaurant.id,
                 }
             }, status=403)
+        
+            # return JsonResponse({"success": False, "error": result}, status=403)
 
         # ✅ Get current count
         table_count = Table.objects.filter(restaurant=restaurant).count()
