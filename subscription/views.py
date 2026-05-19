@@ -530,18 +530,16 @@ def api_create_subscription(request):
         if plan.price == 0:
 
             # deactivate old subscriptions
-            Subscription.objects.filter(
-                restaurant=restaurant
-            ).update(is_active=False)
-
-            subscription = Subscription.objects.create(
-                user=user,
+            subscription, created = Subscription.objects.update_or_create(
                 restaurant=restaurant,
-                plan=plan,
-                start_date=timezone.now(),
-                end_date=timezone.now() + timedelta(days=30),
-                is_active=True,
-                was_free_trial=True
+                defaults={
+                    "user": user,
+                    "plan": plan,
+                    "start_date": timezone.now(),
+                    "end_date": timezone.now() + timedelta(days=30),
+                    "is_active": True,
+                    "was_free_trial": True if plan.price == 0 else False,
+                }
             )
 
             return Response({
@@ -564,19 +562,16 @@ def api_create_subscription(request):
         })
 
         # deactivate old subscriptions
-        Subscription.objects.filter(
-            restaurant=restaurant
-        ).update(is_active=False)
-
-        # create pending subscription
-        subscription = Subscription.objects.create(
-            user=user,
+        subscription, created = Subscription.objects.update_or_create(
             restaurant=restaurant,
-            plan=plan,
-            start_date=timezone.now(),
-            end_date=timezone.now() + timedelta(days=30),
-            is_active=False,
-            was_free_trial=False
+            defaults={
+                "user": user,
+                "plan": plan,
+                "start_date": timezone.now(),
+                "end_date": timezone.now() + timedelta(days=30),
+                "is_active": False,
+                "was_free_trial": False,
+            }
         )
 
         # ================= PAYMENT TRANSACTION =================
