@@ -1,7 +1,8 @@
 # subscription/utils.py
 
-from django.utils import timezone
 from datetime import timedelta
+
+from django.utils import timezone
 
 from subscription.models import Subscription, SubscriptionPlan
 from restaurant.models import Restaurant
@@ -9,11 +10,9 @@ from restaurant.models import Restaurant
 
 def ensure_free_subscription(user, restaurant):
     """
-    Ensure the restaurant has a valid free subscription.
-    Creates one if missing.
+    Ensure restaurant always has a valid free subscription.
     """
 
-    # Get free plan
     free_plan = (
         SubscriptionPlan.objects.filter(price=0).first()
         or SubscriptionPlan.objects.filter(name__iexact="Free").first()
@@ -22,44 +21,47 @@ def ensure_free_subscription(user, restaurant):
     if not free_plan:
         raise Exception("Free subscription plan not configured")
 
-    # Get or create subscription
-    subscription, created = Subscription.objects.get_or_create(
+    # Remove broken subscriptions
+    Subscription.objects.filter(
         user=user,
+        restaurant=restaurant,
+        plan__isnull=True
+    ).delete()
+
+    subscription, created = Subscription.objects.update_or_create(
+        user=user,
+        restaurant=restaurant,
         defaults={
-            "restaurant": restaurant,
             "plan": free_plan,
             "start_date": timezone.now(),
             "end_date": timezone.now() + timedelta(days=free_plan.duration_days),
             "is_active": True,
             "was_free_trial": True,
+            "is_cancelled": False,
         }
     )
 
-    # Fix restaurant link if missing/wrong
-    if subscription.restaurant != restaurant:
-        subscription.restaurant = restaurant
-
-    # Ensure plan exists
-    if not subscription.plan:
-        subscription.plan = free_plan
-
-    # Ensure dates exist
+    # Ensure valid dates
     if not subscription.start_date:
         subscription.start_date = timezone.now()
 
     if not subscription.end_date:
         subscription.end_date = (
             subscription.start_date +
-            timedelta(days=subscription.plan.duration_days)
+            timedelta(days=free_plan.duration_days)
         )
 
-    # Ensure active
+    # Ensure plan exists
+    if not subscription.plan:
+        subscription.plan = free_plan
+
+    # Activate/deactivate properly
     if subscription.end_date >= timezone.now():
         subscription.is_active = True
     else:
         subscription.is_active = False
 
-    # Mark free trial
+    # Free trial flag
     if subscription.plan.price == 0:
         subscription.was_free_trial = True
 
@@ -68,32 +70,47 @@ def ensure_free_subscription(user, restaurant):
     return subscription
 
 
-def check_subscription_access(restaurant):
+def get_active_subscription(restaurant):
     """
-    Check whether restaurant has valid active subscription.
-    Returns:
-        (True, plan)
-        OR
-        (False, error_message)
+    Get latest active valid subscription safely.
     """
 
-    subscription = (
+    return (
         Subscription.objects
         .filter(
-            restaurant=restaurant
+            restaurant=restaurant,
+            is_active=True,
+            end_date__gte=timezone.now(),
+            plan__isnull=False
         )
         .select_related("plan")
+        .order_by("-end_date")
         .first()
     )
 
+
+def check_subscription_access(restaurant):
+    """
+    Check whether restaurant has active subscription.
+    Returns:
+        (True, plan)
+        or
+        (False, message)
+    """
+
+    subscription = get_active_subscription(restaurant)
+
     if not subscription:
-        return False, "No subscription found"
+        return False, "No active subscription found"
+
+    if not subscription.plan:
+        return False, "Subscription has no plan"
 
     if not subscription.is_active:
         return False, "Subscription inactive"
 
     if not subscription.end_date:
-        return False, "Subscription has no expiry date"
+        return False, "Subscription missing expiry date"
 
     if subscription.end_date < timezone.now():
         subscription.is_active = False
@@ -103,33 +120,17 @@ def check_subscription_access(restaurant):
     return True, subscription.plan
 
 
-def get_active_subscription(restaurant):
-    """
-    Helper to get active subscription object safely.
-    """
-
-    subscription = (
-        Subscription.objects
-        .filter(
-            restaurant=restaurant,
-            is_active=True,
-            end_date__gte=timezone.now()
-        )
-        .select_related("plan")
-        .first()
-    )
-
-    return subscription
-
-
 def can_create_table(restaurant):
     """
-    Check if restaurant can create more tables.
+    Check table limit.
     """
 
     subscription = get_active_subscription(restaurant)
 
     if not subscription:
+        return False
+
+    if not subscription.plan:
         return False
 
     return subscription.remaining_tables() > 0
@@ -157,3 +158,35 @@ def can_add_menu_item(restaurant):
     ).count()
 
     return current_items < plan.menu_item_limit
+
+
+def activate_subscription(user, restaurant, plan):
+    """
+    Activate paid/free subscription safely.
+    Prevent duplicate broken subscriptions.
+    """
+
+    # Delete broken subscriptions first
+    Subscription.objects.filter(
+        user=user,
+        restaurant=restaurant,
+        plan__isnull=True
+    ).delete()
+
+    start_date = timezone.now()
+    end_date = start_date + timedelta(days=plan.duration_days)
+
+    subscription, created = Subscription.objects.update_or_create(
+        user=user,
+        restaurant=restaurant,
+        defaults={
+            "plan": plan,
+            "start_date": start_date,
+            "end_date": end_date,
+            "is_active": True,
+            "was_free_trial": plan.price == 0,
+            "is_cancelled": False,
+        }
+    )
+
+    return subscription
