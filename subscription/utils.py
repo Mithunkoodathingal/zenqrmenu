@@ -3,7 +3,6 @@
 from datetime import timedelta
 from django.utils import timezone
 from subscription.models import Subscription, SubscriptionPlan
-from django.shortcuts import  redirect
 # from restaurant.models import Restaurant
 
 
@@ -70,26 +69,19 @@ def ensure_free_subscription(user, restaurant):
 
 
 def get_active_subscription(restaurant):
-    """
-    Get latest active valid subscription safely.
-    """
 
     return (
         Subscription.objects
         .filter(
             restaurant=restaurant,
             is_active=True,
-            end_date__gte=timezone.now(),
             plan__isnull=False
         )
         .select_related("plan")
-        .order_by("-end_date")
+        .order_by("-id")
         .first()
     )
 
-
-from django.utils import timezone
-from subscription.models import Subscription
 
 
 def check_subscription_access(restaurant):
@@ -130,8 +122,8 @@ def can_create_table(restaurant):
 
     subscription = get_active_subscription(restaurant)
 
-    if not has_active_subscription(restaurant):
-        return False
+    # if not has_active_subscription(restaurant):
+    #     return False
 
     if not subscription.plan:
         return False

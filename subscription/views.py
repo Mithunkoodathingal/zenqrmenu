@@ -23,6 +23,9 @@ from django.views.generic import DetailView
 from rest_framework.response import Response
 from rest_framework import status
 import razorpay
+from datetime import timedelta
+from django.conf import settings
+from restaurant.models import Restaurant
 from rest_framework.permissions import IsAuthenticated
 from .models import SubscriptionPlan, Subscription, PaymentTransaction
 from restaurant.models import Restaurant
@@ -444,73 +447,114 @@ def subscription_plans_api(request):
     return JsonResponse({"plans": data})
 
 
-
-
-import logging
-
-logger = logging.getLogger(__name__)
-
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def api_create_subscription(request):
+
     try:
         plan_id = request.data.get("plan_id")
 
         if not plan_id:
             return Response(
-                {"success": False, "error": "plan_id is required"},
+                {
+                    "success": False,
+                    "error": "plan_id is required"
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # ✅ VALIDATE PLAN
+        # ================= PLAN =================
+
         try:
             plan = SubscriptionPlan.objects.get(id=plan_id)
         except SubscriptionPlan.DoesNotExist:
             return Response(
-                {"success": False, "error": "Invalid plan"},
+                {
+                    "success": False,
+                    "error": "Invalid plan"
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         user = request.user
 
-        # 🔥 CRITICAL FIX: ALWAYS GET RESTAURANT
-        restaurant = Restaurant.objects.filter(owner=user).first()
+        # ================= RESTAURANT =================
+
+        restaurant = Restaurant.objects.filter(
+            owner=user
+        ).first()
 
         if not restaurant:
             return Response(
-                {"success": False, "error": "Create restaurant first"},
+                {
+                    "success": False,
+                    "error": "Create restaurant first"
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # 🔥 GET EXISTING SUBSCRIPTION (BY RESTAURANT)
-        subscription = (
-            Subscription.objects.filter(
+        # ================= EXISTING ACTIVE SUBSCRIPTION =================
+
+        active_subscription = (
+            Subscription.objects
+            .filter(
                 restaurant=restaurant,
                 is_active=True,
-                plan__isnull=False,
-                end_date__gte=timezone.now()
+                plan__isnull=False
             )
             .select_related("plan")
-            .order_by("-end_date")
+            .order_by("-id")
             .first()
-)
+        )
 
         # ================= PREVENT DOWNGRADE =================
-        if subscription and subscription.plan and subscription.plan.price > 0 and plan.price == 0:
+
+        if (
+            active_subscription and
+            active_subscription.plan and
+            active_subscription.plan.price > 0 and
+            plan.price == 0
+        ):
             return Response(
-                {"success": False, "error": "Cannot downgrade to free plan"},
+                {
+                    "success": False,
+                    "error": "Cannot downgrade to free plan"
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # ================= FREE PLAN =================
-        if not has_active_subscription(restaurant):
-            return Response(
-                {"error": "No active subscription"},
-                status=status.HTTP_403_FORBIDDEN
+        # =========================================================
+        # FREE PLAN
+        # =========================================================
+
+        if plan.price == 0:
+
+            # deactivate old subscriptions
+            Subscription.objects.filter(
+                restaurant=restaurant
+            ).update(is_active=False)
+
+            subscription = Subscription.objects.create(
+                user=user,
+                restaurant=restaurant,
+                plan=plan,
+                start_date=timezone.now(),
+                end_date=timezone.now() + timedelta(days=30),
+                is_active=True,
+                was_free_trial=True
             )
 
-        # ================= PAID PLAN =================
+            return Response({
+                "success": True,
+                "free": True,
+                "message": "Free plan activated",
+                "subscription_id": subscription.id,
+            })
+
+        # =========================================================
+        # PAID PLAN
+        # =========================================================
+
         order_amount = int(plan.price * 100)
 
         order = razorpay_client.order.create({
@@ -519,15 +563,24 @@ def api_create_subscription(request):
             "payment_capture": 1,
         })
 
-        # 🔥 CREATE OR UPDATE SUBSCRIPTION (IMPORTANT)
-        
-        if not has_active_subscription(restaurant):
-            return Response(
-                {"error": "No active subscription"},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        # deactivate old subscriptions
+        Subscription.objects.filter(
+            restaurant=restaurant
+        ).update(is_active=False)
 
-        # ✅ STORE TRANSACTION
+        # create pending subscription
+        subscription = Subscription.objects.create(
+            user=user,
+            restaurant=restaurant,
+            plan=plan,
+            start_date=timezone.now(),
+            end_date=timezone.now() + timedelta(days=30),
+            is_active=False,
+            was_free_trial=False
+        )
+
+        # ================= PAYMENT TRANSACTION =================
+
         PaymentTransaction.objects.create(
             subscription=subscription,
             plan=plan,
@@ -546,10 +599,16 @@ def api_create_subscription(request):
         })
 
     except Exception as e:
-        logger.error(f"Subscription API error: {str(e)}")
+
+        logger.error(
+            f"Subscription API error: {str(e)}"
+        )
 
         return Response(
-            {"success": False, "error": str(e)},
+            {
+                "success": False,
+                "error": str(e)
+            },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
