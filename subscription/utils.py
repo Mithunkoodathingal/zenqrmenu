@@ -88,33 +88,37 @@ def get_active_subscription(restaurant):
     )
 
 
+from django.utils import timezone
+from subscription.models import Subscription
+
+
 def check_subscription_access(restaurant):
     """
-    Check whether restaurant has active subscription.
+    Check whether restaurant has valid active subscription.
     Returns:
         (True, plan)
-        or
-        (False, message)
+        OR
+        (False, error_message)
     """
 
-    subscription = get_active_subscription(restaurant)
+    subscription = (
+        Subscription.objects
+        .filter(
+            restaurant=restaurant,
+            is_active=True,
+            plan__isnull=False,
+            end_date__gte=timezone.now()
+        )
+        .select_related("plan")
+        .order_by("-end_date")
+        .first()
+    )
 
-    if not has_active_subscription(restaurant):
-        return redirect("pricing")
+    if not subscription:
+        return False, "No active subscription found"
 
     if not subscription.plan:
-        return False, "Subscription has no plan"
-
-    if not subscription.is_active:
-        return False, "Subscription inactive"
-
-    if not subscription.end_date:
-        return False, "Subscription missing expiry date"
-
-    if subscription.end_date < timezone.now():
-        subscription.is_active = False
-        subscription.save(update_fields=["is_active"])
-        return False, "Subscription expired"
+        return False, "Subscription plan missing"
 
     return True, subscription.plan
 
@@ -127,7 +131,7 @@ def can_create_table(restaurant):
     subscription = get_active_subscription(restaurant)
 
     if not has_active_subscription(restaurant):
-        return redirect("pricing")
+        return False
 
     if not subscription.plan:
         return False
@@ -143,7 +147,7 @@ def can_add_menu_item(restaurant):
     subscription = get_active_subscription(restaurant)
 
     if not has_active_subscription(restaurant):
-        return redirect("pricing")
+        return False
 
     plan = subscription.plan
 
