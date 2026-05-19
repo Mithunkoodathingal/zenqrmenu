@@ -140,18 +140,13 @@ def can_create_table(restaurant):
 
 
 def can_add_menu_item(restaurant):
-    """
-    Check menu item limit.
-    """
 
     subscription = get_active_subscription(restaurant)
 
-    if not has_active_subscription(restaurant):
+    if not subscription:
         return False
 
-    plan = subscription.plan
-
-    if not plan:
+    if not subscription.plan:
         return False
 
     from restaurant.models import FoodItem
@@ -160,7 +155,11 @@ def can_add_menu_item(restaurant):
         restaurant=restaurant
     ).count()
 
-    return current_items < plan.menu_item_limit
+    # Unlimited items
+    if subscription.plan.menu_item_limit == -1:
+        return True
+
+    return current_items < subscription.plan.menu_item_limit
 
 
 def activate_subscription(user, restaurant, plan):

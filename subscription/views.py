@@ -23,7 +23,7 @@ from django.views.generic import DetailView
 from rest_framework.response import Response
 from rest_framework import status
 import razorpay
-
+from rest_framework.permissions import IsAuthenticated
 from .models import SubscriptionPlan, Subscription, PaymentTransaction
 from restaurant.models import Restaurant
 from django.http import JsonResponse
@@ -622,32 +622,29 @@ def api_verify_payment(request):
 
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def subscription_status(request):
 
-    restaurant = get_user_restaurant(request.user)
+    subscription = (
+        Subscription.objects
+        .filter(
+            user=request.user,
+            is_active=True
+        )
+        .select_related("plan")
+        .first()
+    )
 
-    if not restaurant:
-        return JsonResponse({
-            "plan": None,
-            "table_limit": None,
-            "is_active": False
+    if not subscription:
+        return Response({
+            "has_subscription": False
         })
 
-    is_valid, plan = check_subscription_access(restaurant)
-
-    if not is_valid:
-        return JsonResponse({
-            "is_active": False,
-            "error": plan
-        }, status=403)
-
-    return JsonResponse({
-        "plan": plan.name,
-        "menu_item_limit": None,   # ✅ unlimited for ALL plans
-        "table_limit": plan.table_limit,
-        "is_active": True
+    return Response({
+        "has_subscription": True,
+        "plan": subscription.plan.name if subscription.plan else None,
+        "plan_id": subscription.plan.id if subscription.plan else None,
     })
 
 
