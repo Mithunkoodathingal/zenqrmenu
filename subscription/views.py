@@ -505,7 +505,10 @@ def api_create_subscription(request):
 
         # ================= FREE PLAN =================
         if not has_active_subscription(restaurant):
-            return redirect("pricing")
+            return Response(
+                {"error": "No active subscription"},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         # ================= PAID PLAN =================
         order_amount = int(plan.price * 100)
@@ -519,7 +522,10 @@ def api_create_subscription(request):
         # 🔥 CREATE OR UPDATE SUBSCRIPTION (IMPORTANT)
         
         if not has_active_subscription(restaurant):
-            return redirect("pricing")
+            return Response(
+                {"error": "No active subscription"},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         # ✅ STORE TRANSACTION
         PaymentTransaction.objects.create(
