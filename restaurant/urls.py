@@ -66,7 +66,7 @@ urlpatterns = [
 
     # ================= TABLE / QR =================
     # path('table/new/', TableCreateView.as_view(), name='table_create'),
-    # path('tables/', create_table_qr_view, name='create_table_qr'),
+    path('tables/', create_table_qr_view, name='create_table_qr'),
     # path('create-restaurant/', create_restaurant, name='create_restaurant'),
     path('download_qr/<int:table_id>/', download_qr_code, name='download_qr'),
 
@@ -131,7 +131,7 @@ urlpatterns = [
 
     ################# Subscription Status api(From Subscription app) ####################
 
-    path('menu/api/subscription/', subscription_status),
+    # path('menu/api/subscription/', subscription_status),
 
 
     ################# Menu URL ######################
@@ -146,3 +146,6 @@ urlpatterns = [
 # ================= STATIC =================
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+
+

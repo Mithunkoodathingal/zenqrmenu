@@ -996,54 +996,54 @@ def toggle_item_availability(request):
 # at top of views.py ensure you have request available imports and logger already defined
 # logger = logging.getLogger(__name__)
 
-# @login_required
-# def create_table_qr_view(request):
-#     """
-#     List tables and mark which are scannable.
-#     If a table is scannable and QR is missing, generate it.
-#     """
-#     restaurant = get_object_or_404(Restaurant, owner=request.user)
-#     logger.info(f"[QR] Loading tables for restaurant {restaurant.id}")
+@login_required
+def create_table_qr_view(request):
+    """
+    List tables and mark which are scannable.
+    If a table is scannable and QR is missing, generate it.
+    """
+    restaurant = get_object_or_404(Restaurant, owner=request.user)
+    logger.info(f"[QR] Loading tables for restaurant {restaurant.id}")
 
-#     subscription = None
-#     allowed_table_ids = []
-#     allowed_table_limit = 0
-#     subscription_active = False
+    subscription = None
+    allowed_table_ids = []
+    allowed_table_limit = 0
+    subscription_active = False
 
-#     try:
-#         subscription = restaurant.subscription
-#         if subscription and subscription.has_active_subscription():
-#             subscription_active = True
-#             allowed_table_limit = subscription.plan.table_limit if subscription.plan else 0
-#             allowed_table_ids = list(
-#                 Table.objects.filter(restaurant=restaurant)
-#                 .order_by("id")[:allowed_table_limit]
-#                 .values_list("id", flat=True)
-#             )
-#     except Subscription.DoesNotExist:
-#         logger.warning(f"[QR] No subscription for restaurant {restaurant.id}")
+    try:
+        subscription = restaurant.subscription
+        if subscription and subscription.has_active_subscription():
+            subscription_active = True
+            allowed_table_limit = subscription.plan.table_limit if subscription.plan else 0
+            allowed_table_ids = list(
+                Table.objects.filter(restaurant=restaurant)
+                .order_by("id")[:allowed_table_limit]
+                .values_list("id", flat=True)
+            )
+    except Subscription.DoesNotExist:
+        logger.warning(f"[QR] No subscription for restaurant {restaurant.id}")
 
-#     tables = Table.objects.filter(restaurant=restaurant).order_by("id")
+    tables = Table.objects.filter(restaurant=restaurant).order_by("id")
 
-#     for table in tables:
-#         table.is_scannable = subscription_active and table.id in allowed_table_ids
+    for table in tables:
+        table.is_scannable = subscription_active and table.id in allowed_table_ids
 
-#         if table.is_scannable:
-#             try:
-#                 if not table.qr_code or not default_storage.exists(table.qr_code.name):
-#                     logger.info(f"[QR] Generating QR for table {table.id}")
-#                     generate_qr_code(table, force=False)
-#             except Exception as e:
-#                 logger.exception(f"[QR][ERROR] Failed QR for table {table.id}: {e}")
+        if table.is_scannable:
+            try:
+                if not table.qr_code or not default_storage.exists(table.qr_code.name):
+                    logger.info(f"[QR] Generating QR for table {table.id}")
+                    generate_qr_code(table, force=False)
+            except Exception as e:
+                logger.exception(f"[QR][ERROR] Failed QR for table {table.id}: {e}")
 
-#     context = {
-#         "restaurant": restaurant,
-#         "tables": tables,
-#         "subscription": subscription,
-#         "subscription_active": subscription_active,
-#         "allowed_table_limit": allowed_table_limit,
-#     }
-#     return render(request, "restaurant/create_table_qr.html", context)
+    context = {
+        "restaurant": restaurant,
+        "tables": tables,
+        "subscription": subscription,
+        "subscription_active": subscription_active,
+        "allowed_table_limit": allowed_table_limit,
+    }
+    return render(request, "restaurant/create_table_qr.html", context)
 
 
 
