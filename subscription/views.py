@@ -695,10 +695,20 @@ def subscription_status(request):
             "has_subscription": False
         })
 
+    print("SUBSCRIPTION:", subscription)
+    print("PLAN:", subscription.plan if subscription else None)
+    print("ACTIVE:", subscription.is_active if subscription else None)
+
+
     return Response({
+        "debug": True,
+        "subscription_exists": bool(subscription),
+        "is_active": subscription.is_active if subscription else False,
         "has_subscription": True,
         "plan": subscription.plan.name if subscription.plan else None,
         "plan_id": subscription.plan.id if subscription.plan else None,
+        "price": str(subscription.plan.price),
+        "table_limit": subscription.plan.table_limit,
     })
 
 
