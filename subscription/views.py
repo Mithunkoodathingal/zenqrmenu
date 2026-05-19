@@ -4,6 +4,7 @@ import logging
 import traceback
 from decimal import Decimal
 from django.conf import settings
+from subscription.utils import has_active_subscription
 from django.contrib import messages
 from subscription.utils import check_subscription_access
 from django.contrib.auth.decorators import login_required
@@ -483,10 +484,17 @@ def api_create_subscription(request):
             )
 
         # 🔥 GET EXISTING SUBSCRIPTION (BY RESTAURANT)
-        subscription = Subscription.objects.filter(
-            restaurant=restaurant,
-            is_active=True
-        ).first()
+        subscription = (
+            Subscription.objects.filter(
+                restaurant=restaurant,
+                is_active=True,
+                plan__isnull=False,
+                end_date__gte=timezone.now()
+            )
+            .select_related("plan")
+            .order_by("-end_date")
+            .first()
+)
 
         # ================= PREVENT DOWNGRADE =================
         if subscription and subscription.plan and subscription.plan.price > 0 and plan.price == 0:
@@ -496,24 +504,8 @@ def api_create_subscription(request):
             )
 
         # ================= FREE PLAN =================
-        if plan.price == 0:
-            if not subscription:
-                subscription = Subscription.objects.create(
-                    user=user,
-                    restaurant=restaurant,
-                    plan=plan,
-                    is_active=True
-                )
-            else:
-                subscription.plan = plan
-                subscription.is_active = True
-                subscription.save()
-
-            return Response({
-                "success": True,
-                "free": True,
-                "message": "Free plan activated"
-            })
+        if not has_active_subscription(restaurant):
+            return redirect("pricing")
 
         # ================= PAID PLAN =================
         order_amount = int(plan.price * 100)
@@ -525,12 +517,9 @@ def api_create_subscription(request):
         })
 
         # 🔥 CREATE OR UPDATE SUBSCRIPTION (IMPORTANT)
-        if not subscription:
-            subscription = Subscription.objects.create(
-                user=user,
-                restaurant=restaurant,
-                is_active=False  # will activate after payment
-            )
+        
+        if not has_active_subscription(restaurant):
+            return redirect("pricing")
 
         # ✅ STORE TRANSACTION
         PaymentTransaction.objects.create(

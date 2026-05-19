@@ -1,11 +1,10 @@
 # subscription/utils.py
 
 from datetime import timedelta
-
 from django.utils import timezone
-
 from subscription.models import Subscription, SubscriptionPlan
-from restaurant.models import Restaurant
+from django.shortcuts import  redirect
+# from restaurant.models import Restaurant
 
 
 def ensure_free_subscription(user, restaurant):
@@ -100,8 +99,8 @@ def check_subscription_access(restaurant):
 
     subscription = get_active_subscription(restaurant)
 
-    if not subscription:
-        return False, "No active subscription found"
+    if not has_active_subscription(restaurant):
+        return redirect("pricing")
 
     if not subscription.plan:
         return False, "Subscription has no plan"
@@ -127,8 +126,8 @@ def can_create_table(restaurant):
 
     subscription = get_active_subscription(restaurant)
 
-    if not subscription:
-        return False
+    if not has_active_subscription(restaurant):
+        return redirect("pricing")
 
     if not subscription.plan:
         return False
@@ -143,8 +142,8 @@ def can_add_menu_item(restaurant):
 
     subscription = get_active_subscription(restaurant)
 
-    if not subscription:
-        return False
+    if not has_active_subscription(restaurant):
+        return redirect("pricing")
 
     plan = subscription.plan
 
@@ -190,3 +189,12 @@ def activate_subscription(user, restaurant, plan):
     )
 
     return subscription
+
+
+def has_active_subscription(restaurant):
+    return Subscription.objects.filter(
+        restaurant=restaurant,
+        is_active=True,
+        plan__isnull=False,
+        end_date__gte=timezone.now()
+    ).exists()
