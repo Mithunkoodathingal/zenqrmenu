@@ -2503,10 +2503,19 @@ def public_menu(request, restaurant_id):
 
 @api_view(['GET', 'POST', 'PATCH'])
 @permission_classes([IsAuthenticated])
-@parser_classes([MultiPartParser, FormParser, JSONParser])
+@parser_classes([JSONParser, MultiPartParser, FormParser])
 def restaurant_profile(request):
 
     try:
+
+        # =====================================================
+        # IMPORTANT
+        # PARSE REQUEST ONLY ONCE
+        # =====================================================
+
+        data = request.data.copy()
+
+        files = request.FILES
 
         restaurant = Restaurant.objects.filter(
             owner=request.user
@@ -2542,30 +2551,32 @@ def restaurant_profile(request):
                 else None
             )
 
-            # =====================================================
-            # IMAGE URLS
-            # =====================================================
-
             logo_url = None
             cover_image_url = None
 
-            if restaurant.logo:
+            try:
 
-                try:
+                if restaurant.logo:
                     logo_url = request.build_absolute_uri(
                         restaurant.logo.url
                     )
-                except Exception:
-                    logo_url = None
 
-            if restaurant.cover_image:
+            except Exception as e:
 
-                try:
-                    cover_image_url = request.build_absolute_uri(
-                        restaurant.cover_image.url
+                print("LOGO URL ERROR:", str(e))
+
+            try:
+
+                if restaurant.cover_image:
+                    cover_image_url = (
+                        request.build_absolute_uri(
+                            restaurant.cover_image.url
+                        )
                     )
-                except Exception:
-                    cover_image_url = None
+
+            except Exception as e:
+
+                print("COVER URL ERROR:", str(e))
 
             return JsonResponse({
 
@@ -2585,7 +2596,6 @@ def restaurant_profile(request):
 
                     "about": restaurant.about,
 
-                    # IMPORTANT
                     "logo": logo_url,
 
                     "logo_url": logo_url,
@@ -2631,81 +2641,60 @@ def restaurant_profile(request):
                 }, status=400)
 
             restaurant = Restaurant.objects.create(
+
                 owner=request.user,
-                name=request.data.get("name", ""),
-                cuisine_type=request.data.get("cuisine", ""),
-                address=request.data.get("address", ""),
-                phone=request.data.get("phone", ""),
-                about=request.data.get("about", ""),
+
+                name=data.get("name", ""),
+
+                cuisine_type=data.get(
+                    "cuisine",
+                    ""
+                ),
+
+                address=data.get(
+                    "address",
+                    ""
+                ),
+
+                phone=data.get(
+                    "phone",
+                    ""
+                ),
+
+                about=data.get(
+                    "about",
+                    ""
+                ),
             )
 
             # =====================================================
-            # IMAGE UPLOADS
+            # IMAGES
             # =====================================================
 
-            if request.FILES.get("logo"):
-                restaurant.logo = request.FILES.get("logo")
+            if files.get("logo"):
 
-            if request.FILES.get("cover_image"):
-                restaurant.cover_image = request.FILES.get(
+                restaurant.logo = files.get(
+                    "logo"
+                )
+
+            if files.get("cover_image"):
+
+                restaurant.cover_image = files.get(
                     "cover_image"
                 )
 
             restaurant.save()
 
-            logo_url = (
-                request.build_absolute_uri(
-                    restaurant.logo.url
-                )
-                if restaurant.logo
-                else None
-            )
-
-            cover_image_url = (
-                request.build_absolute_uri(
-                    restaurant.cover_image.url
-                )
-                if restaurant.cover_image
-                else None
-            )
-
-            return JsonResponse({
-
-                "success": True,
-
-                "restaurant": {
-
-                    "id": restaurant.id,
-
-                    "name": restaurant.name,
-
-                    "cuisine": restaurant.cuisine_type,
-
-                    "address": restaurant.address,
-
-                    "phone": restaurant.phone,
-
-                    "about": restaurant.about,
-
-                    "logo": logo_url,
-
-                    "logo_url": logo_url,
-
-                    "cover_image": cover_image_url,
-
-                    "cover_image_url": cover_image_url,
-                }
-            })
-
         # =====================================================
-        # UPDATE RESTAURANT
+        # PATCH / UPDATE
         # =====================================================
 
         elif request.method == 'PATCH':
 
+            print("PATCH REQUEST RECEIVED")
+
             # =====================================================
             # AUTO CREATE FOR FRESH USERS
-            # IMPORTANT FIX
             # =====================================================
 
             if not restaurant:
@@ -2715,170 +2704,162 @@ def restaurant_profile(request):
                 )
 
                 restaurant = Restaurant.objects.create(
+
                     owner=request.user,
-                    name=request.data.get("name", ""),
-                    cuisine_type=request.data.get(
+
+                    name=data.get("name", ""),
+
+                    cuisine_type=data.get(
                         "cuisine",
                         ""
                     ),
-                    address=request.data.get(
+
+                    address=data.get(
                         "address",
                         ""
                     ),
-                    phone=request.data.get(
+
+                    phone=data.get(
                         "phone",
                         ""
                     ),
-                    about=request.data.get(
+
+                    about=data.get(
                         "about",
                         ""
                     ),
                 )
 
-                # HANDLE IMAGES
-                if request.FILES.get("logo"):
-
-                    restaurant.logo = request.FILES.get(
-                        "logo"
-                    )
-
-                if request.FILES.get("cover_image"):
-
-                    restaurant.cover_image = request.FILES.get(
-                        "cover_image"
-                    )
-
-                restaurant.save()
-
-            else:
-
-                # =====================================================
-                # DEBUG FILES
-                # =====================================================
-
-                print("FILES:", request.FILES)
-
-                # =====================================================
-                # TEXT FIELDS
-                # =====================================================
-
-                if "name" in request.data:
-                    restaurant.name = request.data.get(
-                        "name"
-                    )
-
-                if "cuisine" in request.data:
-                    restaurant.cuisine_type = request.data.get(
-                        "cuisine"
-                    )
-
-                if "address" in request.data:
-                    restaurant.address = request.data.get(
-                        "address"
-                    )
-
-                if "phone" in request.data:
-                    restaurant.phone = request.data.get(
-                        "phone"
-                    )
-
-                if "about" in request.data:
-                    restaurant.about = request.data.get(
-                        "about"
-                    )
-
-                # =====================================================
-                # IMAGE FILES
-                # =====================================================
-
-                if request.FILES.get("logo"):
-
-                    restaurant.logo = request.FILES.get(
-                        "logo"
-                    )
-
-                    print(
-                        "NEW LOGO:",
-                        restaurant.logo
-                    )
-
-                if request.FILES.get("cover_image"):
-
-                    restaurant.cover_image = request.FILES.get(
-                        "cover_image"
-                    )
-
-                    print(
-                        "NEW COVER:",
-                        restaurant.cover_image
-                    )
-
-                restaurant.save()
-
             # =====================================================
-            # REFRESH
+            # UPDATE FIELDS
             # =====================================================
 
-            restaurant.refresh_from_db()
+            restaurant.name = data.get(
+                "name",
+                restaurant.name
+            )
+
+            restaurant.cuisine_type = data.get(
+                "cuisine",
+                restaurant.cuisine_type
+            )
+
+            restaurant.address = data.get(
+                "address",
+                restaurant.address
+            )
+
+            restaurant.phone = data.get(
+                "phone",
+                restaurant.phone
+            )
+
+            restaurant.about = data.get(
+                "about",
+                restaurant.about
+            )
 
             # =====================================================
-            # IMAGE URLS
+            # UPDATE IMAGES
             # =====================================================
 
-            logo_url = None
-            cover_image_url = None
+            if files.get("logo"):
+
+                print("UPDATING LOGO")
+
+                restaurant.logo = files.get(
+                    "logo"
+                )
+
+            if files.get("cover_image"):
+
+                print("UPDATING COVER")
+
+                restaurant.cover_image = files.get(
+                    "cover_image"
+                )
+
+            restaurant.save()
+
+        # =====================================================
+        # REFRESH
+        # =====================================================
+
+        restaurant.refresh_from_db()
+
+        # =====================================================
+        # IMAGE URLS
+        # =====================================================
+
+        logo_url = None
+        cover_image_url = None
+
+        try:
 
             if restaurant.logo:
 
-                try:
-                    logo_url = request.build_absolute_uri(
-                        restaurant.logo.url
-                    )
-                except Exception:
-                    logo_url = None
+                logo_url = request.build_absolute_uri(
+                    restaurant.logo.url
+                )
+
+        except Exception as e:
+
+            print("LOGO URL ERROR:", str(e))
+
+        try:
 
             if restaurant.cover_image:
 
-                try:
-                    cover_image_url = request.build_absolute_uri(
+                cover_image_url = (
+                    request.build_absolute_uri(
                         restaurant.cover_image.url
                     )
-                except Exception:
-                    cover_image_url = None
+                )
 
-            return JsonResponse({
+        except Exception as e:
 
-                "success": True,
+            print("COVER URL ERROR:", str(e))
 
-                "message": "Restaurant saved successfully",
+        # =====================================================
+        # SUCCESS RESPONSE
+        # =====================================================
 
-                "restaurant": {
+        return JsonResponse({
 
-                    "id": restaurant.id,
+            "success": True,
 
-                    "name": restaurant.name,
+            "message": "Restaurant saved successfully",
 
-                    "cuisine": restaurant.cuisine_type,
+            "restaurant": {
 
-                    "address": restaurant.address,
+                "id": restaurant.id,
 
-                    "phone": restaurant.phone,
+                "name": restaurant.name,
 
-                    "about": restaurant.about,
+                "cuisine": restaurant.cuisine_type,
 
-                    "logo": logo_url,
+                "address": restaurant.address,
 
-                    "logo_url": logo_url,
+                "phone": restaurant.phone,
 
-                    "cover_image": cover_image_url,
+                "about": restaurant.about,
 
-                    "cover_image_url": cover_image_url,
-                }
-            })
+                "logo": logo_url,
+
+                "logo_url": logo_url,
+
+                "cover_image": cover_image_url,
+
+                "cover_image_url": cover_image_url,
+            }
+        })
 
     except Exception as e:
 
-        print("RESTAURANT PROFILE ERROR:", str(e))
+        print(
+            "RESTAURANT PROFILE ERROR:",
+            str(e)
+        )
 
         return JsonResponse({
             "success": False,
