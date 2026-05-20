@@ -2503,7 +2503,8 @@ def public_menu(request, restaurant_id):
 
 @api_view(['GET', 'POST', 'PATCH'])
 @permission_classes([IsAuthenticated])
-@parser_classes([JSONParser, MultiPartParser, FormParser])
+@parser_classes([JSONParser, MultiPartParser, FormParser
+])
 def restaurant_profile(request):
 
     try:
@@ -2513,7 +2514,7 @@ def restaurant_profile(request):
         # PARSE REQUEST ONLY ONCE
         # =====================================================
 
-        data = request.data.copy()
+        data = request.data
 
         files = request.FILES
 
