@@ -36,7 +36,7 @@ import datetime
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 import time
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from io import BytesIO
 from django.core.files import File
 from django.http import JsonResponse
@@ -2503,7 +2503,7 @@ def public_menu(request, restaurant_id):
 
 @api_view(['GET', 'POST', 'PATCH'])
 @permission_classes([IsAuthenticated])
-@parser_classes([MultiPartParser, FormParser])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
 def restaurant_profile(request):
 
     try:
