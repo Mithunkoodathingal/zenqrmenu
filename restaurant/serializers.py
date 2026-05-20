@@ -4,9 +4,17 @@ from .models import Restaurant, Order, OrderItem, FoodItem, AddOn, Category
 
 # ================= RESTAURANT =================
 
+
 class RestaurantSerializer(serializers.ModelSerializer):
+
+    logo_url = serializers.SerializerMethodField()
+
+    cover_image_url = serializers.SerializerMethodField()
+
     class Meta:
+
         model = Restaurant
+
         fields = [
             'id',
             'owner',
@@ -14,41 +22,130 @@ class RestaurantSerializer(serializers.ModelSerializer):
             'address',
             'about',
             'cover_image',
+            'cover_image_url',
             'logo',
+            'logo_url',
             'phone',
             'cuisine_type',
         ]
+
         read_only_fields = ['owner']
 
+    # =====================================================
+    # LOGO URL
+    # =====================================================
+
+    def get_logo_url(self, obj):
+
+        request = self.context.get('request')
+
+        if not obj.logo:
+            return None
+
+        try:
+
+            if request:
+                return request.build_absolute_uri(
+                    obj.logo.url
+                )
+
+            return obj.logo.url
+
+        except Exception as e:
+
+            print("LOGO URL ERROR:", str(e))
+
+            return None
+
+    # =====================================================
+    # COVER IMAGE URL
+    # =====================================================
+
+    def get_cover_image_url(self, obj):
+
+        request = self.context.get('request')
+
+        if not obj.cover_image:
+            return None
+
+        try:
+
+            if request:
+                return request.build_absolute_uri(
+                    obj.cover_image.url
+                )
+
+            return obj.cover_image.url
+
+        except Exception as e:
+
+            print("COVER URL ERROR:", str(e))
+
+            return None
+
+    # =====================================================
+    # UPDATE
+    # =====================================================
+
     def update(self, instance, validated_data):
+
         request = self.context.get('request', None)
 
-        # DEBUG
         if request:
             print("FILES:", request.FILES)
 
-        # HANDLE FILES
-        if request and request.FILES:
+        # LOGO
+        if request and request.FILES.get('logo'):
 
-            if 'logo' in request.FILES:
-                new_logo = request.FILES.get('logo')
-                if new_logo:
-                    if instance.logo:
+            new_logo = request.FILES.get('logo')
+
+            if new_logo:
+
+                # avoid deleting default image
+                if (
+                    instance.logo and
+                    'default/' not in str(instance.logo)
+                ):
+
+                    try:
                         instance.logo.delete(save=False)
-                    instance.logo = new_logo
+                    except Exception as e:
+                        print(str(e))
 
-            if 'cover_image' in request.FILES:
-                new_cover = request.FILES.get('cover_image')
-                if new_cover:
-                    if instance.cover_image:
-                        instance.cover_image.delete(save=False)
-                    instance.cover_image = new_cover
+                instance.logo = new_logo
+
+        # COVER
+        if request and request.FILES.get('cover_image'):
+
+            new_cover = request.FILES.get(
+                'cover_image'
+            )
+
+            if new_cover:
+
+                if (
+                    instance.cover_image and
+                    'default/' not in str(instance.cover_image)
+                ):
+
+                    try:
+                        instance.cover_image.delete(
+                            save=False
+                        )
+                    except Exception as e:
+                        print(str(e))
+
+                instance.cover_image = new_cover
 
         # NORMAL FIELDS
         for attr, value in validated_data.items():
+
             setattr(instance, attr, value)
 
         instance.save()
+
+        instance.refresh_from_db()
+
         return instance
 
 

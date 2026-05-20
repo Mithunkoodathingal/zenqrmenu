@@ -1,4 +1,9 @@
 # subscription/views.py
+from subscription.models import (
+    Subscription,
+    SubscriptionPlan,
+    PaymentTransaction,
+)
 import json
 import logging
 import traceback
@@ -36,6 +41,7 @@ logger = logging.getLogger(__name__)
 
 # initialize razorpay client
 razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+
 
 
 def subscription_plans(request):
@@ -452,6 +458,7 @@ def subscription_plans_api(request):
 def api_create_subscription(request):
 
     try:
+
         plan_id = request.data.get("plan_id")
 
         if not plan_id:
@@ -463,10 +470,13 @@ def api_create_subscription(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # ================= PLAN =================
+        # =====================================================
+        # GET PLAN
+        # =====================================================
 
         try:
             plan = SubscriptionPlan.objects.get(id=plan_id)
+
         except SubscriptionPlan.DoesNotExist:
             return Response(
                 {
@@ -478,7 +488,9 @@ def api_create_subscription(request):
 
         user = request.user
 
-        # ================= RESTAURANT =================
+        # =====================================================
+        # GET RESTAURANT
+        # =====================================================
 
         restaurant = Restaurant.objects.filter(
             owner=user
@@ -493,7 +505,18 @@ def api_create_subscription(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # ================= EXISTING ACTIVE SUBSCRIPTION =================
+        # =====================================================
+        # REMOVE BROKEN SUBSCRIPTIONS
+        # =====================================================
+
+        Subscription.objects.filter(
+            restaurant=restaurant,
+            plan__isnull=True
+        ).delete()
+
+        # =====================================================
+        # GET CURRENT ACTIVE SUBSCRIPTION
+        # =====================================================
 
         active_subscription = (
             Subscription.objects
@@ -507,7 +530,9 @@ def api_create_subscription(request):
             .first()
         )
 
-        # ================= PREVENT DOWNGRADE =================
+        # =====================================================
+        # PREVENT PAID -> FREE DOWNGRADE
+        # =====================================================
 
         if (
             active_subscription and
@@ -515,6 +540,7 @@ def api_create_subscription(request):
             active_subscription.plan.price > 0 and
             plan.price == 0
         ):
+
             return Response(
                 {
                     "success": False,
@@ -523,35 +549,73 @@ def api_create_subscription(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # =========================================================
+        # =====================================================
+        # DEACTIVATE OLD SUBSCRIPTIONS
+        # =====================================================
+
+        Subscription.objects.filter(
+            restaurant=restaurant
+        ).update(
+            is_active=False
+        )
+
+        # =====================================================
+        # CREATE DATES
+        # =====================================================
+
+        start_date = timezone.now()
+
+        end_date = (
+            start_date +
+            timedelta(days=plan.duration_days)
+        )
+
+        # =====================================================
         # FREE PLAN
-        # =========================================================
+        # =====================================================
 
         if plan.price == 0:
 
-            # deactivate old subscriptions
             subscription, created = Subscription.objects.update_or_create(
+                user=user,
                 restaurant=restaurant,
                 defaults={
-                    "user": user,
                     "plan": plan,
-                    "start_date": timezone.now(),
-                    "end_date": timezone.now() + timedelta(days=30),
+                    "start_date": start_date,
+                    "end_date": end_date,
                     "is_active": True,
-                    "was_free_trial": True if plan.price == 0 else False,
+                    "was_free_trial": True,
+                    "is_cancelled": False,
+                    "cancelled_at": None,
+                    "auto_renew": False,
                 }
+            )
+
+            logger.info(
+                f"FREE PLAN ACTIVATED | "
+                f"user={user.id} | "
+                f"restaurant={restaurant.id}"
             )
 
             return Response({
                 "success": True,
                 "free": True,
                 "message": "Free plan activated",
-                "subscription_id": subscription.id,
+                "subscription": {
+                    "id": subscription.id,
+                    "plan": plan.name,
+                    "price": str(plan.price),
+                    "is_active": True,
+                    "start_date": subscription.start_date,
+                    "end_date": subscription.end_date,
+                    "table_limit": plan.table_limit,
+                    "menu_item_limit": plan.menu_item_limit,
+                }
             })
 
-        # =========================================================
+        # =====================================================
         # PAID PLAN
-        # =========================================================
+        # =====================================================
 
         order_amount = int(plan.price * 100)
 
@@ -561,20 +625,24 @@ def api_create_subscription(request):
             "payment_capture": 1,
         })
 
-        # deactivate old subscriptions
         subscription, created = Subscription.objects.update_or_create(
+            user=user,
             restaurant=restaurant,
             defaults={
-                "user": user,
                 "plan": plan,
-                "start_date": timezone.now(),
-                "end_date": timezone.now() + timedelta(days=30),
+                "start_date": start_date,
+                "end_date": end_date,
                 "is_active": False,
                 "was_free_trial": False,
+                "is_cancelled": False,
+                "cancelled_at": None,
+                "auto_renew": True,
             }
         )
 
-        # ================= PAYMENT TRANSACTION =================
+        # =====================================================
+        # PAYMENT TRANSACTION
+        # =====================================================
 
         PaymentTransaction.objects.create(
             subscription=subscription,
@@ -585,18 +653,26 @@ def api_create_subscription(request):
             status="created"
         )
 
+        logger.info(
+            f"PAID PLAN CREATED | "
+            f"user={user.id} | "
+            f"restaurant={restaurant.id} | "
+            f"plan={plan.name}"
+        )
+
         return Response({
             "success": True,
             "order_id": order["id"],
             "amount": order_amount,
             "key": settings.RAZORPAY_KEY_ID,
             "plan": plan.name,
+            "subscription_id": subscription.id,
         })
 
     except Exception as e:
 
-        logger.error(
-            f"Subscription API error: {str(e)}"
+        logger.exception(
+            "Subscription API error"
         )
 
         return Response(
