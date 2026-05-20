@@ -2703,82 +2703,126 @@ def restaurant_profile(request):
 
         elif request.method == 'PATCH':
 
+            # =====================================================
+            # AUTO CREATE FOR FRESH USERS
+            # IMPORTANT FIX
+            # =====================================================
+
             if not restaurant:
 
-                return JsonResponse({
-                    "success": False,
-                    "error": "Restaurant not found"
-                }, status=404)
-
-            # =====================================================
-            # DEBUG FILES
-            # =====================================================
-
-            print("FILES:", request.FILES)
-
-            # =====================================================
-            # TEXT FIELDS
-            # =====================================================
-
-            if "name" in request.data:
-                restaurant.name = request.data.get("name")
-
-            if "cuisine" in request.data:
-                restaurant.cuisine_type = request.data.get(
-                    "cuisine"
-                )
-
-            if "address" in request.data:
-                restaurant.address = request.data.get(
-                    "address"
-                )
-
-            if "phone" in request.data:
-                restaurant.phone = request.data.get(
-                    "phone"
-                )
-
-            if "about" in request.data:
-                restaurant.about = request.data.get(
-                    "about"
-                )
-
-            # =====================================================
-            # IMAGE FILES
-            # =====================================================
-
-            if request.FILES.get("logo"):
-
-                restaurant.logo = request.FILES.get(
-                    "logo"
-                )
-
                 print(
-                    "NEW LOGO:",
-                    restaurant.logo
+                    "NO RESTAURANT FOUND -> AUTO CREATING"
                 )
 
-            if request.FILES.get("cover_image"):
-
-                restaurant.cover_image = request.FILES.get(
-                    "cover_image"
+                restaurant = Restaurant.objects.create(
+                    owner=request.user,
+                    name=request.data.get("name", ""),
+                    cuisine_type=request.data.get(
+                        "cuisine",
+                        ""
+                    ),
+                    address=request.data.get(
+                        "address",
+                        ""
+                    ),
+                    phone=request.data.get(
+                        "phone",
+                        ""
+                    ),
+                    about=request.data.get(
+                        "about",
+                        ""
+                    ),
                 )
 
-                print(
-                    "NEW COVER:",
-                    restaurant.cover_image
-                )
+                # HANDLE IMAGES
+                if request.FILES.get("logo"):
 
-            restaurant.save()
+                    restaurant.logo = request.FILES.get(
+                        "logo"
+                    )
+
+                if request.FILES.get("cover_image"):
+
+                    restaurant.cover_image = request.FILES.get(
+                        "cover_image"
+                    )
+
+                restaurant.save()
+
+            else:
+
+                # =====================================================
+                # DEBUG FILES
+                # =====================================================
+
+                print("FILES:", request.FILES)
+
+                # =====================================================
+                # TEXT FIELDS
+                # =====================================================
+
+                if "name" in request.data:
+                    restaurant.name = request.data.get(
+                        "name"
+                    )
+
+                if "cuisine" in request.data:
+                    restaurant.cuisine_type = request.data.get(
+                        "cuisine"
+                    )
+
+                if "address" in request.data:
+                    restaurant.address = request.data.get(
+                        "address"
+                    )
+
+                if "phone" in request.data:
+                    restaurant.phone = request.data.get(
+                        "phone"
+                    )
+
+                if "about" in request.data:
+                    restaurant.about = request.data.get(
+                        "about"
+                    )
+
+                # =====================================================
+                # IMAGE FILES
+                # =====================================================
+
+                if request.FILES.get("logo"):
+
+                    restaurant.logo = request.FILES.get(
+                        "logo"
+                    )
+
+                    print(
+                        "NEW LOGO:",
+                        restaurant.logo
+                    )
+
+                if request.FILES.get("cover_image"):
+
+                    restaurant.cover_image = request.FILES.get(
+                        "cover_image"
+                    )
+
+                    print(
+                        "NEW COVER:",
+                        restaurant.cover_image
+                    )
+
+                restaurant.save()
 
             # =====================================================
-            # REFRESH FROM DB
+            # REFRESH
             # =====================================================
 
             restaurant.refresh_from_db()
 
             # =====================================================
-            # BUILD IMAGE URLS
+            # IMAGE URLS
             # =====================================================
 
             logo_url = None
@@ -2806,7 +2850,7 @@ def restaurant_profile(request):
 
                 "success": True,
 
-                "message": "Restaurant updated successfully",
+                "message": "Restaurant saved successfully",
 
                 "restaurant": {
 
