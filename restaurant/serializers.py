@@ -94,7 +94,19 @@ class RestaurantSerializer(serializers.ModelSerializer):
         if request:
             print("FILES:", request.FILES)
 
-        # LOGO
+        # =====================================================
+        # REMOVE FILE FIELDS FROM VALIDATED DATA
+        # IMPORTANT FIX
+        # =====================================================
+
+        validated_data.pop('logo', None)
+
+        validated_data.pop('cover_image', None)
+
+        # =====================================================
+        # HANDLE LOGO
+        # =====================================================
+
         if request and request.FILES.get('logo'):
 
             new_logo = request.FILES.get('logo')
@@ -114,7 +126,10 @@ class RestaurantSerializer(serializers.ModelSerializer):
 
                 instance.logo = new_logo
 
-        # COVER
+        # =====================================================
+        # HANDLE COVER IMAGE
+        # =====================================================
+
         if request and request.FILES.get('cover_image'):
 
             new_cover = request.FILES.get(
@@ -137,7 +152,10 @@ class RestaurantSerializer(serializers.ModelSerializer):
 
                 instance.cover_image = new_cover
 
-        # NORMAL FIELDS
+        # =====================================================
+        # NORMAL TEXT FIELDS
+        # =====================================================
+
         for attr, value in validated_data.items():
 
             setattr(instance, attr, value)
