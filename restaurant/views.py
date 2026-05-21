@@ -2501,7 +2501,7 @@ def public_menu(request, restaurant_id):
 ############ Restaurant Profile #########################
 
 
-@api_view(['GET', 'POST', 'PATCH'])
+@api_view(['GET', 'POST', 'PUT'])
 @permission_classes([IsAuthenticated])
 @parser_classes([JSONParser, MultiPartParser, FormParser
 ])
@@ -2687,10 +2687,10 @@ def restaurant_profile(request):
             restaurant.save()
 
         # =====================================================
-        # PATCH / UPDATE
+        # PUT / UPDATE
         # =====================================================
 
-        elif request.method == 'PATCH':
+        elif request.method == 'PUT':
 
             print("PATCH REQUEST RECEIVED")
 
