@@ -160,11 +160,22 @@ CLOUD_SQL_INSTANCE = config('CLOUD_SQL_INSTANCE', default='').strip()
 DB_NAME = config('DB_NAME', default='').strip()
 DB_USER = config('DB_USER', default='').strip()
 DB_PASS = config('DB_PASS', default='').strip()
-DB_CONN_MAX_AGE = config('DB_CONN_MAX_AGE', default=600, cast=int)
-DB_SSL_REQUIRE = config('DB_SSL_REQUIRE', default=True, cast=bool)
+
+DB_CONN_MAX_AGE = config(
+    'DB_CONN_MAX_AGE',
+    default=600,
+    cast=int
+)
+
+DB_SSL_REQUIRE = config(
+    'DB_SSL_REQUIRE',
+    default=True,
+    cast=bool
+)
 
 if CLOUD_SQL_INSTANCE and DB_NAME and DB_USER and DB_PASS:
-    # Use Cloud Run's mounted unix socket at /cloudsql/<INSTANCE>
+
+    # Cloud SQL via unix socket
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -172,32 +183,52 @@ if CLOUD_SQL_INSTANCE and DB_NAME and DB_USER and DB_PASS:
             'USER': DB_USER,
             'PASSWORD': DB_PASS,
             'HOST': os.path.join('/cloudsql', CLOUD_SQL_INSTANCE),
-            'PORT': '',  # unix socket
+            'PORT': '',
             'CONN_MAX_AGE': DB_CONN_MAX_AGE,
+            'CONN_HEALTH_CHECKS': True,
         }
     }
+
 else:
-    # If DATABASE_URL present use dj_database_url
-    DATABASE_URL = config('DATABASE_URL', default='').strip()
+
+    DATABASE_URL = config(
+        'DATABASE_URL',
+        default=''
+    ).strip()
+
     if DATABASE_URL:
+
         try:
             import dj_database_url
+
             DATABASES = {
                 'default': dj_database_url.parse(
                     DATABASE_URL,
                     conn_max_age=DB_CONN_MAX_AGE,
-                    ssl_require=DB_SSL_REQUIRE,
+                    ssl_require=True,
                 )
             }
+
+            # Extra SSL stability for Neon/Render/Postgres
+            DATABASES['default']['OPTIONS'] = {
+                'sslmode': 'require',
+            }
+
+            # Better connection recovery
+            DATABASES['default']['CONN_HEALTH_CHECKS'] = True
+
         except Exception:
+
             DATABASES = {
                 'default': {
                     'ENGINE': 'django.db.backends.sqlite3',
                     'NAME': BASE_DIR / 'db.sqlite3',
                 }
             }
+
     else:
-        # local/dev fallback sqlite
+
+        # Local development fallback
         DATABASES = {
             'default': {
                 'ENGINE': 'django.db.backends.sqlite3',
