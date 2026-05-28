@@ -18,11 +18,12 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
         ]
 
     def get_features(self, obj):
+        
         if not obj.features:
-            return []
+            return ""
 
-        return [
+        return "<br>".join(
             feature.strip()
             for feature in obj.features.split("\n")
             if feature.strip()
-        ]
+        )
