@@ -111,7 +111,9 @@ urlpatterns = [
 
     path("api/resend-verification/", resend_verification),
     path("api/password/reset/", password_reset),
+    path("api/auth/password/reset/", password_reset),
     path("api/password/reset/confirm/", password_reset_confirm),
+    path("api/auth/password/reset/confirm/", password_reset_confirm),
 
     ################### JWT ##################################
 
