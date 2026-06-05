@@ -20,6 +20,11 @@ from django.http import (
     JsonResponse,
 )
 
+
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+
+
 from django.core.files import File
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
@@ -3013,18 +3018,63 @@ def resend_verification(request):
 
 @api_view(['POST'])
 def password_reset(request):
-    email = request.data.get("email")
+    email = request.data.get("email", "").strip().lower()
 
     if not email:
-        return Response({"error": "Email required"}, status=400)
+        return Response(
+            {"error": "Email required"},
+            status=400
+        )
 
-    form = ResetPasswordForm(data={"email": email})
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        # Don't reveal whether an email exists
+        return Response({
+            "message": "If an account exists with this email, a password reset link has been sent."
+        })
 
-    if form.is_valid():
-        form.save(request=request)
-        return Response({"message": "Password reset email sent"})
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
 
-    return Response({"error": "Invalid email"}, status=400)
+    reset_link = (
+        f"https://www.zenqrmenu.com/reset-password"
+        f"?uid={uid}&token={token}"
+    )
+
+    email_message = f"""
+Hello from Zen QR Menu,
+
+We received a request to reset the password for your account.
+
+Click the link below to create a new password:
+
+{reset_link}
+
+If you did not request a password reset, you can safely ignore this email.
+
+Regards,
+Zen QR Menu Team
+"""
+
+    try:
+        send_mail(
+            subject="Reset Your Zen QR Menu Password",
+            message=email_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+
+        return Response({
+            "message": "Password reset email sent"
+        })
+
+    except Exception as e:
+        print("PASSWORD RESET EMAIL ERROR:", str(e))
+        return Response({
+            "error": "Failed to send email"
+        }, status=500)
 
 
 
