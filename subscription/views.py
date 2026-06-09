@@ -758,22 +758,24 @@ def subscription_status(request):
 
     subscription = (
         Subscription.objects
-        .filter(
-            user=request.user,
-            is_active=True
-        )
+        .filter(user=request.user, is_active=True)
         .select_related("plan")
         .first()
     )
+
+    if subscription:
+
+        # Auto-expire subscription
+        if subscription.end_date and subscription.end_date <= timezone.now():
+            subscription.is_active = False
+            subscription.save()
+
+            subscription = None
 
     if not subscription:
         return Response({
             "has_subscription": False
         })
-
-    print("SUBSCRIPTION:", subscription)
-    print("PLAN:", subscription.plan if subscription else None)
-    print("ACTIVE:", subscription.is_active if subscription else None)
 
 
     return Response({
