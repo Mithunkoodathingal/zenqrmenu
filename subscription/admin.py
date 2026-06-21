@@ -11,5 +11,9 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
 
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
-    list_display = ('restaurant', 'plan', 'is_active', 'start_date', 'end_date')
+    list_display = ( 'user', 'user_email', 'restaurant', 'plan', 'is_active', 'start_date', 'end_date')
     search_fields = ('restaurant__name', 'plan__name')
+
+    def user_email(self, obj):
+        return obj.user.email
+    user_email.short_description = "Email"

@@ -1,0 +1,254 @@
+//@version=6
+indicator("Volatility Stop", "VStop", overlay=true, timeframe="", timeframe_gaps=true)
+length = input.int(20, "Length", minval = 2)
+src = input.source(close, "Source")
+factor = input.float(2.0, "Multiplier", minval = 0.25, step = 0.25)
+volStop(src, atrlen, atrfactor) =>
+    if not na(src)
+        var max     = src
+        var min     = src
+        var uptrend = true
+        var float stop    = na
+        atrM        = nz(ta.atr(atrlen) * atrfactor, ta.tr)
+        max         := math.max(max, src)
+        min         := math.min(min, src)
+        stop        := nz(uptrend ? math.max(stop, max - atrM) : math.min(stop, min + atrM), src)
+        uptrend     := src - stop >= 0.0
+        if uptrend != uptrend[1] and not barstate.isfirst
+            max    := src
+            min    := src
+            stop   := uptrend ? max - atrM : min + atrM
+        [stop, uptrend]
+
+[vStop, uptrend] = volStop(src, length, factor)
+
+plot(vStop, "Volatility Stop", style=plot.style_cross, color= uptrend ? #009688 : #F44336)
+
+===================================================================================================
+
+//@version=6
+indicator("Volatility Stop", "VStop", overlay=true, timeframe="", timeframe_gaps=true)
+length = input.int(20, "Length", minval = 2)
+src = input.source(close, "Source")
+factor = input.float(2.0, "Multiplier", minval = 0.25, step = 0.25)
+volStop(src, atrlen, atrfactor) =>
+    if not na(src)
+        var max     = src
+        var min     = src
+        var uptrend = true
+        var float stop    = na
+        atrM        = nz(ta.atr(atrlen) * atrfactor, ta.tr)
+        max         := math.max(max, src)
+        min         := math.min(min, src)
+        stop        := nz(uptrend ? math.max(stop, max - atrM) : math.min(stop, min + atrM), src)
+        uptrend     := src - stop >= 0.0
+        if uptrend != uptrend[1] and not barstate.isfirst
+            max    := src
+            min    := src
+            stop   := uptrend ? max - atrM : min + atrM
+        [stop, uptrend]
+
+[vStop, uptrend] = volStop(src, length, factor)
+
+plot(vStop, "Volatility Stop", style=plot.style_cross, color= uptrend ? #009688 : #F44336)
+
+===================================================================================================
+
+// TheeHoganator
+//@version=5
+
+indicator(title='Williams Vix Fix Bottoms and Tops', shorttitle='WVF', overlay=false, precision=2)
+
+
+//------------------------------------------------------------------------ // ***** Colors ***** \\ ------------------------------------------------------------------------\\
+
+Black   = #000000,      Charcoal= #363A45,      Gray    = #787B86,      Silver  = #C0C0C0,      White   = #FFFFFF
+Brown   = #A52A2A,      Red     = #FF0000,      Pink    = #FF69B4,      Gold    = #D4AF37,      Orange  = #FF6A00,      Yellow  = #FFFF00
+Green   = #00AF00,      Teal    = #008080,      Lime    = #00FF0B       // Green = #008000
+Navy    = #311BB2,      Blue    = #0094FF,      Aqua    = #00BCD4       // #2962FF #00FFFF
+Purple  = #800080,      Fucshia = #E040FB   //#FF00FF
+None = color.new(Black, 100)
+
+
+// -----------------------------  Assign Colors  -----------------------------
+
+
+
+
+
+bHighs = input(false, title='Highs not lows', inline='New Features')
+bFlip  = input(false, title='Flip Indicator', inline='New Features')
+Flip   = bFlip ? -1 : 1
+
+
+    // Inputs Tab Criteria.
+pd   = input(22, title='LookBack Period Standard Deviation High')
+bbl  = input(20, title='Bolinger Band', inline='Bollinger')                  //title='Bolinger Band Length'
+mult = input.float(2.0, minval=1, maxval=5, title='', inline='Bollinger')   //title='Bollinger Band Standard Devaition Up'
+lb   = input(50,   title='Look Back Period Percentile High')
+ph   = input(0.85, title='Highest Percentile - 0.90=90%, 0.95=95%, 0.99=99%')
+pl   = input(1.01, title='Lowest Percentile - 1.10=90%, 1.05=95%, 1.01=99%')
+
+
+hp = input(false, title='Plot High/Low Ranges')
+sd = input(false, title='Plot Standard Deviation')
+
+
+col_Entry = input.color(Fucshia, "", inline = 'Entry')
+bSbc      = input(true, title='Highlight Bars For Simple Entry', inline='Entry')
+
+col_AboveLines = Lime // input.color(Lime, "", inline = 'AboveLines')
+bSbcc          = false    // input(false, title='Highlight Bars if WVF IS True', inline='AboveLines')
+
+col_Filt   = input.color(White, "", inline = 'Filtered')
+bSbcFilt   = input(true,  title='Highlight Bars For Filtered Entry', inline = 'Filtered')
+// bLabelFilt = input(false, title='Label', inline = 'Filtered')            // Nevermind this label input, this is useless since it won't draw a label on the price chart, up to you if you want to code it so it will
+
+col_Aggr   = input.color(Yellow, "", inline = 'Aggressive')
+bSbcAggr   = input(false, title='Highlight Bars For Aggressive Filtered Entry', inline = 'Aggressive')
+// bLabelAggr = input(false, title='Label', inline = 'Aggressive')          // Nevermind this label input, this is useless since it won't draw a label on the price chart, up to you if you want to code it so it will
+
+col_AllBars = input.color(Gray, "", inline = 'AllBars')
+bSgb        = input(false, title='Color all bars except signals', inline = 'AllBars')
+
+    // Criteria for Down Trend Definition for Filtered Pivots and Aggressive Filtered Pivots
+ltLB = input.int(40, minval=25, maxval=99, title='Long-Term Look Back Current Bar Has To Close Below This Value OR Medium Term--Default=40')
+mtLB = input.int(14, minval=10, maxval=20, title='Medium-Term Look Back Current Bar Has To Close Below This Value OR Long Term--Default=14')
+str  = input.int(3,  minval=1,  maxval=9,  title='Entry Price Action Strength--Close > X Bars Back---Default=3')
+
+
+
+    // Alerts Instructions and Options Below...Inputs Tab
+// new4 = input(false, title='-------------------------Turn On/Off ALERTS Below---------------------')
+// new5 = input(false, title='----To Activate Alerts You HAVE To Check The Boxes Below For Any Alert Criteria You Want----')
+// new6 = input(false, title='----You Can Un Check The Box BELOW To Turn Off the WVF Histogram And Just See True/False Alert Criteria----')
+swvf = true     // input(true, title='Show Williams Vix Fix Histogram, Uncheck to Turn Off!')
+// sa1 = input(false, title='Show Alert WVF = True?')
+// sa2 = input(false, title='Show Alert WVF Was True Now False?')
+// sa3 = input(false, title='Show Alert WVF Filtered?')
+// sa4 = input(false, title='Show Alert WVF AGGRESSIVE Filter?')
+
+
+
+
+    // Williams Vix Fix Formula
+wvf = bHighs ? (((ta.lowest(close, pd)-high)/(ta.lowest(close, pd))) * 100) : 
+  ((ta.highest(close, pd) - low) / ta.highest(close, pd) * 100)
+sDev = mult * ta.stdev(wvf, bbl)
+midLine = ta.sma(wvf, bbl)
+lowerBand = midLine - sDev
+upperBand = midLine + sDev
+rangeHigh = bHighs ? ta.highest(wvf, lb) * pl    :   ta.highest(wvf, lb) * ph
+rangeLow  = bHighs ? ta.lowest (wvf, lb) * ph    :   ta.lowest (wvf, lb) * pl
+
+
+
+    // Filtered Bar Criteria
+upRange = low > low[1]   and close > high[1]
+upRange_Aggr = close > close[1] and close > open[1]
+
+dnRange = high < high[1] and close < low[1]
+dnRange_Aggr = close < close[1] and close < open[1]
+
+
+
+    // Filtered Criteria
+bFiltered      = (not bHighs and (wvf[1] >= upperBand[1] or wvf[1] >= rangeHigh[1]) and wvf < upperBand and wvf < rangeHigh) or 
+                     (bHighs and (wvf[1] <= lowerBand[1] or wvf[1] <= rangeLow[1])  and wvf > lowerBand and wvf > rangeLow)
+
+bFiltered_Aggr = (not bHighs and (wvf[1] >= upperBand[1] or wvf[1] >= rangeHigh[1]) and not(wvf < upperBand and wvf < rangeHigh)) or 
+                     (bHighs and (wvf[1] <= lowerBand[1] or wvf[1] <= rangeLow[1])  and not(wvf > lowerBand and wvf > rangeLow))
+
+
+
+    // Alerts Criteria
+alert1 = wvf >= upperBand or wvf >= rangeHigh ? 1 : 0
+alert2 = bFiltered ? 1 : 0
+alert3 = (not bHighs and upRange and close > close[str] and (close < close[ltLB] or close < close[mtLB]) and bFiltered) or
+             (bHighs and dnRange and close < close[str] and (close > close[ltLB] or close > close[mtLB]) and bFiltered) ? 1 : 0
+alert4 = (not bHighs and upRange_Aggr and close > close[str] and (close < close[ltLB] or close < close[mtLB]) and bFiltered_Aggr) or
+             (bHighs and dnRange_Aggr and close < close[str] and (close > close[ltLB] or close > close[mtLB]) and bFiltered_Aggr)? 1 : 0
+
+
+
+    // Criteria     Usually I would just write the values into the barcolor function but I want to use these later for the labels
+Criteria_Aggressive  = bSbcAggr and alert4
+Criteria_Filtered    = bSbcFilt and alert3
+Criteria_Entry       = bSbc     and bFiltered
+Criteria_AboveLines  = bSbcc    and (wvf >= upperBand or wvf >= rangeHigh)
+Criteria_AllBars     = bSgb     and close
+
+    // Highlight Bar Criteria
+barcolor(Criteria_Aggressive ? col_Aggr       : na)     // Highlight bars in this order or else the more aggressive or filtered ones will not draw while a less filtered or non filtered bar is colored over it
+barcolor(Criteria_Filtered   ? col_Filt       : na)
+barcolor(Criteria_Entry      ? col_Entry      : na)
+barcolor(Criteria_AboveLines ? col_AboveLines : na)
+barcolor(Criteria_AllBars    ? col_AllBars    : na)
+
+
+
+    // Coloring Criteria of Williams Vix Fix
+bColorBars = (bHighs and wvf <= lowerBand or bHighs and wvf <= rangeLow) or (not bHighs and wvf >= upperBand or not bHighs and wvf >= rangeHigh) ? true : false
+col = bColorBars ? color.new(#00FF00, 35): color.new(color.gray, 35)
+
+
+
+
+    // Plots for Williams Vix Fix Histogram and Alerts
+plot(bHighs and hp   ? rangeHigh * Flip : hp   ? rangeHigh * Flip : na, title='Range High Percentile', style=plot.style_line,    linewidth=4, color=color.new(color.orange, 35))
+plot(bHighs and hp   ? rangeLow  * Flip : hp   ? rangeLow  * Flip : na, title='Range Low  Percentile', style=plot.style_line,    linewidth=4, color=color.new(color.orange, 35))
+plot(bHighs and sd   ? lowerBand * Flip : sd   ? upperBand * Flip : na, title='Upper Band',            style=plot.style_line,    linewidth=3, color=color.new(color.aqua, 35))
+plot(bHighs and swvf ? wvf       * Flip : swvf ? wvf       * Flip : na, title='Williams Vix Fix',      style=plot.style_columns, linewidth=4, color=col)
+
+
+//plot(bColorBars and not bColorBars[1] ? -1 : 0, "Test", White, 2)
+
+GreenBarLookBack  = input.int(1,  minval=1,  title='Number of Green Bars neededd to trigger an alert')
+TestBool = false
+
+for i = 1 to GreenBarLookBack
+    if bColorBars and not bColorBars[i]
+        TestBool := true
+    else
+        TestBool := false
+
+    if TestBool and GreenBarLookBack > 1
+        for j = 1 to i-1
+            if not bColorBars[j]
+                TestBool := false
+                break
+
+// plot(TestBool ? -1 : 0, "Test", White, 2)
+
+
+alertcondition(TestBool, title="Williams Green Bar", message='{{ticker}} Williams Green Bar Signal {{interval}}')
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // If set to draw a label on signal     ****** Nevermind this, I totally forgot this doesn't draw  on the price chart ********
+// upLabelY = ta.lowest(4)
+// dnLabelY = ta.highest(4)
+// FilteredLabel   = bLabelFilt and Criteria_Filtered   ? label.new(bar_index, bHighs ? dnLabelY : upLabelY, "Filt", color = color.new(col_Filt, 25), style = bHighs ? label.style_label_up : label.style_label_down, textcolor = White) : na
+// AggressiveLabel = bLabelAggr and Criteria_Aggressive ? label.new(bar_index, bHighs ? dnLabelY : upLabelY, "Aggr", color = color.new(col_Aggr, 25), style = bHighs ? label.style_label_up : label.style_label_down, textcolor = White) : na
+
+
+
+
+// plot(sa1 and alert1 ? alert1 : 0, title='Alert If WVF = True', style=plot.style_line, linewidth=2, color=color.new(color.lime, 0))
+// plot(sa2 and alert2 ? alert2 : 0, title='Alert If WVF Was True Now False', style=plot.style_line, linewidth=2, color=color.new(color.aqua, 0))
+// plot(sa3 and alert3 ? alert3 : 0, title='Alert Filtered Entry', style=plot.style_line, linewidth=2, color=color.new(color.fuchsia, 0))
+// plot(sa4 and alert4 ? alert4 : 0, title='Alert Aggressive Filtered Entry', style=plot.style_line, linewidth=2, color=color.new(color.orange, 0))
+
+
+
+===========================================================================================================================

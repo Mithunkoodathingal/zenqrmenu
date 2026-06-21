@@ -1,0 +1,196 @@
+//@version=5
+strategy("WVF Bottom Reversal + ATR Trail",
+     overlay=true,
+     pyramiding=0,
+     initial_capital=100000,
+     commission_type=strategy.commission.percent,
+     commission_value=0.03)
+
+//=====================================================
+// WVF SETTINGS (Matching Your Indicator)
+//=====================================================
+
+pd   = input.int(10, "LookBack Period Std Dev")
+bbl  = input.int(10, "Bollinger Length")
+mult = input.float(1.25, "Bollinger Multiplier")
+
+lb   = input.int(20, "Percentile Lookback")
+ph   = input.float(0.95, "Highest Percentile")
+pl   = input.float(1.03, "Lowest Percentile")
+
+GreenBarLookBack = input.int(1, "Green Bars Needed")
+
+//=====================================================
+// TREND FILTER
+//=====================================================
+
+emaLen = input.int(200, "EMA Length")
+ema200 = ta.ema(close, emaLen)
+
+plot(ema200,
+     color=color.orange,
+     linewidth=2,
+     title="EMA 200")
+
+//=====================================================
+// ATR FILTER
+//=====================================================
+
+atrExpansion =
+     ta.atr(14) >
+     ta.sma(ta.atr(14), 20)
+
+//=====================================================
+// WVF CALCULATION
+//=====================================================
+
+wvf =
+     ((ta.highest(close, pd) - low)
+     / ta.highest(close, pd)) * 100
+
+sDev      = mult * ta.stdev(wvf, bbl)
+midLine   = ta.sma(wvf, bbl)
+
+upperBand = midLine + sDev
+rangeHigh = ta.highest(wvf, lb) * ph
+
+//=====================================================
+// GREEN BAR LOGIC
+//=====================================================
+
+greenBar =
+     wvf >= upperBand or
+     wvf >= rangeHigh
+
+// Visual histogram equivalent
+histValue = greenBar ? -wvf : 0
+
+//=====================================================
+// FIRST GREEN BAR DETECTION
+//=====================================================
+
+// TestBool = false
+
+// for i = 1 to GreenBarLookBack
+
+//     if greenBar and not greenBar[i]
+//         TestBool := true
+//     else
+//         TestBool := false
+
+//     if TestBool and GreenBarLookBack > 1
+
+//         for j = 1 to i - 1
+
+//             if not greenBar[j]
+//                 TestBool := false
+//                 break
+
+recentGreenSignal = ta.barssince(greenBar) <= 3
+
+//=====================================================
+// BIG BAR FILTER
+//=====================================================
+
+bigBar = wvf > rangeHigh
+
+//=====================================================
+// BELOW -1 FILTER
+//=====================================================
+
+belowMinusOne =
+     histValue < -1
+
+//=====================================================
+// ENTRY CONDITION
+//=====================================================
+
+// trendFilter =
+//      close > ema200
+
+bullishBreakout = close > high[1]
+
+bullishCandle = close > open
+
+longCondition =
+     recentGreenSignal and
+     bullishCandle and
+     bullishBreakout and
+     atrExpansion and
+     strategy.position_size == 0
+
+if longCondition
+    strategy.entry("LONG", strategy.long)
+
+//=====================================================
+// ATR TRAILING STOP
+//=====================================================
+
+atrLen  = input.int(14, "ATR Length")
+atrMult = input.float(2.5, "ATR Multiplier")
+
+atrValue = ta.atr(atrLen)
+
+var float trailStop = na
+
+if strategy.position_size > 0
+
+    stopCandidate =
+         close - atrValue * atrMult
+
+    trailStop :=
+         na(trailStop[1])
+         ? stopCandidate
+         : math.max(trailStop[1], stopCandidate)
+
+else
+    trailStop := na
+
+strategy.exit(
+     "ATR Exit",
+     from_entry="LONG",
+     stop=trailStop)
+
+//=====================================================
+// PLOTS
+//=====================================================
+
+plot(trailStop,
+     title="ATR Trail",
+     color=color.red,
+     linewidth=2)
+
+plotshape(
+     longCondition,
+     title="BUY",
+     location=location.belowbar,
+     style=shape.triangleup,
+     color=color.lime,
+     size=size.small)
+
+//=====================================================
+// ALERTS
+//=====================================================
+
+alertcondition(
+     longCondition,
+     title="WVF BUY",
+     message="WVF Long Signal")
+
+//=====================================================
+// PERFORMANCE LABEL
+//=====================================================
+
+var label stats = na
+
+if barstate.islast
+
+    label.delete(stats)
+
+    stats :=
+         label.new(
+         bar_index,
+         high,
+         "Trades: " + str.tostring(strategy.closedtrades) +
+         "\nNet Profit: " + str.tostring(strategy.netprofit),
+         style=label.style_label_left)
