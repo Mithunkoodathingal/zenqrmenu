@@ -615,19 +615,9 @@ def api_create_subscription(request):
             "payment_capture": 1,
         })
 
-        subscription, created = Subscription.objects.update_or_create(
+        subscription = Subscription.objects.get(
             user=user,
-            restaurant=restaurant,
-            defaults={
-                "plan": plan,
-                "start_date": start_date,
-                "end_date": end_date,
-                "is_active": False,
-                "was_free_trial": False,
-                "is_cancelled": False,
-                "cancelled_at": None,
-                "auto_renew": True,
-            }
+            restaurant=restaurant
         )
 
         # =====================================================
