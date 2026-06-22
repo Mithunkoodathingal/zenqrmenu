@@ -553,11 +553,11 @@ def api_create_subscription(request):
         # DEACTIVATE OLD SUBSCRIPTIONS
         # =====================================================
 
-        Subscription.objects.filter(
-            restaurant=restaurant
-        ).update(
-            is_active=False
-        )
+        # Subscription.objects.filter(
+        #     restaurant=restaurant
+        # ).update(
+        #     is_active=False
+        # )
 
         # =====================================================
         # CREATE DATES
@@ -576,20 +576,10 @@ def api_create_subscription(request):
 
         if plan.price == 0:
 
-            subscription, created = Subscription.objects.update_or_create(
-                user=user,
-                restaurant=restaurant,
-                defaults={
-                    "plan": plan,
-                    "start_date": start_date,
-                    "end_date": end_date,
-                    "is_active": True,
-                    "was_free_trial": True,
-                    "is_cancelled": False,
-                    "cancelled_at": None,
-                    "auto_renew": False,
-                }
-            )
+            subscription = Subscription.objects.get(
+            user=user,
+            restaurant=restaurant
+        )
 
             logger.info(
                 f"FREE PLAN ACTIVATED | "
