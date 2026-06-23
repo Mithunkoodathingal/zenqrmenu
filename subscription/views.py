@@ -752,6 +752,13 @@ def api_verify_payment(request):
 @permission_classes([IsAuthenticated])
 def subscription_status(request):
 
+    Subscription.objects.filter(
+        is_active=True,
+        end_date__lte=timezone.now()
+    ).update(
+        is_active=False
+    )
+
     subscription = (
         Subscription.objects
         .filter(user=request.user, is_active=True)
