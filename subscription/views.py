@@ -613,6 +613,15 @@ def api_create_subscription(request):
             "amount": order_amount,
             "currency": "INR",
             "payment_capture": 1,
+
+            "notes": {
+                "user_id": str(user.id),
+                "restaurant_id": str(restaurant.id),
+                "restaurant_name": restaurant.name,
+                "email": user.email,
+                "phone": restaurant.phone,
+                "plan": plan.name,
+            }
         })
 
         subscription = Subscription.objects.get(
@@ -647,7 +656,14 @@ def api_create_subscription(request):
             "key": settings.RAZORPAY_KEY_ID,
             "plan": plan.name,
             "subscription_id": subscription.id,
+
+            "prefill": {
+                "name": restaurant.name,
+                "email": user.email,
+                "contact": restaurant.phone,
+            }
         })
+    
 
     except Exception as e:
 
