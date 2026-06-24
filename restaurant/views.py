@@ -20,7 +20,6 @@ from django.http import (
     JsonResponse,
 )
 
-
 import google.generativeai as genai
 import requests
 import tempfile
@@ -3170,113 +3169,16 @@ def user_detail_api(request):
         #                 OCR HELPER
         # =====================================================
 
-# def extract_text_from_file(uploaded_file):
-
-#     ext = uploaded_file.name.lower()
-
-#     # PDF
-#     if ext.endswith(".pdf"):
-
-#         text = ""
-
-#         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
-#             for chunk in uploaded_file.chunks():
-#                 temp.write(chunk)
-
-#             temp.flush()
-
-#             with pdfplumber.open(temp.name) as pdf:
-#                 for page in pdf.pages:
-#                     text += page.extract_text() or ""
-
-#         return text
-
-#     # IMAGE
-#     else:
-
-#         image = Image.open(uploaded_file)
-
-#         text = pytesseract.image_to_string(image)
-
-#         return text
     
         # =====================================================
         #                 GEMIN MENU PARSER
         # =====================================================
 
-def parse_menu_with_gemini(menu_text):
-
-    model = genai.GenerativeModel("gemini-2.5-pro")
-
-    prompt = f"""
-You are an expert restaurant menu parser.
-
-Extract menu items from the text below.
-
-Return ONLY valid JSON.
-
-Format:
-
-{{
-  "items":[
-    {{
-      "category":"",
-      "item_name":"",
-      "description":"",
-      "veg_or_nonveg":"",
-      "price":0,
-      "confidence":0.95
-    }}
-  ]
-}}
-
-Menu:
-
-{menu_text}
-"""
-
-    response = model.generate_content(prompt)
-
-    raw = response.text.strip()
-
-    raw = raw.replace("```json", "")
-    raw = raw.replace("```", "")
-
-    return json.loads(raw)
 
         # =====================================================
         #                 AI MENU EXTRACTION API
         # =====================================================
 
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def ai_menu_extract(request):
-
-    try:
-
-        uploaded_file = request.FILES.get("file")
-
-        if not uploaded_file:
-            return JsonResponse({
-                "success": False,
-                "error": "No file uploaded"
-            })
-
-        text = extract_text_from_file(uploaded_file)
-
-        parsed = parse_menu_with_gemini(text)
-
-        return JsonResponse({
-            "success": True,
-            "items": parsed["items"]
-        })
-
-    except Exception as e:
-
-        return JsonResponse({
-            "success": False,
-            "error": str(e)
-        }, status=500)
     
         # =====================================================
         #                 IMAGE SEARCH API
@@ -3336,7 +3238,7 @@ def ai_image_search(request):
 def parse_menu_with_gemini_vision(uploaded_file):
 
     model = genai.GenerativeModel(
-        model_name="gemini-2.5-pro"
+        model_name="gemini-1.5-pro"
     )
 
     prompt = """
