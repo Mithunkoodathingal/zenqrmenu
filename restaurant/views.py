@@ -21,10 +21,7 @@ from django.http import (
 )
 
 
-import pdfplumber
-import pytesseract
 import google.generativeai as genai
-from PIL import Image
 import requests
 import tempfile
 
@@ -3173,35 +3170,35 @@ def user_detail_api(request):
         #                 OCR HELPER
         # =====================================================
 
-def extract_text_from_file(uploaded_file):
+# def extract_text_from_file(uploaded_file):
 
-    ext = uploaded_file.name.lower()
+#     ext = uploaded_file.name.lower()
 
-    # PDF
-    if ext.endswith(".pdf"):
+#     # PDF
+#     if ext.endswith(".pdf"):
 
-        text = ""
+#         text = ""
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
-            for chunk in uploaded_file.chunks():
-                temp.write(chunk)
+#         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
+#             for chunk in uploaded_file.chunks():
+#                 temp.write(chunk)
 
-            temp.flush()
+#             temp.flush()
 
-            with pdfplumber.open(temp.name) as pdf:
-                for page in pdf.pages:
-                    text += page.extract_text() or ""
+#             with pdfplumber.open(temp.name) as pdf:
+#                 for page in pdf.pages:
+#                     text += page.extract_text() or ""
 
-        return text
+#         return text
 
-    # IMAGE
-    else:
+#     # IMAGE
+#     else:
 
-        image = Image.open(uploaded_file)
+#         image = Image.open(uploaded_file)
 
-        text = pytesseract.image_to_string(image)
+#         text = pytesseract.image_to_string(image)
 
-        return text
+#         return text
     
         # =====================================================
         #                 GEMIN MENU PARSER
