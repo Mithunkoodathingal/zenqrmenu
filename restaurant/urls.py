@@ -141,6 +141,11 @@ urlpatterns = [
     path('menu/table/<int:table_id>/', menu_view_by_table, name='menu_by_table'),
     path('menu/api/table/<int:table_id>/', public_menu_by_table),
 
+    # ------------------- AI MENU CREATION API'S-----------------------
+
+    path( "api/ai-import/extract/", ai_menu_extract ),
+    path( "api/ai-import/image-search/", ai_image_search),
+
     # ================= NEW (IMPORTANT) =================
     path('menu/api/', include(router.urls)),
 ]

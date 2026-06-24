@@ -21,9 +21,15 @@ from django.http import (
 )
 
 
+import pdfplumber
+import pytesseract
+import google.generativeai as genai
+from PIL import Image
+import requests
+import tempfile
+
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
-
 
 from django.core.files import File
 from django.urls import reverse_lazy
@@ -97,6 +103,9 @@ from allauth.account.models import EmailAddress
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
+
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
 
 # cooldown in seconds to avoid spamming resend per email (adjust as you like)
 RESEND_COOLDOWN_SECONDS = 120  # 2 minutes
@@ -3156,4 +3165,282 @@ def user_detail_api(request):
     })
 
 
-#======================= specific commit revert==========================
+######################### AI MENU CREATION API's ###########################
+
+############################################################################
+
+        # =====================================================
+        #                 OCR HELPER
+        # =====================================================
+
+def extract_text_from_file(uploaded_file):
+
+    ext = uploaded_file.name.lower()
+
+    # PDF
+    if ext.endswith(".pdf"):
+
+        text = ""
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
+            for chunk in uploaded_file.chunks():
+                temp.write(chunk)
+
+            temp.flush()
+
+            with pdfplumber.open(temp.name) as pdf:
+                for page in pdf.pages:
+                    text += page.extract_text() or ""
+
+        return text
+
+    # IMAGE
+    else:
+
+        image = Image.open(uploaded_file)
+
+        text = pytesseract.image_to_string(image)
+
+        return text
+    
+        # =====================================================
+        #                 GEMIN MENU PARSER
+        # =====================================================
+
+def parse_menu_with_gemini(menu_text):
+
+    model = genai.GenerativeModel("gemini-2.5-pro")
+
+    prompt = f"""
+You are an expert restaurant menu parser.
+
+Extract menu items from the text below.
+
+Return ONLY valid JSON.
+
+Format:
+
+{{
+  "items":[
+    {{
+      "category":"",
+      "item_name":"",
+      "description":"",
+      "veg_or_nonveg":"",
+      "price":0,
+      "confidence":0.95
+    }}
+  ]
+}}
+
+Menu:
+
+{menu_text}
+"""
+
+    response = model.generate_content(prompt)
+
+    raw = response.text.strip()
+
+    raw = raw.replace("```json", "")
+    raw = raw.replace("```", "")
+
+    return json.loads(raw)
+
+        # =====================================================
+        #                 AI MENU EXTRACTION API
+        # =====================================================
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def ai_menu_extract(request):
+
+    try:
+
+        uploaded_file = request.FILES.get("file")
+
+        if not uploaded_file:
+            return JsonResponse({
+                "success": False,
+                "error": "No file uploaded"
+            })
+
+        text = extract_text_from_file(uploaded_file)
+
+        parsed = parse_menu_with_gemini(text)
+
+        return JsonResponse({
+            "success": True,
+            "items": parsed["items"]
+        })
+
+    except Exception as e:
+
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)
+    
+        # =====================================================
+        #                 IMAGE SEARCH API
+        # =====================================================
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def ai_image_search(request):
+
+    try:
+
+        query = request.GET.get("q")
+
+        if not query:
+            return JsonResponse({
+                "success": False
+            })
+
+        headers = {
+            "Authorization": os.getenv("PEXELS_API_KEY")
+        }
+
+        url = (
+            f"https://api.pexels.com/v1/search"
+            f"?query={query}+food&per_page=1"
+        )
+
+        response = requests.get(url, headers=headers)
+
+        data = response.json()
+
+        if data.get("photos"):
+
+            image_url = data["photos"][0]["src"]["large"]
+
+            return JsonResponse({
+                "success": True,
+                "image_url": image_url
+            })
+
+        return JsonResponse({
+            "success": True,
+            "image_url": ""
+        })
+
+    except Exception as e:
+
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        })
+    
+        # =====================================================
+        #                 GEMINI VISION EXTRACOR
+        # =====================================================
+
+def parse_menu_with_gemini_vision(uploaded_file):
+
+    model = genai.GenerativeModel(
+        model_name="gemini-2.5-pro"
+    )
+
+    prompt = """
+You are an expert restaurant menu digitization engine.
+
+Convert the uploaded restaurant menu into structured data suitable for a QR menu SaaS.
+
+Extract:
+
+- category
+- item_name
+- description
+- veg_or_nonveg
+- price
+- confidence
+
+Requirements:
+
+- Create categories when not explicitly present.
+- Detect Veg / Non Veg accurately.
+- Remove currency symbols.
+- Use numbers only for price.
+- Generate concise descriptions when absent.
+- Ignore logos, addresses, GST numbers, phone numbers and decorative text.
+- Preserve menu hierarchy.
+- Return every item found.
+- Return ONLY JSON.
+
+Schema:
+
+{
+  "items":[
+    {
+    "category": "Starters",
+    "item_name": "Chicken 65",
+    "description": "Spicy fried chicken pieces",
+    "veg_or_nonveg": "Non Veg",
+    "price": 220,
+    "confidence": 0.98,
+    "image_search_term": "chicken 65 indian food",
+    "image_search_terms": [
+        "chicken 65 indian food",
+        "spicy fried chicken appetizer",
+        "restaurant style chicken 65"
+    ]
+    }
+  ]
+}
+"""
+
+    with tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=os.path.splitext(uploaded_file.name)[1]
+    ) as temp:
+
+        for chunk in uploaded_file.chunks():
+            temp.write(chunk)
+
+        temp.flush()
+
+        uploaded = genai.upload_file(temp.name)
+
+    response = model.generate_content(
+        [prompt, uploaded]
+    )
+
+    result = response.text
+
+    result = result.replace("```json", "")
+    result = result.replace("```", "")
+
+    return json.loads(result)
+
+        # =====================================================
+        #                 API ENDPOINTS
+        # =====================================================
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def ai_menu_extract(request):
+
+    try:
+
+        file = request.FILES.get("file")
+
+        if not file:
+            return JsonResponse({
+                "success": False,
+                "error": "No file uploaded"
+            })
+
+        data = parse_menu_with_gemini_vision(file)
+
+        return JsonResponse({
+            "success": True,
+            "items": data["items"]
+        })
+
+    except Exception as e:
+
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)
