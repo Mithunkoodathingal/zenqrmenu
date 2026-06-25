@@ -20,7 +20,6 @@ from django.http import (
     JsonResponse,
 )
 
-import google.generativeai as genai
 import requests
 import tempfile
 
@@ -95,12 +94,16 @@ from .models import (
 from subscription.models import Subscription
 import traceback
 from allauth.account.models import EmailAddress
+from google import genai
+from google.genai import types
+
+client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY")
+)
 
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
-
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 
 # cooldown in seconds to avoid spamming resend per email (adjust as you like)
@@ -3237,10 +3240,6 @@ def ai_image_search(request):
 
 def parse_menu_with_gemini_vision(uploaded_file):
 
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-pro"
-    )
-
     prompt = """
 You are an expert restaurant menu digitization engine.
 
@@ -3272,47 +3271,71 @@ Schema:
 {
   "items":[
     {
-    "category": "Starters",
-    "item_name": "Chicken 65",
-    "description": "Spicy fried chicken pieces",
-    "veg_or_nonveg": "Non Veg",
-    "price": 220,
-    "confidence": 0.98,
-    "image_search_term": "chicken 65 indian food",
-    "image_search_terms": [
+      "category":"Starters",
+      "item_name":"Chicken 65",
+      "description":"Spicy fried chicken pieces",
+      "veg_or_nonveg":"Non Veg",
+      "price":220,
+      "confidence":0.98,
+      "image_search_term":"chicken 65 indian food",
+      "image_search_terms":[
         "chicken 65 indian food",
         "spicy fried chicken appetizer",
         "restaurant style chicken 65"
-    ]
+      ]
     }
   ]
 }
 """
 
-    with tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix=os.path.splitext(uploaded_file.name)[1]
-    ) as temp:
+    mime = uploaded_file.content_type
 
-        for chunk in uploaded_file.chunks():
-            temp.write(chunk)
+    if not mime:
 
-        temp.flush()
+        ext = os.path.splitext(uploaded_file.name)[1].lower()
 
-        print("Uploading to Gemini...")
+        if ext == ".pdf":
+            mime = "application/pdf"
 
-        uploaded = genai.upload_file(temp.name)
+        elif ext in [".jpg", ".jpeg"]:
+            mime = "image/jpeg"
 
-        print("Upload successful")
+        elif ext == ".png":
+            mime = "image/png"
 
-    response = model.generate_content(
-        [prompt, uploaded]
+        elif ext == ".webp":
+            mime = "image/webp"
+
+        else:
+            mime = "application/octet-stream"
+
+    file_bytes = uploaded_file.read()
+
+    response = client.models.generate_content(
+
+        model="gemini-2.5-pro",
+
+        contents=[
+
+            types.Part.from_bytes(
+                data=file_bytes,
+                mime_type=mime,
+            ),
+
+            prompt,
+        ],
+
     )
 
-    result = response.text
+    result = response.text.strip()
 
-    result = result.replace("```json", "")
-    result = result.replace("```", "")
+    if result.startswith("```json"):
+        result = result[7:]
+
+    if result.endswith("```"):
+        result = result[:-3]
+
+    result = result.strip()
 
     return json.loads(result)
 
