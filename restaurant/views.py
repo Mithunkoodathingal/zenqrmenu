@@ -3299,7 +3299,11 @@ Schema:
 
         temp.flush()
 
+        print("Uploading to Gemini...")
+
         uploaded = genai.upload_file(temp.name)
+
+        print("Upload successful")
 
     response = model.generate_content(
         [prompt, uploaded]
@@ -3337,7 +3341,10 @@ def ai_menu_extract(request):
             "items": data["items"]
         })
 
+
     except Exception as e:
+
+        traceback.print_exc()
 
         return JsonResponse({
             "success": False,

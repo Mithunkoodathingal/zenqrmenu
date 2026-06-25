@@ -143,8 +143,8 @@ urlpatterns = [
 
     # ------------------- AI MENU CREATION API'S-----------------------
 
-    path( "api/ai-import/extract/", ai_menu_extract ),
-    path( "api/ai-import/image-search/", ai_image_search),
+    path( "menu/api/ai-import/extract/", ai_menu_extract ),
+    path( "menu/api/ai-import/image-search/", ai_image_search),
 
     # ================= NEW (IMPORTANT) =================
     path('menu/api/', include(router.urls)),
