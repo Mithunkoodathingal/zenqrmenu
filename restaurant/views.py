@@ -3312,20 +3312,16 @@ Schema:
     file_bytes = uploaded_file.read()
 
     response = client.models.generate_content(
-
-        model="gemini-2.5-pro",
-
-        contents=[
-
-            types.Part.from_bytes(
-                data=file_bytes,
-                mime_type=mime,
-            ),
-
-            prompt,
-        ],
-
-    )
+        
+            model="gemini-2.5-flash",
+            contents=[
+                types.Part.from_bytes(
+                    data=file_bytes,
+                    mime_type=mime,
+                ),
+                prompt,
+            ],
+            )
 
     result = response.text.strip()
 
