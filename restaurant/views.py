@@ -2167,7 +2167,9 @@ def category_detail_api(request, id):
 
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+
+# @permission_classes([IsAuthenticated])
+
 def menu_items_api(request):
 
     # ✅ Get restaurant safely
@@ -3312,7 +3314,7 @@ Schema:
     file_bytes = uploaded_file.read()
 
     response = client.models.generate_content(
-        
+
             model="gemini-2.5-flash",
             contents=[
                 types.Part.from_bytes(
