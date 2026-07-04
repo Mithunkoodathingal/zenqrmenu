@@ -793,7 +793,7 @@ class Order(models.Model):
     )
     delivery_latitude = models.DecimalField( max_digits=10, decimal_places=7, null=True, blank=True)
     delivery_longitude = models.DecimalField( max_digits=10, decimal_places=7, null=True, blank=True)
-    order_number = models.CharField( max_length=25, unique=True, blank=True, db_index=True,)
+    order_number = models.CharField(max_length=25, unique=True, blank=True, null=True, db_index=True,)
     pickup_verified = models.BooleanField(default=False)
     delivery_verified = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
