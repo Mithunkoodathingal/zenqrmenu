@@ -1,0 +1,382 @@
+{% extends "receipts/base_print.html" %}
+
+{% block title %}
+Invoice {{ order.order_number }}
+{% endblock %}
+
+{% block content %}
+
+<div class="row align-items-center mb-4">
+
+    <div class="col-2">
+
+        {% if restaurant.logo %}
+        <img
+                src="{{ restaurant.logo.url }}"
+                class="logo">
+        {% endif %}
+
+    </div>
+
+    <div class="col-7">
+
+        <h2>{{ restaurant.name }}</h2>
+
+        <div>{{ restaurant.address }}</div>
+
+        <div>{{ restaurant.phone }}</div>
+
+        <div>{{ restaurant.email }}</div>
+
+        {% if restaurant.gst_number %}
+            <div>
+                GSTIN :
+                {{ restaurant.gst_number }}
+            </div>
+        {% endif %}
+
+    </div>
+
+    <div class="col-3 text-end">
+
+        <h4>INVOICE</h4>
+
+        <strong>
+
+            {{ order.order_number }}
+
+        </strong>
+
+    </div>
+
+</div>
+
+<hr>
+
+<div class="row mb-4">
+
+    <div class="col-md-4">
+
+        <div class="section-title">
+
+            Customer Details
+
+        </div>
+
+        <strong>
+
+            {{ order.customer_name }}
+
+        </strong>
+
+        <br>
+
+        {{ order.customer_phone }}
+
+        <br>
+
+        {{ order.customer_email }}
+
+        <br>
+
+        {{ order.customer_address }}
+
+    </div>
+
+    <div class="col-md-4">
+
+        <div class="section-title">
+
+            Payment Details
+
+        </div>
+
+        Method :
+        {{ payment.payment_mode }}
+
+        <br>
+
+        Status :
+        {{ payment.status }}
+
+        <br>
+
+        Transaction :
+
+        {{ payment.transaction_number }}
+
+        <br>
+
+        {% if payment.gateway_payment_id %}
+
+        Gateway ID :
+
+        {{ payment.gateway_payment_id }}
+
+        {% endif %}
+
+    </div>
+
+    <div class="col-md-4">
+
+        <div class="section-title">
+
+            Order Details
+
+        </div>
+
+        Order Type :
+
+        {{ order.order_type }}
+
+        <br>
+
+        Status :
+
+        {{ order.status }}
+
+        <br>
+
+        Date :
+
+        {{ order.created_at }}
+
+        <br>
+
+        Table :
+
+        {{ order.table }}
+
+    </div>
+
+</div>
+
+<div class="section-title">
+
+Invoice Items
+
+</div>
+
+<table class="table">
+
+    <thead>
+
+    <tr>
+
+        <th width="5%">#</th>
+
+        <th>Item</th>
+
+        <th width="12%">Qty</th>
+
+        <th width="15%">Price</th>
+
+        <th width="15%">Total</th>
+
+    </tr>
+
+    </thead>
+
+    <tbody>
+
+    {% for item in order.items.all %}
+
+    <tr>
+
+        <td>
+
+            {{ forloop.counter }}
+
+        </td>
+
+        <td>
+
+            <strong>
+
+                {{ item.food_item.name }}
+
+            </strong>
+
+            {% if item.instructions %}
+
+                <br>
+
+                <small>
+
+                    {{ item.instructions }}
+
+                </small>
+
+            {% endif %}
+
+        </td>
+
+        <td>
+
+            {{ item.quantity }}
+
+        </td>
+
+        <td>
+
+            ₹ {{ item.unit_price }}
+
+        </td>
+
+        <td>
+
+            ₹ {{ item.total_price }}
+
+        </td>
+
+    </tr>
+
+    {% empty %}
+
+    <tr>
+
+        <td colspan="5">
+
+            No Items
+
+        </td>
+
+    </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+<div class="row mt-4">
+
+    <div class="col-6">
+
+        {% if receipt_qr %}
+
+        <img
+                src="{{ receipt_qr.url }}"
+                width="130">
+
+        {% endif %}
+
+    </div>
+
+    <div class="col-6">
+
+        <table class="total-table">
+
+            <tr>
+
+                <td>
+
+                    Subtotal
+
+                </td>
+
+                <td class="text-end">
+
+                    ₹ {{ order.subtotal }}
+
+                </td>
+
+            </tr>
+
+            <tr>
+
+                <td>
+
+                    Tax
+
+                </td>
+
+                <td class="text-end">
+
+                    ₹ {{ order.tax_amount }}
+
+                </td>
+
+            </tr>
+
+            <tr>
+
+                <td>
+
+                    Discount
+
+                </td>
+
+                <td class="text-end">
+
+                    ₹ {{ order.discount_amount }}
+
+                </td>
+
+            </tr>
+
+            <tr>
+
+                <td>
+
+                    Delivery
+
+                </td>
+
+                <td class="text-end">
+
+                    ₹ {{ order.delivery_charge }}
+
+                </td>
+
+            </tr>
+
+            <tr>
+
+                <td>
+
+                    <strong>
+
+                        Grand Total
+
+                    </strong>
+
+                </td>
+
+                <td class="text-end">
+
+                    <strong>
+
+                        ₹ {{ order.total_price }}
+
+                    </strong>
+
+                </td>
+
+            </tr>
+
+        </table>
+
+    </div>
+
+</div>
+
+<div class="footer">
+
+    <strong>
+
+        Thank You For Visiting
+
+    </strong>
+
+    <br><br>
+
+    This is a computer generated invoice.
+
+    <br>
+
+    No signature required.
+
+</div>
+
+{% endblock %}

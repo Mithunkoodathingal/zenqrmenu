@@ -1,0 +1,41 @@
+Hello {{ payment.customer_name }},
+
+Thank you for your order.
+
+Your payment has been received successfully.
+
+------------------------------------
+
+Restaurant:
+{{ restaurant.name }}
+
+Invoice:
+{{ receipt.invoice_number }}
+
+Order:
+{{ order.id }}
+
+Payment:
+{{ payment.gateway_payment_id }}
+
+Amount:
+₹ {{ payment.amount }}
+
+Payment Method:
+{{ payment.payment_method }}
+
+Status:
+{{ payment.status }}
+
+Invoice Date:
+{{ receipt.invoice_date }}
+
+------------------------------------
+
+Your invoice PDF is attached with this email.
+
+Thank you for choosing {{ restaurant.name }}.
+
+Powered by ZenQRMenu
+
+https://zenqrmenu.com

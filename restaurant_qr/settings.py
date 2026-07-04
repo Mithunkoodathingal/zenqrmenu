@@ -101,6 +101,7 @@ INSTALLED_APPS = [
     'restaurant.apps.RestaurantConfig',
     'corsheaders',
     'subscription',
+    'payments',
 ]
 
 # -------------------------
@@ -634,3 +635,11 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+PAYMENT_ENCRYPTION_KEY = os.getenv(
+    "PAYMENT_ENCRYPTION_KEY"
+)
+
+BRAND_NAME = "ZenQRMenu"
+
+BRAND_URL = "https://zenqrmenu.com"

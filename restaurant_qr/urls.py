@@ -41,7 +41,7 @@ urlpatterns = [
     path('', include('restaurant.urls')),   # ensure you have this file
     path('subscription/', include(('subscription.urls', 'subscription'), namespace='subscription')),
   # if present
-    
+    path("payments/", include("payments.urls"),),
 ]
 
 # Serve media files in development mode

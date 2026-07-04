@@ -1,0 +1,49 @@
+body{
+
+    background:#efefef;
+
+    font-size:14px;
+
+}
+
+.invoice{
+
+    width:210mm;
+
+    min-height:297mm;
+
+    margin:auto;
+
+    background:white;
+
+    padding:15mm;
+
+}
+
+table{
+
+    font-size:14px;
+
+}
+
+@media print{
+
+body{
+
+background:white;
+
+}
+
+.invoice{
+
+width:100%;
+
+margin:0;
+
+padding:0;
+
+box-shadow:none;
+
+}
+
+}
