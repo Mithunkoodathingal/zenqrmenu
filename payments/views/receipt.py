@@ -62,7 +62,7 @@ from payments.services import (
     create_audit_log,
 )
 
-from restaurant.utils import get_restaurant
+from restaurant.integrations import get_restaurant
 
 # =============================================================================
 # Logging

@@ -7,14 +7,7 @@ from restaurant.models import Restaurant, Order
 import uuid
 import random
 import string
-from restaurant.models import Order
-from .models import (
-    RestaurantGatewaySettings,
-    PaymentTransaction,
-    PaymentAuditLog,
-)
-
-
+from .models import PaymentTransaction
 
 
 # ==========================================

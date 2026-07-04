@@ -54,7 +54,7 @@ from payments.services import (
 # Restaurant Helpers
 # =============================================================================
 
-from restaurant.utils import get_restaurant
+from restaurant.integrations import get_restaurant
 
 class CreateRazorpayOrderAPIView(APIView):
 

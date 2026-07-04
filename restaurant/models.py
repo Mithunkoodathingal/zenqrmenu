@@ -302,6 +302,406 @@ class FoodItem(models.Model):
     def __str__(self):
         return self.name
     
+    
+# =============================================================================
+# Delivery Partner
+# =============================================================================
+
+class DeliveryPartner(models.Model):
+    """
+    Delivery Partner
+
+    Represents a delivery executive belonging
+    to a restaurant.
+
+    Responsibilities
+
+        • Delivery assignment
+
+        • Live location
+
+        • Contact details
+
+        • Vehicle information
+
+        • Availability
+
+        • Performance tracking
+    """
+
+    # ==========================================================
+    # Restaurant
+    # ==========================================================
+
+    restaurant = models.ForeignKey(
+
+        Restaurant,
+
+        on_delete=models.CASCADE,
+
+        related_name="delivery_partners",
+
+    )
+
+    # ==========================================================
+    # Identity
+    # ==========================================================
+
+    first_name = models.CharField(
+
+        max_length=100,
+
+    )
+
+    last_name = models.CharField(
+
+        max_length=100,
+
+        blank=True,
+
+    )
+
+    profile_photo = models.ImageField(
+
+        upload_to="delivery_partners/",
+
+        blank=True,
+
+        null=True,
+
+    )
+
+    # ==========================================================
+    # Contact
+    # ==========================================================
+
+    country_code = models.CharField(
+
+        max_length=5,
+
+        default="+91",
+
+    )
+
+    phone = models.CharField(
+
+        max_length=20,
+
+        unique=True,
+
+    )
+
+    alternate_phone = models.CharField(
+
+        max_length=20,
+
+        blank=True,
+
+    )
+
+    email = models.EmailField(
+
+        blank=True,
+
+    )
+
+    # ==========================================================
+    # Address
+    # ==========================================================
+
+    address = models.TextField(
+
+        blank=True,
+
+    )
+
+    city = models.CharField(
+
+        max_length=100,
+
+        blank=True,
+
+    )
+
+    state = models.CharField(
+
+        max_length=100,
+
+        blank=True,
+
+    )
+
+    pincode = models.CharField(
+
+        max_length=10,
+
+        blank=True,
+
+    )
+
+    # ==========================================================
+    # Vehicle
+    # ==========================================================
+
+    vehicle_type = models.CharField(
+
+        max_length=30,
+
+        choices=[
+
+            ("bike", "Bike"),
+
+            ("cycle", "Cycle"),
+
+            ("car", "Car"),
+
+            ("scooter", "Scooter"),
+
+        ],
+
+        default="bike",
+
+    )
+
+    vehicle_number = models.CharField(
+
+        max_length=20,
+
+        blank=True,
+
+    )
+
+    driving_license_number = models.CharField(
+
+        max_length=30,
+
+        blank=True,
+
+    )
+
+    # ==========================================================
+    # Status
+    # ==========================================================
+
+    is_active = models.BooleanField(
+
+        default=True,
+
+    )
+
+    is_available = models.BooleanField(
+
+        default=True,
+
+    )
+
+    is_verified = models.BooleanField(
+
+        default=False,
+
+    )
+
+    # ==========================================================
+    # Live Location
+    # ==========================================================
+
+    current_latitude = models.DecimalField(
+
+        max_digits=10,
+
+        decimal_places=7,
+
+        null=True,
+
+        blank=True,
+
+    )
+
+    current_longitude = models.DecimalField(
+
+        max_digits=10,
+
+        decimal_places=7,
+
+        null=True,
+
+        blank=True,
+
+    )
+
+    last_location_update = models.DateTimeField(
+
+        null=True,
+
+        blank=True,
+
+    )
+
+    # ==========================================================
+    # Performance
+    # ==========================================================
+
+    total_deliveries = models.PositiveIntegerField(
+
+        default=0,
+
+    )
+
+    successful_deliveries = models.PositiveIntegerField(
+
+        default=0,
+
+    )
+
+    cancelled_deliveries = models.PositiveIntegerField(
+
+        default=0,
+
+    )
+
+    average_rating = models.DecimalField(
+
+        max_digits=3,
+
+        decimal_places=2,
+
+        default=Decimal("0.00"),
+
+    )
+
+    # ==========================================================
+    # Employment
+    # ==========================================================
+
+    joined_at = models.DateTimeField(
+
+        auto_now_add=True,
+
+    )
+
+    resigned_at = models.DateTimeField(
+
+        null=True,
+
+        blank=True,
+
+    )
+
+    notes = models.TextField(
+
+        blank=True,
+
+    )
+
+    # ==========================================================
+    # Audit
+    # ==========================================================
+
+    created_at = models.DateTimeField(
+
+        auto_now_add=True,
+
+    )
+
+    updated_at = models.DateTimeField(
+
+        auto_now=True,
+
+    )
+
+    class Meta:
+
+        ordering = [
+
+            "first_name",
+
+        ]
+
+        indexes = [
+
+            models.Index(
+
+                fields=["restaurant"],
+
+            ),
+
+            models.Index(
+
+                fields=["phone"],
+
+            ),
+
+            models.Index(
+
+                fields=["is_active"],
+
+            ),
+
+            models.Index(
+
+                fields=["is_available"],
+
+            ),
+
+            models.Index(
+
+                fields=[
+
+                    "current_latitude",
+
+                    "current_longitude",
+
+                ],
+
+            ),
+
+        ]
+
+    def __str__(self):
+
+        return (
+
+            f"{self.first_name} "
+
+            f"{self.last_name}"
+
+        ).strip()
+
+    @property
+    def full_name(self):
+
+        return (
+
+            f"{self.first_name} "
+
+            f"{self.last_name}"
+
+        ).strip()
+
+    @property
+    def success_rate(self):
+
+        if self.total_deliveries == 0:
+
+            return Decimal("0.00")
+
+        return round(
+
+            (
+
+                self.successful_deliveries
+
+                / self.total_deliveries
+
+            ) * 100,
+
+            2,
+
+        )   
+    
+    
+    
+    
 class Order(models.Model):
 
     STATUS_CHOICES = [
@@ -417,16 +817,18 @@ class Order(models.Model):
     # DELIVERY ASSIGNMENT
     # ==========================================
 
-    delivery_person_name = models.CharField(
-        max_length=100,
-        blank=True,
-        default=""
-    )
+    delivery_partner = models.ForeignKey(
 
-    delivery_person_phone = models.CharField(
-        max_length=20,
+        DeliveryPartner,
+
+        on_delete=models.SET_NULL,
+
+        null=True,
+
         blank=True,
-        default=""
+
+        related_name="orders",
+
     )
 
     # ==========================================
