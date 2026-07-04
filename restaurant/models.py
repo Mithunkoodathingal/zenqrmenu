@@ -771,7 +771,6 @@ class Order(models.Model):
         null=True,
         blank=True
     )
-    id = models.UUIDField( primary_key=True, default=uuid.uuid4, editable=False)
 
     restaurant = models.ForeignKey(Restaurant, related_name="orders", on_delete=models.CASCADE)
     

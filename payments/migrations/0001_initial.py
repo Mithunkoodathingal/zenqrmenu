@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('restaurant', '0023_alter_order_order_number'),
+        ('restaurant', '0022_populate_order_numbers'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
