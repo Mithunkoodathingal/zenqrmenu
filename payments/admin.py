@@ -20,7 +20,7 @@ class ReceiptInline(admin.StackedInline):
     extra = 0
     can_delete = False
     readonly_fields = (
-        "receipt_number",
+        "invoice_number",
         "pdf",
         "created_at",
         "printed",
@@ -169,7 +169,7 @@ class RestaurantGatewaySettingsAdmin(admin.ModelAdmin):
     masked_secret.short_description = "Key Secret"
 
     def masked_webhook(self, obj):
-        return self.mask(obj.webhook_secret_value)
+        return self.mask(obj.webhook_secret)
 
     masked_webhook.short_description = "Webhook Secret"
 
@@ -189,7 +189,7 @@ class PaymentTransactionAdmin(admin.ModelAdmin):
     list_display = (
         "transaction_number",
         "restaurant",
-        "customer_name",
+        "order",
         "payment_mode",
         "source",
         "amount",
@@ -211,8 +211,8 @@ class PaymentTransactionAdmin(admin.ModelAdmin):
         "transaction_number",
         "gateway_order_id",
         "gateway_payment_id",
-        "customer_name",
-        "customer_phone",
+        "order__customer_name",
+        "order__customer_phone",
         "restaurant__name",
     )
 
@@ -341,7 +341,7 @@ class PaymentAuditLogAdmin(admin.ModelAdmin):
 class ReceiptAdmin(admin.ModelAdmin):
 
     list_display = (
-        "receipt_number",
+        "invoice_number",
         "payment",
         "printed",
         "email_sent",
@@ -356,7 +356,7 @@ class ReceiptAdmin(admin.ModelAdmin):
     )
 
     search_fields = (
-        "receipt_number",
+        "invoice_number",
         "payment__transaction_number",
     )
 

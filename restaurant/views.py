@@ -11,6 +11,7 @@ import qrcode
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db import transaction
+from decouple import config
 from allauth.account.views import SignupView
 from django.http import (
     FileResponse,
@@ -97,9 +98,7 @@ from allauth.account.models import EmailAddress
 from google import genai
 from google.genai import types
 
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY")
-)
+client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 logger = logging.getLogger(__name__)
 
@@ -3201,7 +3200,7 @@ def ai_image_search(request):
             })
 
         headers = {
-            "Authorization": os.getenv("PEXELS_API_KEY")
+            "Authorization": config("PEXELS_API_KEY")
         }
 
         url = (

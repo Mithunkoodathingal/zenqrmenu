@@ -61,11 +61,14 @@ class Restaurant(models.Model):
 
 
     city = models.CharField(
-        max_length=100
+        max_length=100,
+        default="Gotham",
     )
 
     state = models.CharField(
-        max_length=100
+        max_length=100,
+        blank=True,
+        null=True,
     )
 
     country = models.CharField(
@@ -74,7 +77,9 @@ class Restaurant(models.Model):
     )
 
     pincode = models.CharField(
-        max_length=10
+        max_length=10,
+        blank=True,
+        null=True,
     )
 
     phone_country_code = models.CharField(
@@ -432,11 +437,9 @@ class DeliveryPartner(models.Model):
     )
 
     pincode = models.CharField(
-
         max_length=10,
-
         blank=True,
-
+        null=True,
     )
 
     # ==========================================================

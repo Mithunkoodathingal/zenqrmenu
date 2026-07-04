@@ -1,12 +1,11 @@
 #------payments/receipt.py------#
-
 import os
 from decimal import Decimal
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.template.loader import render_to_string
 from django.utils import timezone
-from weasyprint import HTML
+# from weasyprint import HTML
 import mimetypes
 import requests
 
@@ -31,7 +30,9 @@ def generate_receipt_pdf(receipt):
     Exception
         If PDF generation fails.
     """
-
+    from weasyprint import HTML
+    
+    
     payment = receipt.payment
     order = payment.order
     restaurant = payment.restaurant

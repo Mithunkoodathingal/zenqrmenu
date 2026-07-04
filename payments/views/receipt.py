@@ -44,7 +44,7 @@ from rest_framework.views import APIView
 # Third-Party Imports
 # =============================================================================
 
-from weasyprint import HTML
+# from weasyprint import HTML
 
 # =============================================================================
 # Local Application Imports
@@ -62,7 +62,7 @@ from payments.services import (
     create_audit_log,
 )
 
-from restaurant.integrations import get_restaurant
+from payments.services import get_restaurant
 
 # =============================================================================
 # Logging
@@ -85,7 +85,10 @@ def generate_receipt_pdf(receipt):
         pdf_bytes,
         relative_file_path
     """
-
+    
+    from weasyprint import HTML
+    
+    
     payment = receipt.payment
 
     order = payment.order

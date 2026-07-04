@@ -7,7 +7,6 @@ from restaurant.models import Restaurant, Order
 import uuid
 import random
 import string
-from .models import PaymentTransaction
 
 
 # ==========================================
