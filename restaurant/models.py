@@ -39,6 +39,49 @@ class Restaurant(models.Model):
         default="razorpay"
     )
 
+    DEFAULT_WORKING_HOURS = {
+        "monday": {
+            "is_open": True,
+            "open": "09:00",
+            "close": "22:00",
+        },
+        "tuesday": {
+            "is_open": True,
+            "open": "09:00",
+            "close": "22:00",
+        },
+        "wednesday": {
+            "is_open": True,
+            "open": "09:00",
+            "close": "22:00",
+        },
+        "thursday": {
+            "is_open": True,
+            "open": "09:00",
+            "close": "22:00",
+        },
+        "friday": {
+            "is_open": True,
+            "open": "09:00",
+            "close": "22:00",
+        },
+        "saturday": {
+            "is_open": True,
+            "open": "09:00",
+            "close": "22:00",
+        },
+        "sunday": {
+            "is_open": False,
+            "open": "09:00",
+            "close": "22:00",
+        },
+    }
+    
+    working_hours = models.JSONField(
+        default=DEFAULT_WORKING_HOURS,
+        help_text="Weekly working schedule."
+    )
+
     tax_enabled = models.BooleanField(
         default=True
     )
