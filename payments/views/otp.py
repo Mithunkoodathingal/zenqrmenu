@@ -52,7 +52,7 @@ from payments.services import (
 # Restaurant Helpers
 # =============================================================================
 
-from payments.services import get_restaurant
+from restaurant.services.common import get_restaurant
 
 
 class GenerateOTPAPIView(APIView):

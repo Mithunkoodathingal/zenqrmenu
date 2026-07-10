@@ -51,7 +51,7 @@ from payments.services import (
     get_restaurant_client,
 )
 
-from payments.services import get_restaurant
+from restaurant.services.common import get_restaurant
 
 
 class RefundAPIView(APIView):

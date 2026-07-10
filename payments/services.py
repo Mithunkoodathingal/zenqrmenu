@@ -149,23 +149,24 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 import csv
 from io import BytesIO, StringIO
-
+from collections import OrderedDict
+from django.db.models import Sum, Count
+from django.db.models.functions import TruncDate, TruncMonth
 from requests import Response
 from rest_framework import request
+
 # =============================================================================
 # Third-Party Imports
 # =============================================================================
-
 import razorpay
 from openpyxl import Workbook
-
 from django.db import models
 from payments.models import PaymentRefund
 from django.db.models import Sum, Count, Q
 import re
-
 import restaurant
 # from .views.payment_settings import get_payment_settings
+
 from .models import (
     PaymentAuditLog,
     PaymentTransaction,
@@ -173,6 +174,7 @@ from .models import (
     Receipt,
     RestaurantGatewaySettings,
 )
+
 from restaurant.models import (
     Order,
     OrderItem,
@@ -260,6 +262,7 @@ def create_audit_log(
         ),
     )
 
+
 def get_restaurant_client(restaurant):
 
     settings_obj = get_payment_settings(
@@ -296,6 +299,7 @@ def get_restaurant_client(restaurant):
             settings_obj.razorpay_key_secret,
         )
     )
+
 
 def verify_razorpay_credentials(settings_obj):
 
@@ -553,6 +557,7 @@ def atomic():
 
 # ==========================================================
 # ORDER CALCULATIONS
+# ----------------------------------------------------------
 # Part 2A
 # ==========================================================
 
@@ -841,6 +846,7 @@ def calculate_tax(
 
 # ==========================================================
 # ORDER CALCULATIONS
+# ----------------------------------------------------------
 # Part 2B
 # ==========================================================
 
@@ -1178,6 +1184,7 @@ def update_order_totals(
 
 # ==========================================================
 # GATEWAY CALCULATIONS
+# ----------------------------------------------------------
 # Part 3
 # ==========================================================
 
@@ -1332,6 +1339,7 @@ def calculate_platform_commission(
 
 # ==========================================================
 # TRANSACTION / INVOICE / RECEIPT GENERATORS
+# ----------------------------------------------------------
 # Part 4A
 # ==========================================================
 
@@ -1566,6 +1574,7 @@ def ensure_receipt(
 
 # ==========================================================
 # RECEIPT STATUS UPDATES
+# ----------------------------------------------------------
 # Part 4B
 # ==========================================================
 
@@ -1707,6 +1716,7 @@ def mark_receipt_whatsapp_sent(
 
 # ==========================================================
 # UTILITIES
+# ----------------------------------------------------------
 # Part 5
 # ==========================================================
 
@@ -1884,6 +1894,7 @@ def validate_payment(
 
 # ==========================================================
 # REFUND HELPERS
+# ----------------------------------------------------------
 # Part 6
 # ==========================================================
 
@@ -2129,6 +2140,7 @@ def update_refund_status(
 
 # ==========================================================
 # RECONCILIATION HELPERS
+# ----------------------------------------------------------
 # Part 7B1
 # ==========================================================
 
@@ -2526,6 +2538,7 @@ def validate_payment(payment):
 
 # ==========================================================
 # REFUND HELPERS
+# ----------------------------------------------------------
 # Part 6A
 # ==========================================================
 
@@ -2892,12 +2905,6 @@ Requires:
     filter_payments()
     calculate_sales()
 """
-
-from collections import OrderedDict
-from decimal import Decimal
-from django.db.models import Sum, Count
-from django.db.models.functions import TruncDate, TruncMonth
-
 
 def daily_sales_report(
     queryset,
@@ -3320,11 +3327,6 @@ def export_sales_excel(queryset, restaurant=None, start_date=None, end_date=None
 payments/services.py
 Part 10A - Core Validation Helpers
 """
-
-from decimal import Decimal
-from django.core.exceptions import ValidationError
-
-
 # ----------------------------------------------------------
 # Validate Order
 # ----------------------------------------------------------
@@ -3552,3 +3554,5 @@ def validate_invoice(receipt):
         )
 
     return True
+
+

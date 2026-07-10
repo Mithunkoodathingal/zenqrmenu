@@ -40,6 +40,8 @@ from rest_framework.views import APIView
 
 from restaurant.models import Order
 
+from restaurant.services.common import get_restaurant
+
 from payments.models import (
     PaymentTransaction,
 )
@@ -53,8 +55,6 @@ from payments.services import (
 # =============================================================================
 # Restaurant Helpers
 # =============================================================================
-
-from payments.services import get_restaurant
 
 class CreateRazorpayOrderAPIView(APIView):
 

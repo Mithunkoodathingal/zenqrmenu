@@ -35,7 +35,7 @@ from rest_framework.permissions import IsAuthenticated
 from .models import SubscriptionPlan, Subscription, PaymentTransaction
 from restaurant.models import Restaurant
 from django.http import JsonResponse
-from restaurant.views import get_user_restaurant
+from restaurant.views.views import get_user_restaurant
 
 logger = logging.getLogger(__name__)
 

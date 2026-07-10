@@ -1,10 +1,61 @@
+# ----------restaurant/serializers.py---------------
+
+"""
+===============================================================================
+restaurant/serializers.py
+
+Enterprise Restaurant Serializers
+
+This module contains all serializers used by the Restaurant application.
+
+Contents
+
+    • RestaurantSerializer
+    • FoodItemSerializer
+    • OrderItemSerializer
+    • CategorySerializer
+    • OrderSerializer
+    • RestaurantDeliverySerializer
+    • RestaurantLocationSerializer
+    • NearbyRestaurantSerializer
+    • OrderDeliverySerializer
+    • DeliveryValidationSerializer
+
+The RestaurantSerializer is the primary serializer used for
+Restaurant CRUD operations.
+
+Features
+
+    • Complete Restaurant model support
+    • Image upload support
+    • Absolute image URLs
+    • Enterprise validation
+    • Delivery configuration
+    • Tax configuration
+    • Currency configuration
+
+===============================================================================
+"""
+
+
 # =============================================================================
 # Django Imports
 # =============================================================================
+
 from datetime import timedelta
+
 from django.utils import timezone
+
 from django.db import transaction
+
 from decimal import Decimal
+
+from django.db.models import Count, Sum
+
+from django.utils import timezone
+
+    
+from rest_framework import serializers
 
 # =============================================================================
 # Django REST Framework Imports
@@ -13,19 +64,29 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from payments.services import calculate_discount, calculate_grand_total, calculate_packing_charge, calculate_subtotal, calculate_tax, update_order_totals
-from restaurant.services import calculate_delivery_charge
+
+from restaurant.services.delivery import calculate_delivery_charge
 
 # =============================================================================
 # Local Application Imports
 # =============================================================================
 
+from .models import AuditLog, DeliveryPartner, KitchenNote, Staff, StaffAttendance, StaffBreak, StaffShiftSchedule
+
 from .models import (
+    
     Restaurant,
+    
     Order,
+    
     OrderItem,
+    
     FoodItem,
+    
     AddOn,
+    
     Category,
+    
 )
 
 
@@ -77,42 +138,8 @@ from .models import (
 
 #         read_only_fields = ['owner']
 
-"""
-===============================================================================
-restaurant/serializers.py
 
-Enterprise Restaurant Serializers
 
-This module contains all serializers used by the Restaurant application.
-
-Contents
-
-    • RestaurantSerializer
-    • FoodItemSerializer
-    • OrderItemSerializer
-    • CategorySerializer
-    • OrderSerializer
-    • RestaurantDeliverySerializer
-    • RestaurantLocationSerializer
-    • NearbyRestaurantSerializer
-    • OrderDeliverySerializer
-    • DeliveryValidationSerializer
-
-The RestaurantSerializer is the primary serializer used for
-Restaurant CRUD operations.
-
-Features
-
-    • Complete Restaurant model support
-    • Image upload support
-    • Absolute image URLs
-    • Enterprise validation
-    • Delivery configuration
-    • Tax configuration
-    • Currency configuration
-
-===============================================================================
-"""
 # =============================================================================
 # Restaurant Serializer
 # =============================================================================
@@ -1206,6 +1233,8 @@ class RestaurantSerializer(serializers.ModelSerializer):
 #         model = FoodItem
 #         fields = '__all__'   # OR explicitly add 'is_veg'
 
+
+
 # =============================================================================
 # Food Item Serializer
 # =============================================================================
@@ -2059,14 +2088,14 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
         return instance
 
-# =================== CATEGORY SERIALIZER ============== #
+# =================== CATEGORY SERIALIZER ============== 
 
 # class CategorySerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = Category
 #         fields = ["id", "name"]
 
-
+# ======================================================
 
 
 # =============================================================================
@@ -4841,7 +4870,6 @@ class RestaurantLocationSerializer(serializers.ModelSerializer):
 
         return attrs
     
-    
 # =============================================================================
 # Nearby Restaurant Serializer
 # =============================================================================
@@ -5114,7 +5142,6 @@ class DeliveryValidationSerializer(serializers.Serializer):
 
         return value
     
-    
 # =============================================================================
 # Restaurant Map Serializer
 # =============================================================================
@@ -5197,7 +5224,6 @@ class RestaurantMapSerializer(serializers.ModelSerializer):
             )
 
         return obj.logo.url
-    
     
 # =============================================================================
 # Customer Location Serializer
@@ -5305,7 +5331,44 @@ class CustomerLocationSerializer(serializers.Serializer):
 
         return value
     
-    
+# =============================================================================
+# Restaurant Delivery Zone Serializer
+# =============================================================================
+
+class RestaurantDeliveryZoneSerializer(serializers.ModelSerializer):
+    """
+    Returns the delivery zone
+    configuration of a restaurant.
+    """
+
+    class Meta:
+
+        model = Restaurant
+
+        fields = [
+
+            "id",
+
+            "name",
+
+            "delivery_enabled",
+
+            "delivery_latitude",
+
+            "delivery_longitude",
+
+            "free_delivery_radius_km",
+
+            "maximum_delivery_radius_km",
+
+            "delivery_charge_per_km",
+
+            "minimum_delivery_order",
+
+            "average_preparation_time",
+
+        ]
+        
 # =============================================================================
 # Delivery Quote Serializer
 # =============================================================================
@@ -5445,47 +5508,72 @@ class DeliveryQuoteSerializer(serializers.Serializer):
 
         return attrs
     
-    
+# =============================================================================
+# Delivery Partner List Serializer
+# =============================================================================
+
+class DeliveryPartnerListSerializer(serializers.ModelSerializer):
+
+    class Meta:
+
+        model = DeliveryPartner
+
+        fields = [
+
+            "id",
+
+            "name",
+
+            "phone",
+
+            "photo",
+
+            "vehicle_type",
+
+            "vehicle_number",
+
+            "is_available",
+
+            "is_active",
+
+            "rating",
+
+            "completed_orders",
+        ]
+
 # =============================================================================
 # Delivery Assignment Serializer
 # =============================================================================
 
 class DeliveryAssignmentSerializer(serializers.ModelSerializer):
-    """
-    Serializer used for assigning a delivery
-    executive to an order.
-    """
+
+    delivery_partner = DeliveryPartnerListSerializer(
+        read_only=True
+    )
+
+    delivery_partner_id = serializers.PrimaryKeyRelatedField(
+        queryset=DeliveryPartner.objects.all(),
+        source="delivery_partner",
+        write_only=True,
+    )
 
     class Meta:
-
         model = Order
 
         fields = [
-
-            "delivery_person_name",
-
-            "delivery_person_phone",
-
+            "delivery_partner",
+            "delivery_partner_id",
             "delivery_status",
-
             "assigned_at",
-
             "picked_at",
-
             "delivered_at",
-
         ]
 
         read_only_fields = [
-
             "assigned_at",
-
             "picked_at",
-
             "delivered_at",
-
         ]
-
     # ==========================================================
     # Delivery Person
     # ==========================================================
@@ -5693,21 +5781,158 @@ class DeliveryChargeBreakdownSerializer(serializers.Serializer):
     free_delivery = serializers.BooleanField()
 
     minimum_order_met = serializers.BooleanField()
-    
-    
+
 # =============================================================================
-# Restaurant Delivery Zone Serializer
+# Delivery Partner Serializer
 # =============================================================================
 
-class RestaurantDeliveryZoneSerializer(serializers.ModelSerializer):
+class DeliveryPartnerSerializer(serializers.ModelSerializer):
     """
-    Returns the delivery zone
-    configuration of a restaurant.
+    Complete Delivery Partner serializer.
     """
 
     class Meta:
+        model = DeliveryPartner
 
-        model = Restaurant
+        fields = [
+            "id",
+
+            "restaurant",
+
+            "name",
+            "phone",
+            "photo",
+
+            "vehicle_type",
+            "vehicle_number",
+
+            "rating",
+            "completed_orders",
+
+            "current_latitude",
+            "current_longitude",
+
+            "is_available",
+            "is_active",
+
+            "created_at",
+            "updated_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "rating",
+            "completed_orders",
+            "created_at",
+            "updated_at",
+        ]
+
+    # -------------------------------------------------
+    # Phone Validation
+    # -------------------------------------------------
+
+    def validate_phone(self, value):
+
+        value = value.strip()
+
+        if len(value) < 8:
+            raise serializers.ValidationError(
+                "Invalid phone number."
+            )
+
+        return value
+    
+# =============================================================================
+# Delivery Partner Location Serializer
+# =============================================================================
+
+class DeliveryPartnerLocationSerializer(
+    serializers.ModelSerializer
+):
+
+    class Meta:
+
+        model = DeliveryPartner
+
+        fields = [
+
+            "current_latitude",
+
+            "current_longitude",
+
+        ]
+
+    # ---------------------------------------------
+    # Latitude
+    # ---------------------------------------------
+
+    def validate_current_latitude(
+        self,
+        value,
+    ):
+
+        if value is None:
+            return value
+
+        if value < -90 or value > 90:
+
+            raise serializers.ValidationError(
+                "Latitude must be between -90 and 90."
+            )
+
+        return value
+
+    # ---------------------------------------------
+    # Longitude
+    # ---------------------------------------------
+
+    def validate_current_longitude(
+        self,
+        value,
+    ):
+
+        if value is None:
+            return value
+
+        if value < -180 or value > 180:
+
+            raise serializers.ValidationError(
+                "Longitude must be between -180 and 180."
+            )
+
+        return value
+    
+# =============================================================================
+# Delivery Availability Serializer
+# =============================================================================
+
+class DeliveryAvailabilitySerializer(
+    serializers.ModelSerializer
+):
+
+    class Meta:
+
+        model = DeliveryPartner
+
+        fields = [
+
+            "is_available",
+
+            "is_active",
+
+        ]
+        
+# =============================================================================
+# Delivery Partner Tracking Serializer
+# =============================================================================
+
+class DeliveryPartnerTrackingSerializer(
+    serializers.ModelSerializer
+):
+
+    class Meta:
+
+        model = DeliveryPartner
 
         fields = [
 
@@ -5715,22 +5940,2391 @@ class RestaurantDeliveryZoneSerializer(serializers.ModelSerializer):
 
             "name",
 
-            "delivery_enabled",
+            "phone",
 
-            "delivery_latitude",
+            "current_latitude",
 
-            "delivery_longitude",
+            "current_longitude",
 
-            "free_delivery_radius_km",
+            "is_available",
 
-            "maximum_delivery_radius_km",
+            "vehicle_type",
 
-            "delivery_charge_per_km",
+            "vehicle_number",
+        ]
+    
+# =============================================================================
+# Kitchen Display System (KDS) Serializer
+# =============================================================================
 
-            "minimum_delivery_order",
+class KDSSerializer(serializers.ModelSerializer):
+    """
+    Primary serializer used by the
+    Kitchen Display System.
 
-            "average_preparation_time",
+    Exposes all information required by
+    kitchen staff while keeping customer-
+    facing fields read-only.
+
+    Used By
+    -------
+    • Kitchen Dashboard
+
+    • Kitchen Order Queue
+
+    • Order Details
+
+    • Live Kitchen Monitor
+    """
+
+    # ==========================================================
+    # Computed Fields
+    # ==========================================================
+
+    table_number = serializers.SerializerMethodField()
+
+    delivery_partner = serializers.SerializerMethodField()
+
+    items_count = serializers.SerializerMethodField()
+
+    total_quantity = serializers.SerializerMethodField()
+
+    elapsed_minutes = serializers.SerializerMethodField()
+
+    is_overdue = serializers.SerializerMethodField()
+
+    estimated_remaining_minutes = serializers.SerializerMethodField()
+
+    customer_display = serializers.SerializerMethodField()
+
+    status_badge = serializers.SerializerMethodField()
+
+    # ==========================================================
+    # Nested Items
+    # ==========================================================
+
+    order_items = OrderItemSerializer(
+        many=True,
+        read_only=True,
+    )
+
+    # ==========================================================
+    # Meta
+    # ==========================================================
+
+    class Meta:
+
+        model = Order
+
+        fields = [
+
+            # Identity
+
+            "id",
+
+            "order_number",
+
+            # Restaurant
+
+            "restaurant",
+
+            "table",
+
+            "table_number",
+
+            # Customer
+
+            "customer_name",
+
+            "customer_phone",
+
+            "customer_display",
+
+            # Order
+
+            "order_type",
+
+            "status",
+
+            "kitchen_status",
+
+            "kitchen_priority",
+
+            "kitchen_notes",
+
+            # Kitchen Timeline
+
+            "kitchen_started_at",
+
+            "kitchen_ready_at",
+
+            "served_at",
+
+            "estimated_ready_time",
+
+            # Delivery
+
+            "delivery_status",
+
+            "delivery_partner",
+
+            # Payment
+
+            "payment_status",
+
+            # Totals
+
+            "subtotal",
+
+            "tax_amount",
+
+            "packing_charge",
+
+            "discount_amount",
+
+            "tip_amount",
+
+            "grand_total",
+
+            # Items
+
+            "order_items",
+
+            "items_count",
+
+            "total_quantity",
+
+            # Status Helpers
+
+            "elapsed_minutes",
+
+            "estimated_remaining_minutes",
+
+            "is_overdue",
+
+            "status_badge"
+
+            # Audit
+
+            "created_at",
+
+            "completed_at",
+
+        ]
+
+        read_only_fields = [
+
+            "id",
+
+            "order_number",
+
+            "restaurant",
+
+            "table_number",
+
+            "customer_display",
+
+            "delivery_partner",
+
+            "order_items",
+
+            "items_count",
+
+            "total_quantity",
+
+            "elapsed_minutes",
+
+            "estimated_remaining_minutes",
+
+            "is_overdue",
+
+            "status_badge"
+
+            "created_at",
+
+            "completed_at",
 
         ]
         
+    # ==========================================================
+    # Table Number
+    # ==========================================================
+
+    def get_table_number(
+        self,
+        obj,
+    ):
+
+        if obj.table:
+
+            return obj.table.table_number
+
+        return None
+
+    # ==========================================================
+    # Delivery Partner
+    # ==========================================================
+
+    def get_delivery_partner(
+        self,
+        obj,
+    ):
+
+        partner = obj.delivery_partner
+
+        if not partner:
+
+            return None
+
+        return {
+
+            "id": partner.id,
+
+            "name": partner.full_name,
+
+            "phone": partner.phone,
+
+            "vehicle_type": partner.vehicle_type,
+
+            "vehicle_number": partner.vehicle_number,
+
+            "is_available": partner.is_available,
+            
+            "photo": (
+                        partner.profile_photo.url
+                        if partner.profile_photo
+                        else None
+                    ),
+
+        }
+
+    # ==========================================================
+    # Items Count
+    # ==========================================================
+
+    def get_items_count(self, obj):
+        return getattr(obj, "items_count", obj.order_items.count())
+
+
+    # ==========================================================
+    # Total Quantity
+    # ==========================================================
+
+    def get_total_quantity(
+        self,
+        obj,
+    ):
+
+        quantity = getattr(
+            obj,
+            "total_quantity",
+            None,
+        )
+
+        if quantity is not None:
+
+            return quantity
+
+        return (
+
+            obj.order_items.aggregate(
+
+                total=Sum("quantity")
+
+            )["total"]
+
+            or 0
+
+        )
+
+    # ==========================================================
+    # Elapsed Minutes
+    # ==========================================================
+
+    def get_elapsed_minutes(
+        self,
+        obj,
+    ):
+
+        if not obj.created_at:
+
+            return 0
+
+        now = timezone.now()
+
+        elapsed = now - obj.created_at
+
+        return int(
+            elapsed.total_seconds() / 60
+        )
         
+        
+    # ==========================================================
+    # Is Overdue
+    # ==========================================================
+
+    def get_is_overdue(
+        self,
+        obj,
+    ):
+        """
+        Determines whether the order has
+        exceeded its estimated ready time.
+        """
+
+        if not obj.estimated_ready_time:
+
+            return False
+
+        if obj.kitchen_status in [
+
+            "ready",
+
+            "served",
+
+        ]:
+
+            return False
+
+        return timezone.now() > obj.estimated_ready_time
+
+    # ==========================================================
+    # Estimated Remaining Minutes
+    # ==========================================================
+
+    def get_estimated_remaining_minutes(
+        self,
+        obj,
+    ):
+        """
+        Returns the remaining preparation
+        time in minutes.
+
+        Returns
+
+        • None if no ETA exists
+
+        • 0 if overdue
+
+        • Positive minutes remaining
+        """
+
+        if not obj.estimated_ready_time:
+
+            return None
+
+        remaining = (
+
+            obj.estimated_ready_time
+
+            - timezone.now()
+
+        ).total_seconds()
+
+        if remaining <= 0:
+
+            return 0
+
+        return int(
+
+            remaining // 60
+
+        )
+
+    # ==========================================================
+    # Customer Display
+    # ==========================================================
+
+    def get_customer_display(
+        self,
+        obj,
+    ):
+        """
+        Returns a compact customer string
+        suitable for kitchen displays.
+        """
+
+        if obj.customer_name:
+
+            if obj.customer_phone:
+
+                return (
+
+                    f"{obj.customer_name}"
+
+                    f" ({obj.customer_phone})"
+
+                )
+
+            return obj.customer_name
+
+        if obj.customer_phone:
+
+            return obj.customer_phone
+
+        return "Walk-in Customer"
+
+    # ==========================================================
+    # Status Badge
+    # ==========================================================
+
+    def get_status_badge(
+        self,
+        obj,
+    ):
+        """
+        Returns badge information used by
+        the frontend KDS.
+        """
+
+        return {
+
+            "label": obj.get_kitchen_status_display(),
+
+            "color": {
+
+                "pending": "secondary",
+
+                "accepted": "primary",
+
+                "preparing": "warning",
+
+                "ready": "success",
+
+                "served": "dark",
+
+            }.get(obj.kitchen_status, "secondary"),
+
+            "priority": obj.kitchen_priority,
+
+            "icon": {
+
+                "pending": "clock",
+
+                "accepted": "check",
+
+                "preparing": "chef-hat",
+
+                "ready": "bell",
+
+                "served": "check-circle",
+
+            }.get(obj.kitchen_status, "clock"),
+
+            "order_status": obj.status,
+
+            "payment_status": obj.payment_status,
+
+            "delivery_status": obj.delivery_status,
+
+            "is_completed": obj.is_completed,
+
+            "is_paid": obj.payment_status == "paid",
+
+            "is_overdue": self.get_is_overdue(obj),
+
+        }
+
+    # ==========================================================
+    # Enterprise Notes
+    # ==========================================================
+    #
+    # This serializer powers the Kitchen
+    # Display System (KDS).
+    #
+    # Business rules:
+    #
+    # • Kitchen staff should never modify
+    #   payment information.
+    #
+    # • Kitchen updates only:
+    #       kitchen_status
+    #       kitchen_priority
+    #       kitchen_notes
+    #       estimated_ready_time
+    #
+    # • Order completion should be handled
+    #   through dedicated KDS services,
+    #   not directly from this serializer.
+    #
+    # • Delivery assignment is managed by
+    #   Delivery APIs.
+    #
+    # • Payment verification is managed by
+    #   Payment APIs.
+    #
+    # • Customer-facing status should stay
+    #   synchronized with kitchen_status
+    #   via service-layer methods.
+    #
+    # • Views should use:
+    #
+    #   select_related(
+    #       "table",
+    #       "delivery_partner",
+    #   )
+    #
+    #   prefetch_related(
+    #       "order_items",
+    #       "order_items__food_item",
+    #       "order_items__selected_addons",
+    #   )
+    #
+    # to avoid N+1 queries.
+    # ==========================================================
+    
+# ==========================================================
+# KDS Order Serializer
+# ==========================================================
+
+class KDSOrderSerializer(serializers.ModelSerializer):
+    """
+    Kitchen Display System order serializer.
+    """
+
+    customer_name = serializers.CharField(
+        source="customer.name",
+        read_only=True,
+    )
+
+    table_number = serializers.CharField(
+        source="table.table_number",
+        read_only=True,
+    )
+
+    items = OrderItemSerializer(
+        many=True,
+        read_only=True,
+    )
+
+    elapsed_minutes = serializers.SerializerMethodField()
+
+    class Meta:
+
+        model = Order
+
+        fields = [
+
+            "id",
+
+            "order_number",
+
+            "customer_name",
+
+            "table_number",
+
+            "order_type",
+
+            "status",
+
+            "kitchen_status",
+
+            "kitchen_priority",
+
+            "special_instructions",
+
+            "items",
+
+            "created_at",
+
+            "elapsed_minutes",
+
+        ]
+
+    def get_elapsed_minutes(
+        self,
+        obj,
+    ):
+        """
+        Minutes since order creation.
+        """
+
+        return int(
+            (
+                timezone.now() - obj.created_at
+            ).total_seconds() // 60
+        )
+    
+# ==============================================================================
+# Kitchen Status Serializer
+# ==============================================================================
+
+class KDSStatusSerializer(serializers.ModelSerializer):
+    """
+    Serializer used to update the
+    kitchen status of an order.
+
+    Used By
+    -------
+    • Kitchen Display System
+
+    • Kitchen Queue
+
+    • Chef Dashboard
+    """
+
+    class Meta:
+
+        model = Order
+
+        fields = [
+
+            "kitchen_status",
+
+        ]
+
+        extra_kwargs = {
+
+            "kitchen_status": {
+
+                "required": True,
+
+            }
+
+        }
+
+    # ==========================================================
+    # Kitchen Status
+    # ==========================================================
+
+    def validate_kitchen_status(
+        self,
+        value,
+    ):
+
+        valid_statuses = [
+
+            "pending",
+
+            "accepted",
+
+            "preparing",
+
+            "ready",
+
+            "served",
+
+        ]
+
+        if value not in valid_statuses:
+
+            raise serializers.ValidationError(
+
+                "Invalid kitchen status."
+
+            )
+
+        return value
+
+    # ==========================================================
+    # Update
+    # ==========================================================
+    
+    #----I recommend not using this serializer's update() method in your view.........
+    
+    def update(
+        self,
+        instance,
+        validated_data,
+    ):
+        """
+        Kitchen timeline updates are handled
+        by the service layer.
+        ------------------------------------------------------------------------
+        I recommend not using this serializer's update() method in your view - 
+        
+        Instead, your view should do:
+
+        serializer = KDSStatusSerializer(
+            order,
+            data=request.data,
+            partial=True,
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        order = update_kds_status(
+            order,
+            serializer.validated_data["kitchen_status"],
+        )
+
+        where update_kds_status() (in services.py) will:
+
+        Set kitchen_status
+        Set kitchen_started_at
+        Set kitchen_ready_at
+        Set served_at
+        Synchronize status if needed
+        Set estimated_ready_time
+        Trigger notifications/events if required
+        -------------------------------------------------------------------------
+        
+        This serializer only validates data.
+        """
+
+        instance.kitchen_status = validated_data[
+            "kitchen_status"
+        ]
+
+        instance.save(
+            update_fields=[
+                "kitchen_status",
+            ]
+        )
+
+        return instance
+
+    # ==========================================================
+    # Enterprise Notes
+    # ==========================================================
+    #
+    # • Views should call the
+    #   update_kds_status()
+    #   service instead of relying on this
+    #   serializer's update() method.
+    #
+    # • The service is responsible for:
+    #
+    #     kitchen_started_at
+    #
+    #     kitchen_ready_at
+    #
+    #     served_at
+    #
+    #     estimated_ready_time
+    #
+    #     status synchronization
+    #
+    #     notifications
+    #
+    #     analytics events
+    #
+    # • This serializer exists mainly for
+    #   validation.
+    # ==========================================================
+    
+# ==============================================================================
+# Kitchen Priority Serializer
+# ==============================================================================
+
+class KDSPrioritySerializer(serializers.ModelSerializer):
+    """
+    Serializer used to update the
+    kitchen priority of an order.
+
+    Used By
+    -------
+    • Kitchen Display System
+
+    • Kitchen Queue
+
+    • Chef Dashboard
+
+    • Manager Dashboard
+    
+            -----------------------------------------------------------------------
+        Use it like this in your view:
+
+        serializer = KDSPrioritySerializer(
+            order,
+            data=request.data,
+            partial=True,
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        order = update_kds_priority(
+            order,
+            serializer.validated_data["kitchen_priority"],
+        )
+
+        This keeps your architecture consistent with:
+
+        update_kds_status()
+        assign_delivery_partner()
+        update_delivery_status()
+        update_partner_location()
+        
+        where all business logic stays in services.py.
+        -------------------------------------------------------------------------
+    
+    """
+
+    class Meta:
+
+        model = Order
+
+        fields = [
+
+            "kitchen_priority",
+
+        ]
+
+        extra_kwargs = {
+
+            "kitchen_priority": {
+
+                "required": True,
+
+            }
+
+        }
+
+    # ==========================================================
+    # Kitchen Priority
+    # ==========================================================
+
+    def validate_kitchen_priority(
+        self,
+        value,
+    ):
+
+        valid_priorities = [
+
+            "low",
+
+            "normal",
+
+            "high",
+
+            "urgent",
+
+        ]
+
+        if value not in valid_priorities:
+
+            raise serializers.ValidationError(
+
+                "Invalid kitchen priority."
+                
+                
+
+            )
+
+        return value
+
+    # ==========================================================
+    # Update
+    # ==========================================================
+
+    def update(
+        self,
+        instance,
+        validated_data,
+    ):
+        """
+        
+        Priority updates should normally
+        be handled by the service layer.
+
+        This update method exists only as
+        a fallback.
+        """
+
+        instance.kitchen_priority = validated_data[
+            "kitchen_priority"
+        ]
+
+        instance.save(
+            update_fields=[
+                "kitchen_priority",
+            ]
+        )
+
+        return instance
+
+    # ==========================================================
+    # Enterprise Notes
+    # ==========================================================
+    #
+    # • Views should call
+    #   update_kds_priority()
+    #   instead of relying on
+    #   serializer.update().
+    #
+    # • Future responsibilities of the
+    #   service may include:
+    #
+    #     • Audit logging
+    #
+    #     • Manager approval
+    #
+    #     • Notification broadcasting
+    #
+    #     • Queue reordering
+    #
+    #     • Analytics events
+    #
+    # This serializer is responsible
+    # only for validation.
+    # ==========================================================
+
+# =============================================================================
+# KDS Note Serializer
+# =============================================================================
+
+class KDSNoteSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Kitchen Display System notes.
+    
+    End Point: POST /orders/<order_id>/notes/
+    
+    Expected request
+    
+    {
+        "note": "No onions. Customer has an allergy.",
+        "note_type": "allergy",
+        "is_pinned": true,
+        "is_internal": true
+    }
+    
+    Response
+    
+    {
+        "id": 12,
+        "staff": 5,
+        "staff_name": "John Doe",
+        "note": "No onions. Customer has an allergy.",
+        "note_type": "allergy",
+        "is_pinned": true,
+        "is_internal": true,
+        "created_at": "2026-07-10T12:15:40Z",
+        "updated_at": "2026-07-10T12:15:40Z",
+        "edited_by": null,
+        "edited_by_name": null,
+        "edited_at": null,
+        "edited_reason": ""
+    }
+    
+    """
+
+    staff_name = serializers.CharField(
+        
+        source="staff.full_name",
+        
+        read_only=True,
+        
+    )
+
+    edited_by_name = serializers.CharField(
+        
+        source="edited_by.full_name",
+        
+        read_only=True,
+        
+    )
+
+    class Meta:
+        model = KitchenNote
+
+        fields = [
+            "id",
+
+            "staff",
+            "staff_name",
+
+            "note",
+            "note_type",
+
+            "is_pinned",
+            "is_internal",
+
+            "created_at",
+            "updated_at",
+
+            "edited_by",
+            "edited_by_name",
+            "edited_at",
+            "edited_reason",
+        ]
+
+        read_only_fields = [
+            "id",
+
+            "staff",
+            "staff_name",
+
+            "created_at",
+            "updated_at",
+
+            "edited_by",
+            "edited_by_name",
+            "edited_at",
+        ]
+
+# =============================================================================
+# KDS Statistics Serializer
+# =============================================================================
+
+class KDSStatisticsSerializer(serializers.Serializer):
+    """
+    Kitchen Display System statistics.
+    
+    Expected service output:
+    
+    Your services.py can simply return a dictionary:
+
+    return {
+        "pending_orders": 5,
+        "accepted_orders": 3,
+        "preparing_orders": 8,
+        "ready_orders": 4,
+        "served_orders": 18,
+        "total_active_orders": 20,
+        "high_priority_orders": 2,
+        "urgent_priority_orders": 1,
+        "average_preparation_time": 14.6,
+    }
+
+    Then in the view:
+
+    stats = get_kds_statistics(restaurant)
+
+    serializer = KDSStatisticsSerializer(stats)
+
+    return Response(serializer.data)
+
+    This follows your service-layer architecture cleanly:
+    
+    """
+
+    pending_orders = serializers.IntegerField(read_only=True)
+
+    accepted_orders = serializers.IntegerField(read_only=True)
+
+    preparing_orders = serializers.IntegerField(read_only=True)
+
+    ready_orders = serializers.IntegerField(read_only=True)
+
+    served_orders = serializers.IntegerField(read_only=True)
+
+    total_active_orders = serializers.IntegerField(read_only=True)
+
+    high_priority_orders = serializers.IntegerField(read_only=True)
+
+    urgent_priority_orders = serializers.IntegerField(read_only=True)
+
+    average_preparation_time = serializers.FloatField(read_only=True)
+
+# =============================================================================
+# Staff Serializer
+# =============================================================================
+
+class StaffSerializer(serializers.ModelSerializer):
+    """
+    Full serializer for Restaurant Staff.
+
+    Used By
+
+    • Staff CRUD
+
+    • Staff Profile
+
+    • Staff Details
+
+    • Dashboard
+    """
+
+    full_name = serializers.ReadOnlyField()
+    
+    has_login = serializers.ReadOnlyField()
+    
+    staff_status = serializers.SerializerMethodField()
+
+    class Meta:
+
+        model = Staff
+
+        fields = [
+
+            # Identity
+
+            "id",
+
+            "restaurant",
+
+            "user",
+            
+            "has_login",
+
+            "employee_id",
+
+            # Personal
+
+            "first_name",
+
+            "last_name",
+
+            "full_name",
+
+            "profile_photo",
+
+            # Contact
+
+            "country_code",
+
+            "phone",
+
+            "alternate_phone",
+
+            "email",
+
+            # Employment
+
+            "role",
+
+            "designation",
+
+            "joining_date",
+
+            "salary",
+
+            # Shift
+
+            "shift_start",
+
+            "shift_end",
+
+            "is_on_shift",
+
+            "is_on_break",
+
+            "last_shift_started_at",
+
+            "last_shift_ended_at",
+
+            # Status
+
+            "staff_status",
+            
+            "is_active",
+
+            "is_deleted",
+
+            "resigned_at",
+
+            "notes",
+
+            "last_login_at",
+
+            # Audit
+
+            "created_at",
+
+            "updated_at",
+
+        ]
+
+        read_only_fields = [
+
+            "id",
+            
+            "user",
+            
+            "has_login",
+            
+            "restaurant",
+
+            "full_name",
+
+            "created_at",
+
+            "updated_at",
+
+            "last_login_at",
+
+            "last_shift_started_at",
+
+            "last_shift_ended_at",
+            
+            "staff_status",
+
+        ]
+        
+    # ==========================================================
+    # Staff Status
+    # ==========================================================
+
+    def get_staff_status(self, obj):
+
+        if not obj.is_active:
+
+            return "inactive"
+
+        if obj.is_on_break:
+
+            return "on_break"
+
+        if obj.is_on_shift:
+
+            return "on_shift"
+
+        return "off_shift"
+
+    # ==========================================================
+    # Employee ID
+    # ==========================================================
+
+    def validate_employee_id(self, value):
+
+        value = value.strip().upper()
+
+        if len(value) < 2:
+
+            raise serializers.ValidationError(
+
+                "Employee ID is too short."
+
+            )
+
+        return value
+
+    # ==========================================================
+    # Phone
+    # ==========================================================
+
+    def validate_phone(self, value):
+
+        digits = "".join(
+
+            c
+
+            for c in value
+
+            if c.isdigit()
+
+        )
+
+        if len(digits) < 8:
+
+            raise serializers.ValidationError(
+
+                "Invalid phone number."
+
+            )
+
+        return value
+    
+    # ==========================================================
+    # Validate Alternate Phone
+    # ==========================================================
+    
+    def validate_alternate_phone(self, value):
+
+        if not value:
+
+            return value
+
+        digits = "".join(
+            c
+            for c in value
+            if c.isdigit()
+        )
+
+        if len(digits) < 8:
+
+            raise serializers.ValidationError(
+                "Invalid alternate phone number."
+            )
+
+        return value
+    
+    # ==========================================================
+    # Validate Country Code
+    # ==========================================================
+    
+    def validate_country_code(self, value):
+
+        value = value.strip()
+
+        if not value.startswith("+"):
+
+            raise serializers.ValidationError(
+                "Country code must start with '+'."
+            )
+
+        return value
+
+    # ==========================================================
+    # Salary
+    # ==========================================================
+
+    def validate_salary(self, value):
+
+        if value is not None and value < 0:
+
+            raise serializers.ValidationError(
+
+                "Salary cannot be negative."
+
+            )
+
+        return value
+    
+    # ==========================================================
+    # Designation
+    # ==========================================================
+
+    def validate_designation(self, value):
+
+        return value.strip()
+    
+    # ==========================================================
+    # Email
+    # ==========================================================
+
+    def validate_email(self, value):
+
+        if value:
+
+            value = value.strip().lower()
+
+        return value
+    
+    # ==========================================================
+    # First Name
+    # ==========================================================
+
+    def validate_first_name(self, value):
+
+        value = value.strip()
+
+        if len(value) < 2:
+
+            raise serializers.ValidationError(
+
+                "First name is too short."
+
+            )
+
+        return value
+
+
+    # ==========================================================
+    # Last Name
+    # ==========================================================
+
+    def validate_last_name(self, value):
+
+        return value.strip()
+    
+    # ==========================================================
+    # Notes
+    # ==========================================================
+
+    def validate_notes(self, value):
+
+        return value.strip()
+
+    # ==========================================================
+    # Enterprise Notes
+    # ==========================================================
+    #
+    # Staff role permissions are enforced
+    # in the View/Permission layer.
+    #
+    # This serializer validates data only.
+    #
+    # ==========================================================
+    #     One future improvement (don't do it now)
+    # --------------------------------------------------
+
+    # Later, when you build the Staff APIs, you can remove the duplicated get_staff_status() from both serializers by creating a small mixin:
+
+    # class StaffStatusMixin:
+
+    #     def get_staff_status(self, obj):
+
+    #         if not obj.is_active:
+    #             return "inactive"
+
+    #         if obj.is_on_break:
+    #             return "on_break"
+
+    #         if obj.is_on_shift:
+    #             return "on_shift"
+
+    #         return "off_shift"
+
+    # Then:
+
+    # class StaffSerializer(
+    #     StaffStatusMixin,
+    #     serializers.ModelSerializer,
+    # ):
+
+    # and
+
+    # class StaffListSerializer(
+    #     StaffStatusMixin,
+    #     serializers.ModelSerializer,
+    # ):
+
+    # This avoids duplicating the method. It's a clean refactor for later, but not necessary now.
+    
+# =============================================================================
+# Staff List Serializer
+# =============================================================================
+
+class StaffListSerializer(serializers.ModelSerializer):
+    
+    """
+    Lightweight serializer for
+    listing staff members.
+    """
+
+    full_name = serializers.ReadOnlyField()
+    
+    has_login = serializers.ReadOnlyField()
+    
+    staff_status = serializers.SerializerMethodField()
+
+    class Meta:
+
+        model = Staff
+
+        fields = [
+
+            "id",
+            
+            "restaurant",
+
+            "employee_id",
+
+            "full_name",
+            
+            "has_login",
+
+            "profile_photo",
+
+            "role",
+
+            "designation",
+
+            "phone",
+
+            "is_on_shift",
+
+            "is_on_break",
+
+            "is_active",
+            
+            "staff_status",
+
+        ]
+        
+        read_only_fields = [
+
+            "staff_status",
+
+        ]
+        
+    def get_staff_status(self, obj):
+
+        if not obj.is_active:
+
+            return "inactive"
+
+        if obj.is_on_break:
+
+            return "on_break"
+
+        if obj.is_on_shift:
+
+            return "on_shift"
+
+        return "off_shift"
+
+# =============================================================================
+# Staff Shift Serializer
+# =============================================================================
+
+class StaffShiftSerializer(serializers.Serializer):
+    """
+    Serializer used for
+    staff shift actions.
+    """
+
+    ACTION_CHOICES = [
+
+        ("clock_in", "Clock In"),
+
+        ("clock_out", "Clock Out"),
+
+        ("start_break", "Start Break"),
+
+        ("end_break", "End Break"),
+
+    ]
+
+    action = serializers.ChoiceField(
+
+        choices=ACTION_CHOICES,
+
+    )
+
+    # ==========================================================
+    # Enterprise Notes
+    # ==========================================================
+    #
+    # Business logic is handled
+    # by the service layer.
+    #
+    # ==========================================================
+
+    # ==========================================================
+    # Staff Status
+    # ==========================================================
+
+    def get_staff_status(self, obj):
+
+        if not obj.is_active:
+
+            return "inactive"
+
+        if obj.is_on_break:
+
+            return "on_break"
+
+        if obj.is_on_shift:
+
+            return "on_shift"
+
+        return "off_shift"
+
+    # ==========================================================
+    # Shift Validation
+    # ==========================================================
+
+    def validate(self, attrs):
+
+        shift_start = attrs.get(
+            "shift_start",
+            getattr(
+                self.instance,
+                "shift_start",
+                None,
+            ),
+        )
+
+        shift_end = attrs.get(
+            "shift_end",
+            getattr(
+                self.instance,
+                "shift_end",
+                None,
+            ),
+        )
+
+        if (
+
+            shift_start
+
+            and shift_end
+
+            and shift_start >= shift_end
+
+        ):
+
+            raise serializers.ValidationError(
+
+                "Shift end time must be after shift start time."
+
+            )
+
+        return attrs
+
+    # ==========================================================
+    # Enterprise Notes
+    # ==========================================================
+    #
+    # Shift clock-in/clock-out timestamps
+    # should be updated through the
+    # service layer.
+    #
+    # ==========================================================
+    
+# ==========================================================
+# Staff Role Serializer
+# ==========================================================
+
+class StaffRoleSerializer(serializers.ModelSerializer):
+    """
+    Serializer used to update staff roles.
+
+    Used By
+
+    • Manager Panel
+
+    • Staff Administration
+
+    • Permissions
+    """
+
+    class Meta:
+
+        model = Staff
+
+        fields = [
+
+            "role",
+
+        ]
+
+    # ==========================================================
+    # Enterprise Notes
+    # ==========================================================
+    #
+    # Role changes should be performed
+    # only by restaurant owners or
+    # managers.
+    #
+    # Permissions should be enforced
+    # in the View/Permission layer.
+    #
+    # ==========================================================
+    # Since you've adopted a service-layer architecture (assign_delivery_partner(), update_delivery_status(), etc.), I'd follow the same pattern here and create:
+
+    # update_staff_shift(staff, data)
+    # update_staff_role(staff, role)
+
+    # in services.py.
+
+    # The serializers should remain responsible only for validation, while the services handle business logic such as:
+
+    # updating last_shift_started_at
+    # updating last_shift_ended_at
+    # clearing is_on_break when a shift ends
+    # recording audit logs
+    # triggering notifications if needed
+
+    # This keeps your backend consistent and makes future changes easier.
+    
+    #===========================================================
+
+# ==========================================================
+# Staff Shift Schedule Serializer
+# ==========================================================
+
+class StaffShiftScheduleSerializer(serializers.ModelSerializer):
+
+    class Meta:
+
+        model = StaffShiftSchedule
+
+        fields = [
+
+            "id",
+
+            "staff",
+
+            "day_of_week",
+
+            "shift_start",
+
+            "shift_end",
+
+            "is_off_day",
+
+            "is_active",
+
+        ]
+
+    def validate(self, attrs):
+
+        shift_start = attrs.get(
+            "shift_start",
+            getattr(self.instance, "shift_start", None),
+        )
+
+        shift_end = attrs.get(
+            "shift_end",
+            getattr(self.instance, "shift_end", None),
+        )
+
+        is_off_day = attrs.get(
+            "is_off_day",
+            getattr(self.instance, "is_off_day", False),
+        )
+
+        if (
+            not is_off_day
+            and shift_start
+            and shift_end
+            and shift_start >= shift_end
+        ):
+            raise serializers.ValidationError(
+                "Shift end time must be after shift start time."
+            )
+
+        return attrs
+    
+# ==========================================================
+# Staff Attendance Serializer
+# ==========================================================
+
+class StaffAttendanceSerializer(serializers.ModelSerializer):
+    """
+    Staff attendance serializer.
+    """
+
+    staff_name = serializers.CharField(
+        source="staff.full_name",
+        read_only=True,
+    )
+
+    employee_id = serializers.CharField(
+        source="staff.employee_id",
+        read_only=True,
+    )
+
+    class Meta:
+        model = StaffAttendance
+
+        fields = [
+
+            "id",
+
+            "staff",
+            "staff_name",
+            "employee_id",
+
+            "attendance_date",
+
+            "status",
+
+            "clock_in",
+            "clock_out",
+
+            "worked_minutes",
+            "break_minutes",
+            "late_minutes",
+            "overtime_minutes",
+
+            "notes",
+
+            "created_at",
+            "updated_at",
+
+        ]
+
+        read_only_fields = [
+
+            "id",
+
+            "staff_name",
+            "employee_id",
+
+            "worked_minutes",
+            "break_minutes",
+            "late_minutes",
+            "overtime_minutes",
+
+            "created_at",
+            "updated_at",
+
+        ]
+
+# ==========================================================
+# Clock In Serializer
+# ==========================================================
+
+class AttendanceClockInSerializer(serializers.Serializer):
+    """
+    Clock in request serializer.
+    """
+
+    staff_id = serializers.IntegerField()
+
+# ==========================================================
+# Clock Out Serializer
+# ==========================================================
+
+class AttendanceClockOutSerializer(serializers.Serializer):
+    """
+    Clock out request serializer.
+    """
+
+    staff_id = serializers.IntegerField()
+
+# ==========================================================
+# Attendance Status Serializer
+# ==========================================================
+
+class AttendanceStatusSerializer(serializers.Serializer):
+    """
+    Update attendance status.
+    """
+
+    status = serializers.ChoiceField(
+        choices=StaffAttendance.STATUS_CHOICES,
+    )
+
+# ==========================================================
+# Attendance Notes Serializer
+# ==========================================================
+
+class AttendanceNotesSerializer(serializers.Serializer):
+    """
+    Update attendance notes.
+    """
+
+    notes = serializers.CharField(
+        
+        allow_blank=True,
+    )
+    
+    """
+    Why split them?
+
+    This keeps each endpoint focused:
+
+    StaffAttendanceSerializer → GET attendance / attendance detail
+    AttendanceClockInSerializer → POST /attendance/clock-in/
+    AttendanceClockOutSerializer → POST /attendance/clock-out/
+    AttendanceStatusSerializer → PATCH attendance status
+    AttendanceNotesSerializer → PATCH attendance notes
+    
+    """
+    
+# ==========================================================
+# Staff Attendance Update Serializer
+# ==========================================================
+
+class StaffAttendanceUpdateSerializer(serializers.Serializer):
+    """
+    Update a staff attendance record.
+    """
+
+    status = serializers.ChoiceField(
+        choices=StaffAttendance.STATUS_CHOICES,
+        required=False,
+    )
+
+    notes = serializers.CharField(
+        required=False,
+        allow_blank=True,
+    )
+    
+    
+# ==========================================================
+# Staff Break Serializer
+# ==========================================================
+
+class StaffBreakSerializer(serializers.ModelSerializer):
+    """
+    Serializer for staff break history.
+    
+    StaffBreakSerializer
+
+    Used for:
+
+    GET /staff/breaks/
+    POST /staff/break/start/ response
+    POST /staff/break/end/ response
+
+    The client never edits a break directly, so everything is read-only.
+    ----------------------------
+    BreakStartSerializer
+
+    Request:
+
+    {
+        "staff_id": 5
+    }
+    ----------------------------
+    BreakEndSerializer
+
+    Request:
+
+    {
+        "staff_id": 5
+    }
+    ----------------------------
+    """
+
+    staff_id = serializers.IntegerField(
+        source="attendance.staff.id",
+        read_only=True,
+    )
+
+    staff_name = serializers.CharField(
+        source="attendance.staff.full_name",
+        read_only=True,
+    )
+
+    attendance_id = serializers.IntegerField(
+        source="attendance.id",
+        read_only=True,
+    )
+
+    class Meta:
+        model = StaffBreak
+
+        fields = [
+
+            "id",
+
+            "attendance_id",
+
+            "staff_id",
+            "staff_name",
+
+            "break_start",
+            "break_end",
+
+            "minutes",
+
+            "is_active",
+
+            "created_at",
+            "updated_at",
+
+        ]
+
+        read_only_fields = [
+
+            "id",
+
+            "attendance_id",
+
+            "staff_id",
+            "staff_name",
+
+            "break_start",
+            "break_end",
+
+            "minutes",
+
+            "is_active",
+
+            "created_at",
+            "updated_at",
+
+        ]
+
+# ==========================================================
+# Break Start Serializer
+# ==========================================================
+
+class BreakStartSerializer(serializers.Serializer):
+    """
+    Start a staff break.
+    """
+
+    staff_id = serializers.IntegerField()
+
+# ==========================================================
+# Break End Serializer
+# ==========================================================
+
+class BreakEndSerializer(serializers.Serializer):
+    """
+    End a staff break.
+    """
+
+    staff_id = serializers.IntegerField()
+    
+# ==========================================================
+# Break Filter Serializer
+# ==========================================================
+
+class BreakFilterSerializer(serializers.Serializer):
+    
+    attendance_id = serializers.IntegerField(required=False)
+    
+    staff_id = serializers.IntegerField(required=False)
+    
+    today = serializers.BooleanField(required=False, default=False)
+    
+# ==========================================================
+# Kitchen Note Create Serializer
+# ==========================================================
+
+class KitchenNoteCreateSerializer(serializers.Serializer):
+    """
+    Create a kitchen note.
+    
+    Why these serializers?
+    
+    KitchenNoteCreateSerializer
+
+    Used by:
+    POST /api/kitchen/notes/
+
+    Request:
+
+    {
+        "order_id": 15,
+        "note": "No onion",
+        "note_type": "customer",
+        "is_internal": false,
+        "is_pinned": true
+    }
+    -------------------------------------------------------------
+    
+    KitchenNoteUpdateSerializer
+    ---------------------------
+    Used by:
+    PATCH /api/kitchen/notes/8/
+
+    Example:
+
+    {
+        "note": "Extra spicy",
+        "edited_reason": "Customer changed request"
+    }
+    
+    -------------------------------------------------------------
+    Everything is optional because it's a PATCH request.
+    -------------------------------------------------------------
+    
+    KitchenNoteFilterSerializer
+    ---------------------------
+    Used by:
+    GET /api/kitchen/notes/?order_id=15&is_internal=true
+
+    or
+
+    GET /api/kitchen/notes/?note_type=chef
+
+    ----------------------------------------------------------------------
+    The validated data can be passed directly to your service:
+
+    filter_serializer = KitchenNoteFilterSerializer(
+        data=request.query_params,
+    )
+
+    filter_serializer.is_valid(
+        raise_exception=True,
+    )
+
+    notes = list_notes(
+        restaurant=restaurant,
+        **filter_serializer.validated_data,
+    )
+    
+    ----------------------------------------------------------------------
+    This keeps the same pattern you've been following across the project:
+    
+    Action-specific serializers (Create, Update, Filter)
+    Thin views
+    Business logic in services
+    Validation centralized in serializers
+    
+    """
+
+    order_id = serializers.IntegerField()
+
+    note = serializers.CharField(
+        trim_whitespace=True,
+    )
+
+    note_type = serializers.ChoiceField(
+        choices=KitchenNote.NOTE_TYPES,
+        default="general",
+    )
+
+    is_internal = serializers.BooleanField(
+        default=True,
+    )
+
+    is_pinned = serializers.BooleanField(
+        default=False,
+    )
+
+    def validate_note(self, value):
+
+        value = value.strip()
+
+        if not value:
+
+            raise serializers.ValidationError(
+                "Note cannot be empty."
+            )
+
+        return value
+    
+# ==========================================================
+# Kitchen Note Update Serializer
+# ==========================================================
+
+class KitchenNoteUpdateSerializer(serializers.Serializer):
+    """
+    Update a kitchen note.
+    """
+
+    note = serializers.CharField(
+        required=False,
+        trim_whitespace=True,
+    )
+
+    note_type = serializers.ChoiceField(
+        choices=KitchenNote.NOTE_TYPES,
+        required=False,
+    )
+
+    is_internal = serializers.BooleanField(
+        required=False,
+    )
+
+    is_pinned = serializers.BooleanField(
+        required=False,
+    )
+
+    edited_reason = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=255,
+    )
+
+    def validate_note(self, value):
+
+        value = value.strip()
+
+        if not value:
+
+            raise serializers.ValidationError(
+                "Note cannot be empty."
+            )
+
+        return value
+
+# ==========================================================
+# Kitchen Note Filter Serializer
+# ==========================================================
+
+class KitchenNoteFilterSerializer(serializers.Serializer):
+    """
+    Filter kitchen notes.
+    """
+
+    order_id = serializers.IntegerField(
+        required=False,
+    )
+
+    note_type = serializers.ChoiceField(
+        choices=KitchenNote.NOTE_TYPES,
+        required=False,
+    )
+
+    is_internal = serializers.BooleanField(
+        required=False,
+    )
+
+    is_pinned = serializers.BooleanField(
+        required=False,
+    )
+    
+# =============================================================================
+# Audit Log Serializer
+# =============================================================================
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    
+    """
+    Read-only serializer for audit logs.
+    
+    Filter audit logs.
+    
+    AuditLogSerializer
+    ------------------
+    Used for:
+    GET /api/audit-logs/
+
+    Returns:
+
+    {
+        "id": 51,
+        "restaurant": 1,
+        "restaurant_name": "Pizza Hub",
+        "staff": 4,
+        "staff_name": "John",
+        "action": "staff_created",
+        "action_display": "Staff Created",
+        "entity": "Staff",
+        "entity_id": 12,
+        "description": "Created staff member Alice.",
+        "ip_address": "192.168.1.20",
+        "user_agent": "...",
+        "created_at": "2026-07-10T12:40:00Z"
+    }
+    
+    
+    AuditLogFilterSerializer
+    ------------------------
+    Used by:
+    GET /api/audit-logs/
+
+    ?action=clock_in
+    &staff_id=5
+    &entity=Staff
+    &from_date=2026-07-01
+    &to_date=2026-07-10
+
+
+    -------------------------------------------------
+    The view simply does:
+
+    filter_serializer = AuditLogFilterSerializer(
+        data=request.query_params,
+    )
+
+    filter_serializer.is_valid(
+        raise_exception=True,
+    )
+
+    logs = get_audit_logs(
+        restaurant=restaurant,
+        **filter_serializer.validated_data,
+    )
+    
+    -------------------------------------------------
+    """
+
+    staff_name = serializers.CharField(
+        source="staff.full_name",
+        read_only=True,
+    )
+
+    restaurant_name = serializers.CharField(
+        source="restaurant.name",
+        read_only=True,
+    )
+
+    action_display = serializers.CharField(
+        source="get_action_display",
+        read_only=True,
+    )
+
+    class Meta:
+
+        model = AuditLog
+
+        fields = [
+
+            "id",
+
+            "restaurant",
+
+            "restaurant_name",
+
+            "staff",
+
+            "staff_name",
+
+            "action",
+
+            "action_display",
+
+            "entity",
+
+            "entity_id",
+
+            "description",
+
+            "ip_address",
+
+            "user_agent",
+
+            "created_at",
+
+        ]
+
+        read_only_fields = fields
+            
+# =============================================================================
+# Audit Log Filter Serializer
+# =============================================================================
+
+class AuditLogFilterSerializer(serializers.Serializer):
+    
+    """
+    Filter audit logs.
+    
+    --------------------------------------------------------------------------------------------------------------
+    View response
+    
+    {
+        "id": 51,
+        "restaurant_name": "Pizza Hub",
+        "staff_name": "John",
+        "action": "staff_created",
+        "action_display": "Staff Created",
+        "entity": "Staff",
+        "entity_id": 12,
+        "description": "Created staff member Alice.",
+        "ip_address": "192.168.1.20",
+        "user_agent": "Mozilla/5.0...",
+        "created_at": "2026-07-10T14:30:18Z"
+    }
+    
+    --------------------------------------------------------------------------------------------------------------
+    Filtering
+    
+    GET /api/audit-logs/?staff_id=5
+
+    GET /api/audit-logs/?action=clock_in
+
+    GET /api/audit-logs/?entity=Order
+
+    GET /api/audit-logs/?entity_id=42
+
+    GET /api/audit-logs/?from_date=2026-07-01&to_date=2026-07-10
+
+    The AuditLogFilterSerializer validates those query parameters, and your get_audit_logs() service receives 
+    properly typed, validated values.
+
+    This design keeps the API focused on viewing audit history while ensuring all audit creation 
+    continues to go through the service layer, which is exactly the separation of responsibilities 
+    you've been building throughout ZenQRMenu.
+    -------------------------------------------------------------------------------------------------------------
+    """
+
+    action = serializers.ChoiceField(
+        choices=AuditLog.Action.choices,
+        required=False,
+    )
+
+    entity = serializers.CharField(
+        required=False,
+    )
+
+    entity_id = serializers.IntegerField(
+        required=False,
+    )
+
+    staff_id = serializers.IntegerField(
+        required=False,
+    )
+
+    from_date = serializers.DateField(
+        required=False,
+    )
+
+    to_date = serializers.DateField(
+        required=False,
+    )
+
+    def validate(self, attrs):
+
+        from_date = attrs.get("from_date")
+        to_date = attrs.get("to_date")
+
+        if (
+            from_date
+            and
+            to_date
+            and
+            from_date > to_date
+        ):
+
+            raise serializers.ValidationError(
+                "from_date cannot be after to_date."
+            )
+
+        return attrs
+    
+    
+    
+    

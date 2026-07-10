@@ -50,10 +50,7 @@ from payments.services import (
     get_restaurant_client,
 )
 
-from payments.services import get_restaurant
-
-
-
+from restaurant.services.common import get_restaurant
 
 # ==========================================================
 # payments/views/reconciliation.py
@@ -81,8 +78,9 @@ from payments.models import (
 )
 
 from .payment_settings import (
-    get_restaurant,
+    
     get_restaurant_client,
+    
 )
 
 from payments.services import (

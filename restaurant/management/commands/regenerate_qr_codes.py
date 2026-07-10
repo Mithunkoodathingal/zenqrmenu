@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from restaurant.models import Table
-from restaurant.views import generate_qr_code
+from restaurant.views.views import generate_qr_code
 from django.conf import settings
 
 

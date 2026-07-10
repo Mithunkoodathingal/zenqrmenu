@@ -2,11 +2,17 @@ from payments.models import PaymentAuditLog
 
 
 def create_audit_log(
+    
     restaurant,
+    
     action,
+    
     description,
+    
     payment=None,
+    
     request=None,
+    
 ):
 
     PaymentAuditLog.objects.create(

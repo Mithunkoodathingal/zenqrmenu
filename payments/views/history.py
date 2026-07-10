@@ -64,7 +64,7 @@ from payments.serializers import (
 # Restaurant Helpers
 # =============================================================================
 
-from payments.services import get_restaurant
+from restaurant.services.common import get_restaurant
 
 # ==========================================================
 # Payment History API
