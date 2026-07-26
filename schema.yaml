@@ -1,0 +1,2430 @@
+openapi: 3.0.3
+info:
+  title: ZenQRMenu API
+  version: 1.0.0
+  description: Restaurant QR Menu SaaS API
+paths:
+  /api/ai-import/extract/:
+    post:
+      operationId: api_ai_import_extract_create
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/ai-import/image-search/:
+    get:
+      operationId: api_ai_import_image_search_retrieve
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/auth/google/:
+    post:
+      operationId: api_auth_google_create
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/login/:
+    post:
+      operationId: api_auth_login_create
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/logout/:
+    post:
+      operationId: api_auth_logout_create
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/password/reset/:
+    post:
+      operationId: api_auth_password_reset_create
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/password/reset/confirm/:
+    post:
+      operationId: api_auth_password_reset_confirm_create
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/refresh/:
+    post:
+      operationId: api_auth_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/auth/user/:
+    get:
+      operationId: api_auth_user_retrieve
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/login/:
+    post:
+      operationId: api_login_create
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/logout/:
+    post:
+      operationId: api_logout_create
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/password/reset/:
+    post:
+      operationId: api_password_reset_create
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/password/reset/confirm/:
+    post:
+      operationId: api_password_reset_confirm_create
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/register/:
+    post:
+      operationId: api_register_create
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/resend-verification/:
+    post:
+      operationId: api_resend_verification_create
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/staff/:
+    get:
+      operationId: api_staff_list
+      description: |-
+        Returns all active staff members
+        belonging to the authenticated
+        user's restaurant.
+
+        Endpoint
+
+            GET /api/staff/
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StaffList'
+          description: ''
+  /api/staff/{id}/:
+    get:
+      operationId: api_staff_retrieve
+      description: |-
+        Returns a single staff member
+        belonging to the authenticated
+        user's restaurant.
+
+        Endpoint
+
+            GET /api/staff/<id>/
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Staff'
+          description: ''
+  /api/staff/{id}/delete/:
+    delete:
+      operationId: api_staff_delete_destroy
+      description: |-
+        Soft deletes a staff member.
+
+        Endpoint
+
+            DELETE /api/staff/<id>/
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/staff/{id}/role/:
+    get:
+      operationId: api_staff_role_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    patch:
+      operationId: api_staff_role_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/staff/{id}/shift/:
+    patch:
+      operationId: api_staff_shift_partial_update
+      description: |-
+        Updates staff shift status.
+
+        Endpoint
+
+            PATCH /api/staff/<id>/shift/
+
+        Request Body
+
+        {
+            "action": "clock_in"
+        }
+
+        Supported Actions
+
+        • clock_in
+
+        • clock_out
+
+        • start_break
+
+        • end_break
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffShiftRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffShiftRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffShiftRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffShift'
+          description: ''
+  /api/staff/{id}/shift-schedule/:
+    patch:
+      operationId: api_staff_shift_schedule_partial_update
+      description: |-
+        Updates a staff member's planned
+        working shift schedule.
+
+        Endpoint
+
+            PATCH /api/staff/<id>/shift-schedule/
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffShiftScheduleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffShiftScheduleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffShiftScheduleRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffShiftSchedule'
+          description: ''
+  /api/staff/{id}/update/:
+    patch:
+      operationId: api_staff_update_partial_update
+      description: |-
+        Updates an existing staff member.
+
+        Endpoint
+
+            PATCH /api/staff/<id>/
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Staff'
+          description: ''
+  /api/staff/create/:
+    post:
+      operationId: api_staff_create_create
+      description: |-
+        Creates a new staff member for the
+        authenticated user's restaurant.
+
+        Endpoint
+
+            POST /api/staff/
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StaffRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StaffRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Staff'
+          description: ''
+  /api/user/:
+    get:
+      operationId: api_user_retrieve
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /audit/logs/:
+    get:
+      operationId: audit_logs_retrieve
+      description: View audit logs.
+      tags:
+      - audit
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /kds/orders/:
+    get:
+      operationId: kds_orders_retrieve
+      tags:
+      - kds
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /kds/orders/{order_id}/notes/:
+    post:
+      operationId: kds_orders_notes_create
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - kds
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /kds/orders/{order_id}/priority/:
+    patch:
+      operationId: kds_orders_priority_partial_update
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - kds
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /kds/orders/{order_id}/status/:
+    patch:
+      operationId: kds_orders_status_partial_update
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - kds
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /kds/statistics/:
+    get:
+      operationId: kds_statistics_retrieve
+      tags:
+      - kds
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /kitchen/notes/:
+    get:
+      operationId: kitchen_notes_retrieve
+      description: Create and list kitchen notes.
+      tags:
+      - kitchen
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: kitchen_notes_create
+      description: Create and list kitchen notes.
+      tags:
+      - kitchen
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /kitchen/notes/{note_id}/:
+    patch:
+      operationId: kitchen_notes_partial_update
+      description: Update or archive a kitchen note.
+      parameters:
+      - in: path
+        name: note_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - kitchen
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: kitchen_notes_destroy
+      description: Update or archive a kitchen note.
+      parameters:
+      - in: path
+        name: note_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - kitchen
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /menu/api/categories/:
+    get:
+      operationId: menu_api_categories_retrieve
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: menu_api_categories_create
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /menu/api/categories/{id}/:
+    patch:
+      operationId: menu_api_categories_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: menu_api_categories_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /menu/api/items/:
+    get:
+      operationId: menu_api_items_retrieve
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: menu_api_items_create
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /menu/api/items/{id}/:
+    patch:
+      operationId: menu_api_items_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: menu_api_items_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /menu/api/orders/:
+    get:
+      operationId: menu_api_orders_list
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+          description: ''
+    post:
+      operationId: menu_api_orders_create
+      tags:
+      - menu
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+  /menu/api/orders/{id}/:
+    get:
+      operationId: menu_api_orders_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this order.
+        required: true
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+    put:
+      operationId: menu_api_orders_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this order.
+        required: true
+      tags:
+      - menu
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+    patch:
+      operationId: menu_api_orders_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this order.
+        required: true
+      tags:
+      - menu
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedOrderRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedOrderRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedOrderRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+    delete:
+      operationId: menu_api_orders_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this order.
+        required: true
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /menu/api/orders/{id}/public/:
+    get:
+      operationId: menu_api_orders_public_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /menu/api/restaurant/:
+    get:
+      operationId: menu_api_restaurant_retrieve
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: menu_api_restaurant_create
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    put:
+      operationId: menu_api_restaurant_update
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /menu/api/table/{table_id}/:
+    get:
+      operationId: menu_api_table_retrieve
+      parameters:
+      - in: path
+        name: table_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /menu/api/tables/:
+    get:
+      operationId: menu_api_tables_retrieve
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: menu_api_tables_create
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /menu/api/tables/{table_id}/:
+    delete:
+      operationId: menu_api_tables_destroy
+      parameters:
+      - in: path
+        name: table_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - menu
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /payments/api/payment-settings/:
+    get:
+      operationId: payments_api_payment_settings_retrieve
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: payments_api_payment_settings_create
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    put:
+      operationId: payments_api_payment_settings_update
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/api/payment-settings/verify/:
+    post:
+      operationId: payments_api_payment_settings_verify_create
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/orders/{order_id}/complete/:
+    post:
+      operationId: payments_orders_complete_create
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/orders/{order_id}/create-payment/:
+    post:
+      operationId: payments_orders_create_payment_create
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/orders/{order_id}/generate-otp/:
+    post:
+      operationId: payments_orders_generate_otp_create
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/orders/{order_id}/receipt/email/:
+    post:
+      operationId: payments_orders_receipt_email_create
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/orders/{order_id}/receipt/pdf/:
+    get:
+      operationId: payments_orders_receipt_pdf_retrieve
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/orders/{order_id}/receipt/whatsapp/:
+    post:
+      operationId: payments_orders_receipt_whatsapp_create
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/orders/{order_id}/refund/:
+    post:
+      operationId: payments_orders_refund_create
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/orders/{order_id}/refund-status/:
+    get:
+      operationId: payments_orders_refund_status_retrieve
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/orders/{order_id}/verify-otp/:
+    post:
+      operationId: payments_orders_verify_otp_create
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/orders/{order_id}/verify-payment/:
+    post:
+      operationId: payments_orders_verify_payment_create
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/payments/{payment_id}/:
+    get:
+      operationId: payments_payments_retrieve
+      parameters:
+      - in: path
+        name: payment_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/payments/history/:
+    get:
+      operationId: payments_payments_history_retrieve
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/receipt/{order_id}/:
+    get:
+      operationId: payments_receipt_retrieve
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/webhook/razorpay/:
+    post:
+      operationId: payments_webhook_razorpay_create
+      tags:
+      - payments
+      responses:
+        '200':
+          description: No response body
+  /staff/attendance/:
+    get:
+      operationId: staff_attendance_retrieve
+      description: List staff attendance.
+      tags:
+      - staff
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /staff/attendance/{attendance_id}/:
+    patch:
+      operationId: staff_attendance_partial_update
+      description: Update attendance record.
+      parameters:
+      - in: path
+        name: attendance_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - staff
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /staff/attendance/clock-in/:
+    post:
+      operationId: staff_attendance_clock_in_create
+      description: Clock in a staff member.
+      tags:
+      - staff
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /staff/attendance/clock-out/:
+    post:
+      operationId: staff_attendance_clock_out_create
+      description: Clock out a staff member.
+      tags:
+      - staff
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /staff/break/end/:
+    post:
+      operationId: staff_break_end_create
+      description: End a staff break.
+      tags:
+      - staff
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /staff/break/start/:
+    post:
+      operationId: staff_break_start_create
+      description: Start a staff break.
+      tags:
+      - staff
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /staff/breaks/:
+    get:
+      operationId: staff_breaks_retrieve
+      tags:
+      - staff
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /staff/role/{staff_id}/:
+    get:
+      operationId: staff_role_retrieve
+      parameters:
+      - in: path
+        name: staff_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - staff
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    patch:
+      operationId: staff_role_partial_update
+      parameters:
+      - in: path
+        name: staff_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - staff
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /subscription/api/create/:
+    post:
+      operationId: subscription_api_create_create
+      tags:
+      - subscription
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /subscription/api/subscription/:
+    get:
+      operationId: subscription_api_subscription_retrieve
+      tags:
+      - subscription
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /subscription/api/verify/:
+    post:
+      operationId: subscription_api_verify_create
+      tags:
+      - subscription
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+components:
+  schemas:
+    ActionEnum:
+      enum:
+      - clock_in
+      - clock_out
+      - start_break
+      - end_break
+      type: string
+      description: |-
+        * `clock_in` - Clock In
+        * `clock_out` - Clock Out
+        * `start_break` - Start Break
+        * `end_break` - End Break
+    DayOfWeekEnum:
+      enum:
+      - monday
+      - tuesday
+      - wednesday
+      - thursday
+      - friday
+      - saturday
+      - sunday
+      type: string
+      description: |-
+        * `monday` - Monday
+        * `tuesday` - Tuesday
+        * `wednesday` - Wednesday
+        * `thursday` - Thursday
+        * `friday` - Friday
+        * `saturday` - Saturday
+        * `sunday` - Sunday
+    DeliveryStatusEnum:
+      enum:
+      - not_required
+      - assigned
+      - picked
+      - out_for_delivery
+      - delivered
+      - failed
+      type: string
+      description: |-
+        * `not_required` - Not Required
+        * `assigned` - Assigned
+        * `picked` - Picked
+        * `out_for_delivery` - Out for Delivery
+        * `delivered` - Delivered
+        * `failed` - Failed
+    Order:
+      type: object
+      description: |-
+        Enterprise serializer for Orders.
+
+        Responsibilities
+
+            • Order Creation
+
+            • Order Updates
+
+            • Nested Order Items
+
+            • Delivery Orders
+
+            • Pickup Orders
+
+            • Dine-In Orders
+
+            • Payment Information
+
+            • Customer Information
+
+            • Tax Information
+
+            • Order Totals
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        order_number:
+          type: string
+          readOnly: true
+          nullable: true
+        restaurant:
+          type: integer
+        table:
+          type: integer
+          nullable: true
+        customer_name:
+          type: string
+          maxLength: 150
+        customer_phone:
+          type: string
+          maxLength: 20
+        customer_email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        customer_note:
+          type: string
+        customer_country:
+          type: string
+          maxLength: 100
+        customer_country_code:
+          type: string
+          maxLength: 6
+        order_type:
+          $ref: '#/components/schemas/OrderTypeEnum'
+        customer_address:
+          type: string
+        customer_city:
+          type: string
+          maxLength: 100
+        customer_state:
+          type: string
+          maxLength: 100
+        customer_pincode:
+          type: string
+          maxLength: 10
+        delivery_latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,7})?$
+          nullable: true
+        delivery_longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,7})?$
+          nullable: true
+        delivery_distance_km:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+          readOnly: true
+        delivery_charge:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        delivery_status:
+          $ref: '#/components/schemas/DeliveryStatusEnum'
+        scheduled_time:
+          type: string
+          format: date-time
+          nullable: true
+        pickup_verified:
+          type: boolean
+        delivery_verified:
+          type: boolean
+        delivery_person_name:
+          type: string
+          nullable: true
+          readOnly: true
+        delivery_person_phone:
+          type: string
+          nullable: true
+          readOnly: true
+        assigned_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        picked_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        is_completed:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        subtotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+        discount_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+        tax_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+        packing_charge:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+        tip_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        round_off:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+          readOnly: true
+        grand_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+        cgst:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+        sgst:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+        igst:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+        total_price_cached:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+        kitchen_printed:
+          type: boolean
+        receipt_printed:
+          type: boolean
+        is_deleted:
+          type: boolean
+        order_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+          readOnly: true
+      required:
+      - assigned_at
+      - cgst
+      - completed_at
+      - created_at
+      - delivered_at
+      - delivery_distance_km
+      - delivery_person_name
+      - delivery_person_phone
+      - discount_amount
+      - grand_total
+      - id
+      - igst
+      - is_completed
+      - order_items
+      - order_number
+      - packing_charge
+      - picked_at
+      - restaurant
+      - round_off
+      - sgst
+      - subtotal
+      - tax_amount
+      - total_price_cached
+    OrderItem:
+      type: object
+      description: |-
+        Enterprise serializer for Order Items.
+
+        Responsibilities
+
+            • Create Order Items
+
+            • Update Order Items
+
+            • Validate Food Item
+
+            • Validate Quantity
+
+            • Validate Addons
+
+            • Prevent cross-restaurant items
+
+            • Calculate readonly display fields
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        quantity:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        food_item_name:
+          type: string
+          readOnly: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+        is_veg:
+          type: boolean
+          readOnly: true
+        addons:
+          type: string
+          readOnly: true
+        line_total:
+          type: string
+          readOnly: true
+        selected_addons:
+          type: array
+          items:
+            type: integer
+          readOnly: true
+      required:
+      - addons
+      - food_item_name
+      - id
+      - is_veg
+      - line_total
+      - price
+      - selected_addons
+    OrderItemRequest:
+      type: object
+      description: |-
+        Enterprise serializer for Order Items.
+
+        Responsibilities
+
+            • Create Order Items
+
+            • Update Order Items
+
+            • Validate Food Item
+
+            • Validate Quantity
+
+            • Validate Addons
+
+            • Prevent cross-restaurant items
+
+            • Calculate readonly display fields
+      properties:
+        food_item_id:
+          type: integer
+          writeOnly: true
+        quantity:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        selected_addons_ids:
+          type: array
+          items:
+            type: integer
+          writeOnly: true
+      required:
+      - food_item_id
+    OrderRequest:
+      type: object
+      description: |-
+        Enterprise serializer for Orders.
+
+        Responsibilities
+
+            • Order Creation
+
+            • Order Updates
+
+            • Nested Order Items
+
+            • Delivery Orders
+
+            • Pickup Orders
+
+            • Dine-In Orders
+
+            • Payment Information
+
+            • Customer Information
+
+            • Tax Information
+
+            • Order Totals
+      properties:
+        restaurant:
+          type: integer
+        table:
+          type: integer
+          nullable: true
+        customer_name:
+          type: string
+          maxLength: 150
+        customer_phone:
+          type: string
+          maxLength: 20
+        customer_email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        customer_note:
+          type: string
+        customer_country:
+          type: string
+          minLength: 1
+          maxLength: 100
+        customer_country_code:
+          type: string
+          minLength: 1
+          maxLength: 6
+        order_type:
+          $ref: '#/components/schemas/OrderTypeEnum'
+        customer_address:
+          type: string
+        customer_city:
+          type: string
+          maxLength: 100
+        customer_state:
+          type: string
+          maxLength: 100
+        customer_pincode:
+          type: string
+          maxLength: 10
+        delivery_latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,7})?$
+          nullable: true
+        delivery_longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,7})?$
+          nullable: true
+        delivery_charge:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        delivery_status:
+          $ref: '#/components/schemas/DeliveryStatusEnum'
+        scheduled_time:
+          type: string
+          format: date-time
+          nullable: true
+        pickup_verified:
+          type: boolean
+        delivery_verified:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        tip_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        kitchen_printed:
+          type: boolean
+        receipt_printed:
+          type: boolean
+        is_deleted:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemRequest'
+          writeOnly: true
+      required:
+      - restaurant
+    OrderTypeEnum:
+      enum:
+      - dinein
+      - pickup
+      - delivery
+      type: string
+      description: |-
+        * `dinein` - Dine In
+        * `pickup` - Pickup
+        * `delivery` - Delivery
+    PatchedOrderRequest:
+      type: object
+      description: |-
+        Enterprise serializer for Orders.
+
+        Responsibilities
+
+            • Order Creation
+
+            • Order Updates
+
+            • Nested Order Items
+
+            • Delivery Orders
+
+            • Pickup Orders
+
+            • Dine-In Orders
+
+            • Payment Information
+
+            • Customer Information
+
+            • Tax Information
+
+            • Order Totals
+      properties:
+        restaurant:
+          type: integer
+        table:
+          type: integer
+          nullable: true
+        customer_name:
+          type: string
+          maxLength: 150
+        customer_phone:
+          type: string
+          maxLength: 20
+        customer_email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        customer_note:
+          type: string
+        customer_country:
+          type: string
+          minLength: 1
+          maxLength: 100
+        customer_country_code:
+          type: string
+          minLength: 1
+          maxLength: 6
+        order_type:
+          $ref: '#/components/schemas/OrderTypeEnum'
+        customer_address:
+          type: string
+        customer_city:
+          type: string
+          maxLength: 100
+        customer_state:
+          type: string
+          maxLength: 100
+        customer_pincode:
+          type: string
+          maxLength: 10
+        delivery_latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,7})?$
+          nullable: true
+        delivery_longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,7})?$
+          nullable: true
+        delivery_charge:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        delivery_status:
+          $ref: '#/components/schemas/DeliveryStatusEnum'
+        scheduled_time:
+          type: string
+          format: date-time
+          nullable: true
+        pickup_verified:
+          type: boolean
+        delivery_verified:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        tip_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        kitchen_printed:
+          type: boolean
+        receipt_printed:
+          type: boolean
+        is_deleted:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemRequest'
+          writeOnly: true
+    PatchedStaffRequest:
+      type: object
+      description: |-
+        Full serializer for Restaurant Staff.
+
+        Used By
+
+        • Staff CRUD
+
+        • Staff Profile
+
+        • Staff Details
+
+        • Dashboard
+      properties:
+        employee_id:
+          type: string
+          minLength: 1
+          maxLength: 50
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        profile_photo:
+          type: string
+          format: binary
+          nullable: true
+        country_code:
+          type: string
+          minLength: 1
+          maxLength: 5
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 20
+        alternate_phone:
+          type: string
+          maxLength: 20
+        email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        designation:
+          type: string
+          maxLength: 100
+        joining_date:
+          type: string
+          format: date
+        salary:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        is_on_shift:
+          type: boolean
+        is_on_break:
+          type: boolean
+        is_active:
+          type: boolean
+        is_deleted:
+          type: boolean
+        resigned_at:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+    PatchedStaffShiftRequest:
+      type: object
+      description: |-
+        Serializer used for
+        staff shift actions.
+      properties:
+        action:
+          $ref: '#/components/schemas/ActionEnum'
+    PatchedStaffShiftScheduleRequest:
+      type: object
+      properties:
+        staff:
+          type: integer
+        day_of_week:
+          $ref: '#/components/schemas/DayOfWeekEnum'
+        shift_start:
+          type: string
+          format: time
+        shift_end:
+          type: string
+          format: time
+        is_off_day:
+          type: boolean
+        is_active:
+          type: boolean
+    PaymentStatusEnum:
+      enum:
+      - pending
+      - paid
+      - failed
+      - refunded
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `paid` - Paid
+        * `failed` - Failed
+        * `refunded` - Refunded
+    RoleEnum:
+      enum:
+      - owner
+      - manager
+      - chef
+      - cashier
+      - waiter
+      - delivery_manager
+      - inventory_manager
+      type: string
+      description: |-
+        * `owner` - Owner
+        * `manager` - Manager
+        * `chef` - Chef
+        * `cashier` - Cashier
+        * `waiter` - Waiter
+        * `delivery_manager` - Delivery Manager
+        * `inventory_manager` - Inventory Manager
+    Staff:
+      type: object
+      description: |-
+        Full serializer for Restaurant Staff.
+
+        Used By
+
+        • Staff CRUD
+
+        • Staff Profile
+
+        • Staff Details
+
+        • Dashboard
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        restaurant:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+          readOnly: true
+          nullable: true
+        has_login:
+          type: string
+          readOnly: true
+        employee_id:
+          type: string
+          maxLength: 50
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        full_name:
+          type: string
+          readOnly: true
+        profile_photo:
+          type: string
+          format: uri
+          nullable: true
+        country_code:
+          type: string
+          maxLength: 5
+        phone:
+          type: string
+          maxLength: 20
+        alternate_phone:
+          type: string
+          maxLength: 20
+        email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        designation:
+          type: string
+          maxLength: 100
+        joining_date:
+          type: string
+          format: date
+        salary:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        shift_schedules:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffShiftSchedule'
+          readOnly: true
+        is_on_shift:
+          type: boolean
+        is_on_break:
+          type: boolean
+        last_shift_started_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        last_shift_ended_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        staff_status:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        is_deleted:
+          type: boolean
+        resigned_at:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+        last_login_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - employee_id
+      - first_name
+      - full_name
+      - has_login
+      - id
+      - last_login_at
+      - last_shift_ended_at
+      - last_shift_started_at
+      - phone
+      - restaurant
+      - shift_schedules
+      - staff_status
+      - updated_at
+      - user
+    StaffList:
+      type: object
+      description: |-
+        Lightweight serializer for
+        listing staff members.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        restaurant:
+          type: integer
+        employee_id:
+          type: string
+          maxLength: 50
+        full_name:
+          type: string
+          readOnly: true
+        has_login:
+          type: string
+          readOnly: true
+        profile_photo:
+          type: string
+          format: uri
+          nullable: true
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        designation:
+          type: string
+          maxLength: 100
+        phone:
+          type: string
+          maxLength: 20
+        is_on_shift:
+          type: boolean
+        is_on_break:
+          type: boolean
+        is_active:
+          type: boolean
+        staff_status:
+          type: string
+          readOnly: true
+      required:
+      - employee_id
+      - full_name
+      - has_login
+      - id
+      - phone
+      - restaurant
+      - staff_status
+    StaffRequest:
+      type: object
+      description: |-
+        Full serializer for Restaurant Staff.
+
+        Used By
+
+        • Staff CRUD
+
+        • Staff Profile
+
+        • Staff Details
+
+        • Dashboard
+      properties:
+        employee_id:
+          type: string
+          minLength: 1
+          maxLength: 50
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        profile_photo:
+          type: string
+          format: binary
+          nullable: true
+        country_code:
+          type: string
+          minLength: 1
+          maxLength: 5
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 20
+        alternate_phone:
+          type: string
+          maxLength: 20
+        email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        designation:
+          type: string
+          maxLength: 100
+        joining_date:
+          type: string
+          format: date
+        salary:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        is_on_shift:
+          type: boolean
+        is_on_break:
+          type: boolean
+        is_active:
+          type: boolean
+        is_deleted:
+          type: boolean
+        resigned_at:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+      required:
+      - employee_id
+      - first_name
+      - phone
+    StaffShift:
+      type: object
+      description: |-
+        Serializer used for
+        staff shift actions.
+      properties:
+        action:
+          $ref: '#/components/schemas/ActionEnum'
+      required:
+      - action
+    StaffShiftSchedule:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        staff:
+          type: integer
+        day_of_week:
+          $ref: '#/components/schemas/DayOfWeekEnum'
+        shift_start:
+          type: string
+          format: time
+        shift_end:
+          type: string
+          format: time
+        is_off_day:
+          type: boolean
+        is_active:
+          type: boolean
+      required:
+      - day_of_week
+      - id
+      - shift_end
+      - shift_start
+      - staff
+    StaffShiftScheduleRequest:
+      type: object
+      properties:
+        staff:
+          type: integer
+        day_of_week:
+          $ref: '#/components/schemas/DayOfWeekEnum'
+        shift_start:
+          type: string
+          format: time
+        shift_end:
+          type: string
+          format: time
+        is_off_day:
+          type: boolean
+        is_active:
+          type: boolean
+      required:
+      - day_of_week
+      - shift_end
+      - shift_start
+      - staff
+    StatusEnum:
+      enum:
+      - pending
+      - confirmed
+      - preparing
+      - completed
+      - cancelled
+      - ready
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `confirmed` - Confirmed
+        * `preparing` - Preparing
+        * `completed` - Completed
+        * `cancelled` - Cancelled
+        * `ready` - Ready
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+      required:
+      - access
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - refresh
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

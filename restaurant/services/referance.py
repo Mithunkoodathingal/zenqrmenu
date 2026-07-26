@@ -1,64 +1,64 @@
-"""
-==========================================================
-restaurant/services.py
+# """
+# ==========================================================
+# restaurant/services.py
 
-Business Logic Layer
+# Business Logic Layer
 
-Contains reusable helper functions for:
+# Contains reusable helper functions for:
 
-• Distance calculations
-• Delivery validation
-• Delivery charge calculation
-• Restaurant coverage
-• Location helpers
+# • Distance calculations
+# • Delivery validation
+# • Delivery charge calculation
+# • Restaurant coverage
+# • Location helpers
 
-Views should remain thin and delegate business logic here.
+# Views should remain thin and delegate business logic here.
 
-==========================================================
-"""
-"""
-restaurant/services.py
+# ==========================================================
+# """
+# """
+# restaurant/services.py
 
-Delivery Partner Services
-"""
+# Delivery Partner Services
+# """
 
-from django.db import transaction
+# from django.db import transaction
 
-from django.utils import timezone
+# from django.utils import timezone
 
-from django.db.models import F, Avg, DurationField, ExpressionWrapper, Sum
+# from django.db.models import F, Avg, DurationField, ExpressionWrapper, Sum
 
-from django.shortcuts import get_object_or_404
+# from django.shortcuts import get_object_or_404
 
-from ..models import (
+# from ..models import (
     
-    FoodItem,
+#     FoodItem,
     
-    KitchenNote,
+#     KitchenNote,
     
-    Order,
+#     Order,
     
-    DeliveryPartner,
+#     DeliveryPartner,
     
-    OrderItem,
+#     OrderItem,
     
-    Staff,
+#     Staff,
     
-    StaffAttendance,
+#     StaffAttendance,
     
-)
+# )
 
-from datetime import date
+# from datetime import date
 
-from django.db.models import Count
+# from django.db.models import Count
 
-from datetime import timedelta
+# from datetime import timedelta
 
-from decimal import Decimal
+# from decimal import Decimal
 
-from math import radians, sin, cos, sqrt, atan2
+# from math import radians, sin, cos, sqrt, atan2
 
-from django.core.exceptions import ValidationError
+# from django.core.exceptions import ValidationError
 
 
 

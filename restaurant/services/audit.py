@@ -1,3 +1,5 @@
+# restaurants/services/audit.py
+
 from restaurant.models import AuditLog
 
 
@@ -402,4 +404,375 @@ def get_audit_logs(
     )
     
     
-    
+# =============================================================================
+# Restaurant Audit
+# =============================================================================
+
+def audit_restaurant(
+    *,
+    restaurant,
+    action,
+    staff=None,
+    request=None,
+):
+    """
+    Create restaurant audit log.
+    """
+
+    return create_audit_log(
+
+        restaurant=restaurant,
+
+        staff=staff,
+
+        request=request,
+
+        action=action,
+
+        entity="restaurant",
+
+        entity_id=restaurant.id,
+
+        description=build_restaurant_description(
+
+            restaurant,
+
+            action,
+
+        ),
+
+    )
+
+
+# =============================================================================
+# Staff Audit
+# =============================================================================
+
+def audit_staff(
+    *,
+    restaurant,
+    staff_member,
+    action,
+    staff=None,
+    request=None,
+):
+    """
+    Create staff audit log.
+    """
+
+    return create_audit_log(
+
+        restaurant=restaurant,
+
+        staff=staff,
+
+        request=request,
+
+        action=action,
+
+        entity="staff",
+
+        entity_id=staff_member.id,
+
+        description=build_staff_description(
+
+            staff_member,
+
+            action,
+
+        ),
+
+    )
+
+
+# =============================================================================
+# Order Audit
+# =============================================================================
+
+def audit_order(
+    *,
+    order,
+    action,
+    staff=None,
+    request=None,
+):
+    """
+    Create order audit log.
+    """
+
+    return create_audit_log(
+
+        restaurant=order.restaurant,
+
+        staff=staff,
+
+        request=request,
+
+        action=action,
+
+        entity="order",
+
+        entity_id=order.id,
+
+        description=build_order_description(
+
+            order,
+
+            action,
+
+        ),
+
+    )
+
+
+# =============================================================================
+# Delivery Audit
+# =============================================================================
+
+def audit_delivery(
+    *,
+    delivery,
+    action,
+    staff=None,
+    request=None,
+):
+    """
+    Create delivery audit log.
+    """
+
+    return create_audit_log(
+
+        restaurant=delivery.restaurant,
+
+        staff=staff,
+
+        request=request,
+
+        action=action,
+
+        entity="delivery",
+
+        entity_id=delivery.id,
+
+        description=build_delivery_description(
+
+            delivery,
+
+            action,
+
+        ),
+
+    )
+
+
+# =============================================================================
+# Kitchen Note Audit
+# =============================================================================
+
+def audit_kitchen_note(
+    *,
+    kitchen_note,
+    action,
+    staff=None,
+    request=None,
+):
+    """
+    Create kitchen note audit log.
+    """
+
+    return create_audit_log(
+
+        restaurant=kitchen_note.order.restaurant,
+
+        staff=staff,
+
+        request=request,
+
+        action=action,
+
+        entity="kitchen_note",
+
+        entity_id=kitchen_note.id,
+
+        description=build_kitchen_note_description(
+
+            kitchen_note,
+
+            action,
+
+        ),
+
+    )
+
+
+# =============================================================================
+# Payment Audit
+# =============================================================================
+
+def audit_payment(
+    *,
+    payment,
+    action,
+    staff=None,
+    request=None,
+):
+    """
+    Create payment audit log.
+    """
+
+    return create_audit_log(
+
+        restaurant=payment.order.restaurant,
+
+        staff=staff,
+
+        request=request,
+
+        action=action,
+
+        entity="payment",
+
+        entity_id=payment.id,
+
+        description=build_payment_description(
+
+            payment,
+
+            action,
+
+        ),
+
+    )
+
+
+# =============================================================================
+# Generic Audit
+# =============================================================================
+
+def audit(
+    *,
+    restaurant,
+    action,
+    entity,
+    entity_id,
+    description,
+    staff=None,
+    request=None,
+):
+    """
+    Generic audit helper for custom events.
+    """
+
+    return create_audit_log(
+
+        restaurant=restaurant,
+
+        staff=staff,
+
+        request=request,
+
+        action=action,
+
+        entity=entity,
+
+        entity_id=entity_id,
+
+        description=description,
+
+    )
+
+
+# =============================================================================
+# Recent Audit Logs
+# =============================================================================
+
+def get_recent_audit_logs(
+    *,
+    restaurant,
+    limit=25,
+):
+    """
+    Return the most recent audit log entries.
+    """
+
+    return (
+
+        AuditLog.objects
+
+        .filter(
+
+            restaurant=restaurant,
+
+        )
+
+        .select_related(
+
+            "restaurant",
+
+            "staff",
+
+        )
+
+        .order_by(
+
+            "-created_at",
+
+        )[:limit]
+
+    )
+
+
+# =============================================================================
+# Audit Log Count
+# =============================================================================
+
+def get_audit_log_count(
+    *,
+    restaurant,
+):
+    """
+    Return the total number of audit log entries.
+    """
+
+    return (
+
+        AuditLog.objects
+
+        .filter(
+
+            restaurant=restaurant,
+
+        )
+
+        .count()
+
+    )
+
+
+# =============================================================================
+# Delete Audit Logs
+# =============================================================================
+
+def delete_audit_logs(
+    *,
+    restaurant,
+):
+    """
+    Permanently delete all audit logs for a restaurant.
+
+    Intended for maintenance or GDPR cleanup.
+    """
+
+    return (
+
+        AuditLog.objects
+
+        .filter(
+
+            restaurant=restaurant,
+
+        )
+
+        .delete()
+
+    )

@@ -876,11 +876,13 @@ class StaffShiftAPIView(UpdateAPIView):
     # using a StaffShiftScheduleSerializer for:
 
     # shift_start
+    
     # shift_end
 
     # This keeps:
 
     # Shift schedule (planned working hours)
+    
     # Shift actions (clock in/out, breaks)
 
     # as separate responsibilities

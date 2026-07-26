@@ -1,0 +1,231 @@
+URL                                                                 | Module                                                          | Name                                                | Decorator
+--------------------------------------------------------------------+-----------------------------------------------------------------+-----------------------------------------------------+-
+/__debug/diagnostic/                                                | restaurant.debug_views.diagnostic                               | diagnostic                                          | 
+/accounts/3rdparty/                                                 | allauth.socialaccount.views.ConnectionsView                     | socialaccount_connections                           | 
+/accounts/3rdparty/login/cancelled/                                 | allauth.socialaccount.views.LoginCancelledView                  | socialaccount_login_cancelled                       | 
+/accounts/3rdparty/login/error/                                     | allauth.socialaccount.views.LoginErrorView                      | socialaccount_login_error                           | 
+/accounts/3rdparty/signup/                                          | allauth.socialaccount.views.SignupView                          | socialaccount_signup                                | 
+/accounts/confirm-email/                                            | allauth.account.views.email_verification_sent                   | account_email_verification_sent                     | 
+/accounts/confirm-email/<key>/                                      | allauth.account.views.ConfirmEmailView                          | account_confirm_email                               | 
+/accounts/email/                                                    | allauth.account.views.EmailView                                 | account_email                                       | 
+/accounts/facebook/login/                                           | allauth.socialaccount.providers.oauth2.views.view               | facebook_login                                      | 
+/accounts/facebook/login/callback/                                  | allauth.socialaccount.providers.oauth2.views.view               | facebook_callback                                   | 
+/accounts/facebook/login/token/                                     | allauth.socialaccount.providers.facebook.views.LoginByTokenView | facebook_login_by_token                             | 
+/accounts/google/login/                                             | allauth.socialaccount.providers.oauth2.views.view               | google_login                                        | 
+/accounts/google/login/callback/                                    | allauth.socialaccount.providers.oauth2.views.view               | google_callback                                     | 
+/accounts/google/login/token/                                       | allauth.socialaccount.providers.google.views.LoginByTokenView   | google_login_by_token                               | 
+/accounts/inactive/                                                 | allauth.account.views.AccountInactiveView                       | account_inactive                                    | 
+/accounts/login/                                                    | allauth.account.views.LoginView                                 | account_login                                       | 
+/accounts/login/code/confirm/                                       | allauth.account.views.ConfirmLoginCodeView                      | account_confirm_login_code                          | 
+/accounts/logout/                                                   | allauth.account.views.LogoutView                                | account_logout                                      | 
+/accounts/password/change/                                          | allauth.account.views.PasswordChangeView                        | account_change_password                             | 
+/accounts/password/reset/                                           | allauth.account.views.PasswordResetView                         | account_reset_password                              | 
+/accounts/password/reset/done/                                      | allauth.account.views.PasswordResetDoneView                     | account_reset_password_done                         | 
+/accounts/password/reset/key/<uidb36>-<key>/                        | allauth.account.views.PasswordResetFromKeyView                  | account_reset_password_from_key                     | 
+/accounts/password/reset/key/done/                                  | allauth.account.views.PasswordResetFromKeyDoneView              | account_reset_password_from_key_done                | 
+/accounts/password/set/                                             | allauth.account.views.PasswordSetView                           | account_set_password                                | 
+/accounts/password_reset/                                           | django.contrib.auth.views.PasswordResetView                     | password_reset                                      | 
+/accounts/password_reset/done/                                      | django.contrib.auth.views.PasswordResetDoneView                 | password_reset_done                                 | 
+/accounts/reauthenticate/                                           | allauth.account.views.ReauthenticateView                        | account_reauthenticate                              | 
+/accounts/reset/<uidb64>/<token>/                                   | django.contrib.auth.views.PasswordResetConfirmView              | password_reset_confirm                              | 
+/accounts/reset/done/                                               | django.contrib.auth.views.PasswordResetCompleteView             | password_reset_complete                             | 
+/accounts/signup/                                                   | allauth.account.views.SignupView                                | account_signup                                      | 
+/accounts/social/connections/                                       | django.views.generic.base.RedirectView                          |                                                     | 
+/accounts/social/login/cancelled/                                   | django.views.generic.base.RedirectView                          |                                                     | 
+/accounts/social/login/error/                                       | django.views.generic.base.RedirectView                          |                                                     | 
+/accounts/social/signup/                                            | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/                                                             | django.contrib.admin.sites.index                                | admin:index                                         | 
+/admin/<app_label>/                                                 | django.contrib.admin.sites.app_index                            | admin:app_list                                      | 
+/admin/<url>                                                        | django.contrib.admin.sites.catch_all_view                       |                                                     | 
+/admin/account/emailaddress/                                        | django.contrib.admin.options.changelist_view                    | admin:account_emailaddress_changelist               | 
+/admin/account/emailaddress/<path:object_id>/                       | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/account/emailaddress/<path:object_id>/change/                | django.contrib.admin.options.change_view                        | admin:account_emailaddress_change                   | 
+/admin/account/emailaddress/<path:object_id>/delete/                | django.contrib.admin.options.delete_view                        | admin:account_emailaddress_delete                   | 
+/admin/account/emailaddress/<path:object_id>/history/               | django.contrib.admin.options.history_view                       | admin:account_emailaddress_history                  | 
+/admin/account/emailaddress/add/                                    | django.contrib.admin.options.add_view                           | admin:account_emailaddress_add                      | 
+/admin/auth/group/                                                  | django.contrib.admin.options.changelist_view                    | admin:auth_group_changelist                         | 
+/admin/auth/group/<path:object_id>/                                 | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/auth/group/<path:object_id>/change/                          | django.contrib.admin.options.change_view                        | admin:auth_group_change                             | 
+/admin/auth/group/<path:object_id>/delete/                          | django.contrib.admin.options.delete_view                        | admin:auth_group_delete                             | 
+/admin/auth/group/<path:object_id>/history/                         | django.contrib.admin.options.history_view                       | admin:auth_group_history                            | 
+/admin/auth/group/add/                                              | django.contrib.admin.options.add_view                           | admin:auth_group_add                                | 
+/admin/auth/user/                                                   | django.contrib.admin.options.changelist_view                    | admin:auth_user_changelist                          | 
+/admin/auth/user/<id>/password/                                     | django.contrib.auth.admin.user_change_password                  | admin:auth_user_password_change                     | 
+/admin/auth/user/<path:object_id>/                                  | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/auth/user/<path:object_id>/change/                           | django.contrib.admin.options.change_view                        | admin:auth_user_change                              | 
+/admin/auth/user/<path:object_id>/delete/                           | django.contrib.admin.options.delete_view                        | admin:auth_user_delete                              | 
+/admin/auth/user/<path:object_id>/history/                          | django.contrib.admin.options.history_view                       | admin:auth_user_history                             | 
+/admin/auth/user/add/                                               | django.contrib.auth.admin.add_view                              | admin:auth_user_add                                 | 
+/admin/autocomplete/                                                | django.contrib.admin.sites.autocomplete_view                    | admin:autocomplete                                  | 
+/admin/jsi18n/                                                      | django.contrib.admin.sites.i18n_javascript                      | admin:jsi18n                                        | 
+/admin/login/                                                       | django.contrib.admin.sites.login                                | admin:login                                         | 
+/admin/logout/                                                      | django.contrib.admin.sites.logout                               | admin:logout                                        | 
+/admin/password_change/                                             | django.contrib.admin.sites.password_change                      | admin:password_change                               | 
+/admin/password_change/done/                                        | django.contrib.admin.sites.password_change_done                 | admin:password_change_done                          | 
+/admin/payments/paymentauditlog/                                    | django.contrib.admin.options.changelist_view                    | admin:payments_paymentauditlog_changelist           | 
+/admin/payments/paymentauditlog/<path:object_id>/                   | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/payments/paymentauditlog/<path:object_id>/change/            | django.contrib.admin.options.change_view                        | admin:payments_paymentauditlog_change               | 
+/admin/payments/paymentauditlog/<path:object_id>/delete/            | django.contrib.admin.options.delete_view                        | admin:payments_paymentauditlog_delete               | 
+/admin/payments/paymentauditlog/<path:object_id>/history/           | django.contrib.admin.options.history_view                       | admin:payments_paymentauditlog_history              | 
+/admin/payments/paymentauditlog/add/                                | django.contrib.admin.options.add_view                           | admin:payments_paymentauditlog_add                  | 
+/admin/payments/paymentrefund/                                      | django.contrib.admin.options.changelist_view                    | admin:payments_paymentrefund_changelist             | 
+/admin/payments/paymentrefund/<path:object_id>/                     | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/payments/paymentrefund/<path:object_id>/change/              | django.contrib.admin.options.change_view                        | admin:payments_paymentrefund_change                 | 
+/admin/payments/paymentrefund/<path:object_id>/delete/              | django.contrib.admin.options.delete_view                        | admin:payments_paymentrefund_delete                 | 
+/admin/payments/paymentrefund/<path:object_id>/history/             | django.contrib.admin.options.history_view                       | admin:payments_paymentrefund_history                | 
+/admin/payments/paymentrefund/add/                                  | django.contrib.admin.options.add_view                           | admin:payments_paymentrefund_add                    | 
+/admin/payments/paymenttransaction/                                 | django.contrib.admin.options.changelist_view                    | admin:payments_paymenttransaction_changelist        | 
+/admin/payments/paymenttransaction/<path:object_id>/                | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/payments/paymenttransaction/<path:object_id>/change/         | django.contrib.admin.options.change_view                        | admin:payments_paymenttransaction_change            | 
+/admin/payments/paymenttransaction/<path:object_id>/delete/         | django.contrib.admin.options.delete_view                        | admin:payments_paymenttransaction_delete            | 
+/admin/payments/paymenttransaction/<path:object_id>/history/        | django.contrib.admin.options.history_view                       | admin:payments_paymenttransaction_history           | 
+/admin/payments/paymenttransaction/add/                             | django.contrib.admin.options.add_view                           | admin:payments_paymenttransaction_add               | 
+/admin/payments/paymentwebhooklog/                                  | django.contrib.admin.options.changelist_view                    | admin:payments_paymentwebhooklog_changelist         | 
+/admin/payments/paymentwebhooklog/<path:object_id>/                 | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/payments/paymentwebhooklog/<path:object_id>/change/          | django.contrib.admin.options.change_view                        | admin:payments_paymentwebhooklog_change             | 
+/admin/payments/paymentwebhooklog/<path:object_id>/delete/          | django.contrib.admin.options.delete_view                        | admin:payments_paymentwebhooklog_delete             | 
+/admin/payments/paymentwebhooklog/<path:object_id>/history/         | django.contrib.admin.options.history_view                       | admin:payments_paymentwebhooklog_history            | 
+/admin/payments/paymentwebhooklog/add/                              | django.contrib.admin.options.add_view                           | admin:payments_paymentwebhooklog_add                | 
+/admin/payments/receipt/                                            | django.contrib.admin.options.changelist_view                    | admin:payments_receipt_changelist                   | 
+/admin/payments/receipt/<path:object_id>/                           | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/payments/receipt/<path:object_id>/change/                    | django.contrib.admin.options.change_view                        | admin:payments_receipt_change                       | 
+/admin/payments/receipt/<path:object_id>/delete/                    | django.contrib.admin.options.delete_view                        | admin:payments_receipt_delete                       | 
+/admin/payments/receipt/<path:object_id>/history/                   | django.contrib.admin.options.history_view                       | admin:payments_receipt_history                      | 
+/admin/payments/receipt/add/                                        | django.contrib.admin.options.add_view                           | admin:payments_receipt_add                          | 
+/admin/payments/restaurantgatewaysettings/                          | django.contrib.admin.options.changelist_view                    | admin:payments_restaurantgatewaysettings_changelist | 
+/admin/payments/restaurantgatewaysettings/<path:object_id>/         | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/payments/restaurantgatewaysettings/<path:object_id>/change/  | django.contrib.admin.options.change_view                        | admin:payments_restaurantgatewaysettings_change     | 
+/admin/payments/restaurantgatewaysettings/<path:object_id>/delete/  | django.contrib.admin.options.delete_view                        | admin:payments_restaurantgatewaysettings_delete     | 
+/admin/payments/restaurantgatewaysettings/<path:object_id>/history/ | django.contrib.admin.options.history_view                       | admin:payments_restaurantgatewaysettings_history    | 
+/admin/payments/restaurantgatewaysettings/add/                      | django.contrib.admin.options.add_view                           | admin:payments_restaurantgatewaysettings_add        | 
+/admin/r/<int:content_type_id>/<path:object_id>/                    | django.contrib.contenttypes.views.shortcut                      | admin:view_on_site                                  | 
+/admin/restaurant/category/                                         | django.contrib.admin.options.changelist_view                    | admin:restaurant_category_changelist                | 
+/admin/restaurant/category/<path:object_id>/                        | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/restaurant/category/<path:object_id>/change/                 | django.contrib.admin.options.change_view                        | admin:restaurant_category_change                    | 
+/admin/restaurant/category/<path:object_id>/delete/                 | django.contrib.admin.options.delete_view                        | admin:restaurant_category_delete                    | 
+/admin/restaurant/category/<path:object_id>/history/                | django.contrib.admin.options.history_view                       | admin:restaurant_category_history                   | 
+/admin/restaurant/category/add/                                     | django.contrib.admin.options.add_view                           | admin:restaurant_category_add                       | 
+/admin/restaurant/fooditem/                                         | django.contrib.admin.options.changelist_view                    | admin:restaurant_fooditem_changelist                | 
+/admin/restaurant/fooditem/<path:object_id>/                        | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/restaurant/fooditem/<path:object_id>/change/                 | django.contrib.admin.options.change_view                        | admin:restaurant_fooditem_change                    | 
+/admin/restaurant/fooditem/<path:object_id>/delete/                 | django.contrib.admin.options.delete_view                        | admin:restaurant_fooditem_delete                    | 
+/admin/restaurant/fooditem/<path:object_id>/history/                | django.contrib.admin.options.history_view                       | admin:restaurant_fooditem_history                   | 
+/admin/restaurant/fooditem/add/                                     | django.contrib.admin.options.add_view                           | admin:restaurant_fooditem_add                       | 
+/admin/sites/site/                                                  | django.contrib.admin.options.changelist_view                    | admin:sites_site_changelist                         | 
+/admin/sites/site/<path:object_id>/                                 | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/sites/site/<path:object_id>/change/                          | django.contrib.admin.options.change_view                        | admin:sites_site_change                             | 
+/admin/sites/site/<path:object_id>/delete/                          | django.contrib.admin.options.delete_view                        | admin:sites_site_delete                             | 
+/admin/sites/site/<path:object_id>/history/                         | django.contrib.admin.options.history_view                       | admin:sites_site_history                            | 
+/admin/sites/site/add/                                              | django.contrib.admin.options.add_view                           | admin:sites_site_add                                | 
+/admin/socialaccount/socialaccount/                                 | django.contrib.admin.options.changelist_view                    | admin:socialaccount_socialaccount_changelist        | 
+/admin/socialaccount/socialaccount/<path:object_id>/                | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/socialaccount/socialaccount/<path:object_id>/change/         | django.contrib.admin.options.change_view                        | admin:socialaccount_socialaccount_change            | 
+/admin/socialaccount/socialaccount/<path:object_id>/delete/         | django.contrib.admin.options.delete_view                        | admin:socialaccount_socialaccount_delete            | 
+/admin/socialaccount/socialaccount/<path:object_id>/history/        | django.contrib.admin.options.history_view                       | admin:socialaccount_socialaccount_history           | 
+/admin/socialaccount/socialaccount/add/                             | django.contrib.admin.options.add_view                           | admin:socialaccount_socialaccount_add               | 
+/admin/socialaccount/socialapp/                                     | django.contrib.admin.options.changelist_view                    | admin:socialaccount_socialapp_changelist            | 
+/admin/socialaccount/socialapp/<path:object_id>/                    | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/socialaccount/socialapp/<path:object_id>/change/             | django.contrib.admin.options.change_view                        | admin:socialaccount_socialapp_change                | 
+/admin/socialaccount/socialapp/<path:object_id>/delete/             | django.contrib.admin.options.delete_view                        | admin:socialaccount_socialapp_delete                | 
+/admin/socialaccount/socialapp/<path:object_id>/history/            | django.contrib.admin.options.history_view                       | admin:socialaccount_socialapp_history               | 
+/admin/socialaccount/socialapp/add/                                 | django.contrib.admin.options.add_view                           | admin:socialaccount_socialapp_add                   | 
+/admin/socialaccount/socialtoken/                                   | django.contrib.admin.options.changelist_view                    | admin:socialaccount_socialtoken_changelist          | 
+/admin/socialaccount/socialtoken/<path:object_id>/                  | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/socialaccount/socialtoken/<path:object_id>/change/           | django.contrib.admin.options.change_view                        | admin:socialaccount_socialtoken_change              | 
+/admin/socialaccount/socialtoken/<path:object_id>/delete/           | django.contrib.admin.options.delete_view                        | admin:socialaccount_socialtoken_delete              | 
+/admin/socialaccount/socialtoken/<path:object_id>/history/          | django.contrib.admin.options.history_view                       | admin:socialaccount_socialtoken_history             | 
+/admin/socialaccount/socialtoken/add/                               | django.contrib.admin.options.add_view                           | admin:socialaccount_socialtoken_add                 | 
+/admin/subscription/subscription/                                   | django.contrib.admin.options.changelist_view                    | admin:subscription_subscription_changelist          | 
+/admin/subscription/subscription/<path:object_id>/                  | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/subscription/subscription/<path:object_id>/change/           | django.contrib.admin.options.change_view                        | admin:subscription_subscription_change              | 
+/admin/subscription/subscription/<path:object_id>/delete/           | django.contrib.admin.options.delete_view                        | admin:subscription_subscription_delete              | 
+/admin/subscription/subscription/<path:object_id>/history/          | django.contrib.admin.options.history_view                       | admin:subscription_subscription_history             | 
+/admin/subscription/subscription/add/                               | django.contrib.admin.options.add_view                           | admin:subscription_subscription_add                 | 
+/admin/subscription/subscriptionplan/                               | django.contrib.admin.options.changelist_view                    | admin:subscription_subscriptionplan_changelist      | 
+/admin/subscription/subscriptionplan/<path:object_id>/              | django.views.generic.base.RedirectView                          |                                                     | 
+/admin/subscription/subscriptionplan/<path:object_id>/change/       | django.contrib.admin.options.change_view                        | admin:subscription_subscriptionplan_change          | 
+/admin/subscription/subscriptionplan/<path:object_id>/delete/       | django.contrib.admin.options.delete_view                        | admin:subscription_subscriptionplan_delete          | 
+/admin/subscription/subscriptionplan/<path:object_id>/history/      | django.contrib.admin.options.history_view                       | admin:subscription_subscriptionplan_history         | 
+/admin/subscription/subscriptionplan/add/                           | django.contrib.admin.options.add_view                           | admin:subscription_subscriptionplan_add             | 
+/api/ai-import/extract/                                             | restaurant.views.views.ai_menu_extract                          |                                                     | 
+/api/ai-import/image-search/                                        | restaurant.views.views.ai_image_search                          |                                                     | 
+/api/auth/google/                                                   | restaurant.views.views.google_login                             |                                                     | 
+/api/auth/login/                                                    | restaurant.views.views.api_login                                |                                                     | 
+/api/auth/logout/                                                   | restaurant.views.views.api_logout                               |                                                     | 
+/api/auth/password/reset/                                           | restaurant.views.views.password_reset                           |                                                     | 
+/api/auth/password/reset/confirm/                                   | restaurant.views.views.password_reset_confirm                   |                                                     | 
+/api/auth/refresh/                                                  | rest_framework_simplejwt.views.TokenRefreshView                 |                                                     | 
+/api/auth/user/                                                     | restaurant.views.views.user_detail_api                          |                                                     | 
+/api/login/                                                         | restaurant.views.views.api_login                                |                                                     | 
+/api/logout/                                                        | restaurant.views.views.api_logout                               |                                                     | 
+/api/password/reset/                                                | restaurant.views.views.password_reset                           |                                                     | 
+/api/password/reset/confirm/                                        | restaurant.views.views.password_reset_confirm                   |                                                     | 
+/api/register/                                                      | restaurant.views.views.api_register                             |                                                     | 
+/api/resend-verification/                                           | restaurant.views.views.resend_verification                      |                                                     | 
+/api/staff/                                                         | restaurant.views.staff.StaffListAPIView                         | staff-list                                          | 
+/api/staff/<int:pk>/                                                | restaurant.views.staff.StaffDetailAPIView                       | staff-detail                                        | 
+/api/staff/<int:pk>/delete/                                         | restaurant.views.staff.StaffDeleteAPIView                       | staff-delete                                        | 
+/api/staff/<int:pk>/role/                                           | restaurant.views.staff.StaffRoleAPIView                         | staff-role                                          | 
+/api/staff/<int:pk>/shift-schedule/                                 | restaurant.views.staff.StaffShiftScheduleAPIView                | staff-shift-schedule                                | 
+/api/staff/<int:pk>/shift/                                          | restaurant.views.staff.StaffShiftAPIView                        | staff-shift                                         | 
+/api/staff/<int:pk>/update/                                         | restaurant.views.staff.StaffUpdateAPIView                       | staff-update                                        | 
+/api/staff/create/                                                  | restaurant.views.staff.StaffCreateAPIView                       | staff-create                                        | 
+/api/user/                                                          | restaurant.views.views.api_user                                 |                                                     | 
+/audit/logs/                                                        | restaurant.views.audit.AuditLogAPIView                          | audit-logs                                          | 
+/kds/orders/                                                        | restaurant.views.kds.KDSOrdersAPIView                           | kds-orders                                          | 
+/kds/orders/<int:order_id>/notes/                                   | restaurant.views.kds.KDSNotesAPIView                            | kds-notes                                           | 
+/kds/orders/<int:order_id>/priority/                                | restaurant.views.kds.KDSPriorityAPIView                         | kds-priority                                        | 
+/kds/orders/<int:order_id>/status/                                  | restaurant.views.kds.KDSStatusAPIView                           | kds-status                                          | 
+/kds/statistics/                                                    | restaurant.views.kds.KDSStatisticsAPIView                       | kds-statistics                                      | 
+/kitchen/notes/                                                     | restaurant.views.kitchen_notes.KitchenNotesAPIView              | kitchen-notes                                       | 
+/kitchen/notes/<int:note_id>/                                       | restaurant.views.kitchen_notes.KitchenNoteAPIView               | kitchen-note                                        | 
+/logout/                                                            | restaurant.views.views.CustomLogoutView                         | logout                                              | 
+/menu/api/                                                          | rest_framework.routers.APIRootView                              | api-root                                            | 
+/menu/api/\.<format>/                                               | rest_framework.routers.APIRootView                              | api-root                                            | 
+/menu/api/categories/                                               | restaurant.views.views.categories_api                           |                                                     | 
+/menu/api/categories/<int:id>/                                      | restaurant.views.views.category_detail_api                      |                                                     | 
+/menu/api/items/                                                    | restaurant.views.views.menu_items_api                           |                                                     | 
+/menu/api/items/<int:id>/                                           | restaurant.views.views.menu_item_detail_api                     |                                                     | 
+/menu/api/orders/                                                   | restaurant.views.views.OrderViewSet                             | orders-list                                         | 
+/menu/api/orders/<int:pk>/public/                                   | restaurant.views.views.public_order_detail                      | public-order-detail                                 | 
+/menu/api/orders/<pk>/                                              | restaurant.views.views.OrderViewSet                             | orders-detail                                       | 
+/menu/api/orders/<pk>\.<format>/                                    | restaurant.views.views.OrderViewSet                             | orders-detail                                       | 
+/menu/api/orders\.<format>/                                         | restaurant.views.views.OrderViewSet                             | orders-list                                         | 
+/menu/api/restaurant/                                               | restaurant.views.views.restaurant_profile                       |                                                     | 
+/menu/api/table/<int:table_id>/                                     | restaurant.views.views.public_menu_by_table                     |                                                     | 
+/menu/api/tables/                                                   | restaurant.views.views.create_table_api                         |                                                     | 
+/menu/api/tables/<int:table_id>/                                    | restaurant.views.views.delete_table_api                         |                                                     | 
+/menu/table/<int:table_id>/                                         | restaurant.views.views.menu_view_by_table                       | menu_by_table                                       | 
+/payments/api/payment-settings/                                     | payments.views.payment_settings.PaymentSettingsAPIView          |                                                     | 
+/payments/api/payment-settings/verify/                              | payments.views.payment_settings.VerifyRazorpayAPIView           |                                                     | 
+/payments/orders/<uuid:order_id>/complete/                          | payments.views.order_completion.CompleteOrderAPIView            | complete-order                                      | 
+/payments/orders/<uuid:order_id>/create-payment/                    | payments.views.payment_orders.CreateRazorpayOrderAPIView        | create-payment                                      | 
+/payments/orders/<uuid:order_id>/generate-otp/                      | payments.views.otp.GenerateOTPAPIView                           | generate-otp                                        | 
+/payments/orders/<uuid:order_id>/receipt/email/                     | payments.views.receipt.EmailReceiptAPIView                      | receipt-email                                       | 
+/payments/orders/<uuid:order_id>/receipt/pdf/                       | payments.views.receipt.ReceiptPDFAPIView                        | receipt-pdf                                         | 
+/payments/orders/<uuid:order_id>/receipt/whatsapp/                  | payments.views.receipt.WhatsAppReceiptAPIView                   | receipt-whatsapp                                    | 
+/payments/orders/<uuid:order_id>/refund-status/                     | payments.views.refunds.RefundStatusAPIView                      | refund-status                                       | 
+/payments/orders/<uuid:order_id>/refund/                            | payments.views.refunds.RefundAPIView                            | refund                                              | 
+/payments/orders/<uuid:order_id>/verify-otp/                        | payments.views.otp.VerifyOTPAPIView                             | verify-otp                                          | 
+/payments/orders/<uuid:order_id>/verify-payment/                    | payments.views.payment_orders.VerifyPaymentAPIView              | verify-payment                                      | 
+/payments/payments/<uuid:payment_id>/                               | payments.views.history.PaymentDetailAPIView                     | payment-detail                                      | 
+/payments/payments/history/                                         | payments.views.history.PaymentHistoryAPIView                    | payment-history                                     | 
+/payments/receipt/<uuid:order_id>/                                  | payments.views.receipt.ReceiptAPIView                           | receipt                                             | 
+/payments/webhook/razorpay/                                         | payments.views.webhooks.RazorpayWebhookAPIView                  | razorpay-webhook                                    | 
+/staff/attendance/                                                  | restaurant.views.attendance.StaffAttendanceAPIView              | staff-attendance                                    | 
+/staff/attendance/<int:attendance_id>/                              | restaurant.views.attendance.StaffAttendanceUpdateAPIView        | staff-attendance-update                             | 
+/staff/attendance/clock-in/                                         | restaurant.views.attendance.StaffClockInAPIView                 | staff-clock-in                                      | 
+/staff/attendance/clock-out/                                        | restaurant.views.attendance.StaffClockOutAPIView                | staff-clock-out                                     | 
+/staff/break/end/                                                   | restaurant.views.breaks.StaffBreakEndAPIView                    | staff-break-end                                     | 
+/staff/break/start/                                                 | restaurant.views.breaks.StaffBreakStartAPIView                  | staff-break-start                                   | 
+/staff/breaks/                                                      | restaurant.views.breaks.StaffBreakAPIView                       | staff-breaks                                        | 
+/staff/role/<int:staff_id>/                                         | restaurant.views.staff.StaffRoleAPIView                         | staff-role                                          | 
+/subscription/                                                      | subscription.views.subscription_plans                           | subscription:subscription_plans                     | 
+/subscription/<int:pk>/                                             | subscription.views.SubscriptionDetailView                       | subscription:subscription_detail                    | 
+/subscription/<int:pk>/cancel/                                      | subscription.views.SubscriptionCancelView                       | subscription:subscription_cancel                    | 
+/subscription/api/create/                                           | subscription.views.api_create_subscription                      |                                                     | 
+/subscription/api/plans/                                            | subscription.views.subscription_plans_api                       | subscription:subscription_plans_api                 | 
+/subscription/api/subscription/                                     | subscription.views.subscription_status                          |                                                     | 
+/subscription/api/verify/                                           | subscription.views.api_verify_payment                           |                                                     | 
+/subscription/payment-success/                                      | subscription.views.payment_success_return                       | subscription:payment_success                        | 
+/subscription/webhook/                                              | subscription.views.payment_success_webhook                      | subscription:payment_webhook                        | 

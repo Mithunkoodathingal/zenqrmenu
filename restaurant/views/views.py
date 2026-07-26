@@ -34,6 +34,7 @@ from django.db import IntegrityError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.decorators import api_view, permission_classes, parser_classes
+from drf_spectacular.utils import extend_schema, OpenApiExample
 from django.core.exceptions import ValidationError
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, F, DecimalField, ExpressionWrapper, Q
@@ -45,7 +46,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from io import BytesIO
 from django.core.files import File
 from django.http import JsonResponse
-from restaurant.services.common import get_user_restaurant
+from restaurant.services.common import get_restaurant, get_user_restaurant
 from subscription.utils import check_subscription_access, ensure_free_subscription
 from django.contrib.auth.models import User
 from google.oauth2 import id_token
@@ -55,8 +56,7 @@ from django.utils.http import urlsafe_base64_decode
 from allauth.account.forms import ResetPasswordForm
 from allauth.account.adapter import get_adapter
 from rest_framework import viewsets, status
-from ..serializers import OrderSerializer
-from ..serializers import RestaurantSerializer
+from ..serializers import NearbyRestaurantRequestSerializer, NearbyRestaurantResponseSerializer, NearbyRestaurantSerializer, RestaurantDeleteResponseSerializer, RestaurantDetailResponseSerializer, RestaurantDetailSerializer, RestaurantListRequestSerializer, RestaurantListResponseSerializer, RestaurantListSerializer, RestaurantNotFoundSerializer, RestaurantSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.views.decorators.csrf import csrf_exempt
@@ -81,6 +81,15 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from rest_framework.views import APIView
+from drf_spectacular.utils import (
+    extend_schema,
+    extend_schema_view,
+    OpenApiParameter,
+    OpenApiExample,
+    OpenApiResponse,
+)
+from drf_spectacular.types import OpenApiTypes
 from ..models import (
     Restaurant,
     Table,
@@ -91,10 +100,37 @@ from ..models import (
     AddOn,
 )
 from subscription.models import Subscription
-import traceback
-from allauth.account.models import EmailAddress
+
 from google import genai
 # from google.genai import types
+
+from drf_spectacular.utils import (
+    OpenApiExample,
+    extend_schema,
+)
+
+from rest_framework.generics import GenericAPIView
+
+from restaurant.serializers import (
+    RestaurantCreateRequestSerializer,
+    RestaurantResponseSerializer,
+    AuthenticationErrorSerializer,
+    EmailSerializer,
+    EmailVerificationRequiredSerializer,
+    ErrorSerializer,
+    GoogleLoginSerializer,
+    LoginResponseSerializer,
+    LoginSerializer,
+    LogoutResponseSerializer,
+    OrderSerializer,
+    PasswordResetConfirmSerializer,
+    RegisterResponseSerializer,
+    RegisterSerializer,
+    SuccessSerializer,
+    UserResponseSerializer,
+    ValidationErrorSerializer
+)
+from restaurant.services.restaurant import create_restaurant, delete_restaurant, get_my_restaurant, get_nearby_restaurants, get_restaurant_by_id, get_restaurant_detail, get_restaurant_list, update_restaurant
 
 
 # ==========================================================
@@ -112,11 +148,669 @@ User = get_user_model()
 RESEND_COOLDOWN_SECONDS = 120  # 2 minutes
 
 
+# =============================================================================
+# My Restaurant API
+# =============================================================================
+
+class MyRestaurantAPIView(APIView):
+    """
+    Return the authenticated user's restaurant.
+    
+    GET/api/restaurants/my/
+    
+    {
+        "id": 3,
+        "name": "Zen Restaurant",
+        "description": "...",
+        "owner": 5,
+        "is_active": true,
+        "categories": [],
+        "food_items": [],
+        "tables": [],
+        "staff_members": []
+    }
+        
+    """
+
+    permission_classes = [
+        IsAuthenticated,
+    ]
+
+    def get(
+        self,
+        request,
+    ):
+
+        restaurant = get_my_restaurant(
+            request=request,
+        )
+
+        serializer = RestaurantSerializer(
+            restaurant,
+        )
+
+        return Response(
+            serializer.data,
+        )
 
 
+# =============================================================================
+# Restaurant Detail API
+# =============================================================================
+
+class RestaurantDetailAPIView(APIView):
+    """
+    Retrieve restaurant details.
+    
+    GET/api/restaurants/15/
+    
+    {
+        "id": 15,
+        "name": "Zen Restaurant",
+        "description": "Authentic South Indian cuisine",
+        "owner": 3,
+        "is_active": true,
+        "categories": [...],
+        "food_items": [...],
+        "tables": [...],
+        "staff_members": [...],
+        "delivery_partners": [...]
+    }
+        
+    
+    """
+
+    permission_classes = [
+        IsAuthenticated,
+    ]
+
+    def get(
+        self,
+        request,
+        restaurant_id,
+    ):
+
+        restaurant = get_restaurant_detail(
+            restaurant_id=restaurant_id,
+        )
+
+        serializer = RestaurantSerializer(
+            restaurant,
+        )
+
+        return Response(
+            serializer.data,
+        )
 
 
+# =============================================================================
+# Create Restaurant API
+# =============================================================================
 
+
+class RestaurantCreateAPIView(GenericAPIView):
+    """
+    Create Restaurant API.
+
+    Creates a restaurant for the authenticated user.
+    """
+
+    serializer_class = RestaurantCreateRequestSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+    ]
+
+    parser_classes = [
+        MultiPartParser,
+        FormParser,
+    ]
+
+    @extend_schema(
+        tags=["Restaurant"],
+        operation_id="Restaurant_Create",
+        summary="Create Restaurant",
+        description="""
+Create a new restaurant.
+
+Business Rules
+
+• Authentication required.
+
+• Each user may own only one restaurant.
+
+• Restaurant owner is assigned automatically.
+
+• Images are optional.
+
+• Images must be uploaded using multipart/form-data.
+        """,
+        request=RestaurantCreateRequestSerializer,
+        responses={
+            201: RestaurantResponseSerializer,
+            400: ValidationErrorSerializer,
+            401: AuthenticationErrorSerializer,
+        },
+        examples=[
+            OpenApiExample(
+                name="Create Restaurant",
+                request_only=True,
+                value={
+                    "name": "Zen Restaurant",
+                    "about": "Traditional Kerala cuisine.",
+                    "address": "Beach Road",
+                    "city": "Calicut",
+                    "state": "Kerala",
+                    "country": "India",
+                    "pincode": "673001",
+                    "phone_country_code": "+91",
+                    "phone": "9876543210",
+                    "email": "info@zenrestaurant.com",
+                    "delivery_enabled": True,
+                    "pickup_enabled": True,
+                },
+            ),
+        ],
+    )
+    def post(self, request):
+
+        serializer = self.get_serializer(
+            data=request.data,
+            context={"request": request},
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        restaurant = create_restaurant(
+            owner=request.user,
+            validated_data=serializer.validated_data,
+            files=request.FILES,
+        )
+
+
+        restaurant_data = RestaurantSerializer(
+            restaurant,
+            context={"request": request},
+        ).data
+
+        return Response(
+            {
+                "success": True,
+                "message": "Restaurant created successfully.",
+                "restaurant": restaurant_data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+# =============================================================================
+# Restaurant Detail API
+# =============================================================================
+
+class RestaurantDetailAPIView(GenericAPIView):
+    """
+    Restaurant Detail API.
+
+    Retrieves detailed information about a single restaurant.
+    """
+
+    serializer_class = RestaurantDetailSerializer
+
+    permission_classes = [
+        AllowAny,
+    ]
+
+    @extend_schema(
+        tags=["Restaurant"],
+        operation_id="Restaurant_Retrieve",
+        summary="Retrieve Restaurant",
+        description="""
+Retrieve detailed information about a restaurant.
+
+Business Rules
+
+• Public endpoint.
+
+• Returns restaurant information together with nested resources.
+
+• Returns HTTP 404 if the restaurant does not exist or is inactive.
+        """,
+        responses={
+            200: RestaurantDetailResponseSerializer,
+            404: ErrorSerializer,
+        },
+        parameters=[
+            OpenApiParameter(
+                name="pk",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                required=True,
+                description="Restaurant ID",
+            ),
+        ],
+        examples=[
+            OpenApiExample(
+                name="Restaurant Detail",
+                response_only=True,
+                value={
+                    "success": True,
+                    "restaurant": {
+                        "id": 1,
+                        "name": "Zen Restaurant",
+                        "about": "Traditional Kerala cuisine.",
+                        "city": "Calicut",
+                        "state": "Kerala",
+                        "country": "India",
+                        "categories": [
+                            {
+                                "id": 1,
+                                "name": "Main Course",
+                            },
+                            {
+                                "id": 2,
+                                "name": "Desserts",
+                            },
+                        ],
+                    },
+                },
+            ),
+        ],
+    )
+    def get(self, request, pk):
+
+        restaurant = get_restaurant_by_id(
+            restaurant_id=pk,
+        )
+
+        restaurant_data = RestaurantDetailSerializer(
+            restaurant,
+            context={
+                "request": request,
+            },
+        ).data
+
+        return Response(
+            {
+                "success": True,
+                "restaurant": restaurant_data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+# =============================================================================
+# Update Restaurant API
+# =============================================================================
+
+class UpdateRestaurantAPIView(APIView):
+    """
+    Update restaurant.
+    
+    PATCH /api/restaurants/5/update/
+    
+    {
+        "name": "ZenQR Restaurant",
+        "description": "Updated description"
+    }
+            
+    """
+
+    permission_classes = [
+        IsAuthenticated,
+    ]
+
+    parser_classes = [
+        MultiPartParser,
+        FormParser,
+    ]
+
+    def put(
+        self,
+        request,
+        restaurant_id,
+    ):
+
+        restaurant = get_restaurant(
+            restaurant_id=restaurant_id,
+        )
+
+        serializer = RestaurantSerializer(
+
+            restaurant,
+
+            data=request.data,
+
+            partial=False,
+
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        restaurant = update_restaurant(
+
+            restaurant_id=restaurant_id,
+
+            validated_data=serializer.validated_data,
+
+            staff=getattr(
+                request.user,
+                "staff_profile",
+                None,
+            ),
+
+            request=request,
+
+        )
+
+        return Response(
+
+            RestaurantSerializer(
+                restaurant,
+            ).data
+
+        )
+
+    def patch(
+        self,
+        request,
+        restaurant_id,
+    ):
+
+        restaurant = get_restaurant(
+            restaurant_id=restaurant_id,
+        )
+
+        serializer = RestaurantSerializer(
+
+            restaurant,
+
+            data=request.data,
+
+            partial=True,
+
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        restaurant = update_restaurant(
+
+            restaurant_id=restaurant_id,
+
+            validated_data=serializer.validated_data,
+
+            staff=getattr(
+                request.user,
+                "staff_profile",
+                None,
+            ),
+
+            request=request,
+
+        )
+
+        return Response(
+
+            RestaurantSerializer(
+                restaurant,
+            ).data
+
+        )
+
+
+# =============================================================================
+# Delete Restaurant API
+# =============================================================================
+
+class DeleteRestaurantAPIView(APIView):
+    
+    """
+    Soft delete a restaurant.
+    
+    {
+        "success": true,
+        "message": "Restaurant deleted successfully."
+    }
+    
+    """
+
+    permission_classes = [
+        IsAuthenticated,
+    ]
+    @extend_schema(
+
+        summary="Delete Restaurant",
+
+        description="Soft delete a restaurant.",
+
+        responses={
+
+            200: RestaurantDeleteResponseSerializer,
+
+            404: RestaurantNotFoundSerializer,
+
+            403: ErrorSerializer,
+
+        },
+
+    )
+
+    def delete(
+        self,
+        request,
+        restaurant_id,
+    ):
+
+        delete_restaurant(
+
+            restaurant_id=restaurant_id,
+
+            staff=getattr(
+                request.user,
+                "staff_profile",
+                None,
+            ),
+
+            request=request,
+
+        )
+
+        return Response(
+
+            {
+
+                "success": True,
+
+                "message": "Restaurant deleted successfully.",
+
+            },
+
+            status=status.HTTP_200_OK,
+
+        )
+        
+
+# =============================================================================
+# Nearby Restaurants API
+# =============================================================================
+
+@extend_schema(
+
+    summary="Nearby Restaurants",
+
+    description=(
+        "Returns restaurants that can deliver "
+        "to the customer's current location."
+    ),
+
+    parameters=[
+
+        NearbyRestaurantRequestSerializer,
+
+    ],
+
+    responses={
+
+        200: NearbyRestaurantResponseSerializer,
+
+        400: ValidationErrorSerializer,
+
+    },
+
+)
+
+class NearbyRestaurantAPIView(APIView):
+    
+    """
+    GET /api/restaurants/nearby/?latitude=11.2588&longitude=75.7804
+    Authorization: Bearer <token>
+    
+    {
+        "success": true,
+        "count": 2,
+        "restaurants": [
+            {
+                "id": 5,
+                "name": "Zen Restaurant",
+                "city": "Kozhikode",
+                "distance_km": 1.82,
+                "delivery_enabled": true,
+                "pickup_enabled": true
+            },
+            {
+                "id": 12,
+                "name": "Royal Kitchen",
+                "city": "Kozhikode",
+                "distance_km": 4.36,
+                "delivery_enabled": true,
+                "pickup_enabled": false
+            }
+        ]
+    }
+    
+    """
+    
+
+    permission_classes = [
+        IsAuthenticated,
+    ]
+
+    def get(
+        self,
+        request,
+    ):
+
+        serializer = NearbyRestaurantRequestSerializer(
+
+            data=request.query_params,
+
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        restaurants = get_nearby_restaurants(
+
+            **serializer.validated_data,
+
+        )
+
+        response_serializer = NearbyRestaurantSerializer(
+
+            restaurants,
+
+            many=True,
+
+            context={
+                "request": request,
+            },
+
+        )
+
+        response = NearbyRestaurantResponseSerializer(
+
+            {
+
+                "success": True,
+
+                "count": len(restaurants),
+
+                "restaurants": response_serializer.data,
+
+            }
+
+        )
+
+        return Response(
+
+            response.data,
+
+            status=status.HTTP_200_OK,
+
+        )
+
+
+# =============================================================================
+# Restaurant List API
+# =============================================================================
+
+@extend_schema(
+    summary="Restaurant List",
+    description="Returns public restaurants with optional filtering and searching.",
+    parameters=[
+        RestaurantListRequestSerializer,
+    ],
+    responses={
+        200: RestaurantListResponseSerializer,
+    },
+)
+class RestaurantListAPIView(APIView):
+
+    permission_classes = [
+        AllowAny,
+    ]
+
+    def get(self, request):
+
+        request_serializer = RestaurantListRequestSerializer(
+            data=request.query_params,
+        )
+
+        request_serializer.is_valid(
+            raise_exception=True,
+        )
+
+        restaurants = get_restaurant_list(
+            **request_serializer.validated_data,
+        )
+
+        response_serializer = RestaurantListSerializer(
+            restaurants,
+            many=True,
+            context={
+                "request": request,
+            },
+        )
+
+        response = RestaurantListResponseSerializer(
+            {
+                "success": True,
+                "count": restaurants.count(),
+                "restaurants": response_serializer.data,
+            }
+        )
+
+        return Response(
+            response.data,
+            status=status.HTTP_200_OK,
+        )
+        
+        
 
 
 # ===========================================================
@@ -1927,10 +2621,6 @@ class CustomLogoutView(View):
     def post(self, request):
         logout(request)
         return redirect("login")
-
-    def get(self, request):
-        logout(request)
-        return redirect("login")
     
 ######################### AUTH API'S ################################
 #####################################################################
@@ -1939,6 +2629,41 @@ class CustomLogoutView(View):
 #                       REGISTER API
 # ==========================================================
 
+
+@extend_schema(
+    tags=["Authentication"],
+    summary="Register User",
+    description=(
+        "Create a new user account and send an email verification email."
+    ),
+    request=RegisterSerializer,
+    responses={
+        201: RegisterResponseSerializer,
+        400: ValidationErrorSerializer,
+    },
+    examples=[
+        OpenApiExample(
+            "Request",
+            request_only=True,
+            value={
+                "username": "mithun",
+                "email": "mithun@example.com",
+                "password1": "StrongPassword123",
+                "password2": "StrongPassword123",
+            },
+        ),
+        OpenApiExample(
+            "Success",
+            response_only=True,
+            status_codes=["201"],
+            value={
+                "success": True,
+                "message": "Account created. Please verify your email.",
+                "email": "mithun@example.com",
+            },
+        ),
+    ],
+)
 @api_view(['POST'])
 def api_register(request):
     data = request.data
@@ -1996,6 +2721,23 @@ def api_register(request):
 #                      LOGIN API
 # ==========================================================
 
+
+@extend_schema(
+    tags=["Authentication"],
+    operation_id="auth_login",
+    summary="Login",
+    description=(
+        "Authenticate using username or email and return JWT access and "
+        "refresh tokens. If the email address is not verified, a new "
+        "verification email is sent automatically."
+    ),
+    request=LoginSerializer,
+    responses={
+        200: LoginResponseSerializer,
+        400: AuthenticationErrorSerializer,
+        403: EmailVerificationRequiredSerializer,
+    },
+)
 @api_view(['POST'])
 def api_login(request):
     username_or_email = request.data.get("username")
@@ -2071,7 +2813,22 @@ def api_login(request):
 #                       LOGOUT API
 # ==========================================================
 
+
+@extend_schema(
+    tags=["Authentication"],
+    operation_id="auth_logout",
+    summary="Logout",
+    description=(
+        "Logout the authenticated user. "
+        "Since JWT authentication is stateless, "
+        "the frontend should discard the stored tokens."
+    ),
+    responses={
+        200: LogoutResponseSerializer,
+    },
+)
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def api_logout(request):
     return Response({
         "success": True,
@@ -2082,6 +2839,16 @@ def api_logout(request):
 #                       USER API
 # ==========================================================
 
+@extend_schema(
+    tags=["Authentication"],
+    operation_id="auth_current_user",
+    summary="Current User",
+    description="Retrieve the currently authenticated user's information.",
+    responses={
+        200: UserResponseSerializer,
+        401: ErrorSerializer,
+    },
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_user(request):
@@ -2970,6 +3737,18 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 ############################################################################
 
+
+@extend_schema(
+    tags=["Authentication"],
+    operation_id="auth_resend_verification",
+    summary="Resend Verification Email",
+    description="Resend the email verification link to the user's email address.",
+    request=EmailSerializer,
+    responses={
+        200: SuccessSerializer,
+        400: ErrorSerializer,
+    },
+)
 @api_view(['POST'])
 def resend_verification(request):
     email = request.data.get("email")
@@ -3001,6 +3780,20 @@ def resend_verification(request):
 
     return Response({"message": "Verification email sent"})
 
+
+@extend_schema(
+    tags=["Authentication"],
+    operation_id="auth_password_reset",
+    summary="Request Password Reset",
+    description=(
+        "Send a password reset email to the registered email address."
+    ),
+    request=EmailSerializer,
+    responses={
+        200: SuccessSerializer,
+        400: ErrorSerializer,
+    },
+)
 @api_view(['POST'])
 def password_reset(request):
     email = request.data.get("email", "").strip().lower()
@@ -3061,6 +3854,19 @@ Zen QR Menu Team
             "error": "Failed to send email"
         }, status=500)
 
+
+
+@extend_schema(
+    tags=["Authentication"],
+    operation_id="auth_password_reset_confirm",
+    summary="Confirm Password Reset",
+    description="Reset the password using the password reset token.",
+    request=PasswordResetConfirmSerializer,
+    responses={
+        200: SuccessSerializer,
+        400: ValidationErrorSerializer,
+    },
+)
 @api_view(['POST'])
 def password_reset_confirm(request):
     uid = request.data.get("uid")
@@ -3085,10 +3891,22 @@ def password_reset_confirm(request):
 
     return Response({"message": "Password reset successful"})
 
+
 # ==========================================================
 #                   GOOGLE LOGIN API
 # ==========================================================
 
+@extend_schema(
+    tags=["Authentication"],
+    operation_id="auth_google_login",
+    summary="Google Login",
+    description="Authenticate using a Google ID token.",
+    request=GoogleLoginSerializer,
+    responses={
+        200: LoginResponseSerializer,
+        400: AuthenticationErrorSerializer,
+    },
+)
 @api_view(['POST'])
 def google_login(request):
     id_token_from_frontend = request.data.get("id_token")
@@ -3125,7 +3943,16 @@ def google_login(request):
     except Exception as e:
         return Response({"error": str(e)}, status=400)
     
-
+@extend_schema(
+    tags=["Authentication"],
+    operation_id="auth_user_detail",
+    summary="Authenticated User Details",
+    description="Retrieve detailed information about the authenticated user.",
+    responses={
+        200: UserResponseSerializer,
+        401: ErrorSerializer,
+    },
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_detail_api(request):

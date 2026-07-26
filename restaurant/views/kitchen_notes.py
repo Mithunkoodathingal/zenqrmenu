@@ -83,30 +83,20 @@ class KitchenNotesAPIView(APIView):
         )
         
         
-        
 # ==========================================================
 # Kitchen Note Detail API
 # ==========================================================
 
 class KitchenNoteAPIView(APIView):
     """
-    Update or archive a kitchen note.
+    Retrieve, update and archive a kitchen note.
     """
 
     permission_classes = [IsAuthenticated]
 
-    def patch(
-        self,
-        request,
-        note_id,
-    ):
+    def put(self, request, note_id):
 
         restaurant = get_restaurant(request)
-
-        staff = get_staff_by_user(
-            restaurant=restaurant,
-            user=request.user,
-        )
 
         serializer = KDSNoteSerializer(
             data=request.data,
@@ -120,7 +110,6 @@ class KitchenNoteAPIView(APIView):
         note = update_note(
             restaurant=restaurant,
             note_id=note_id,
-            staff=staff,
             **serializer.validated_data,
         )
 
@@ -128,25 +117,40 @@ class KitchenNoteAPIView(APIView):
             KDSNoteSerializer(note).data,
         )
 
-    def delete(
-        self,
-        request,
-        note_id,
-    ):
+    def patch(self, request, note_id):
 
         restaurant = get_restaurant(request)
 
-        staff = get_staff_by_user(
-            restaurant=restaurant,
-            user=request.user,
+        serializer = KDSNoteSerializer(
+            data=request.data,
+            partial=True,
         )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        note = update_note(
+            restaurant=restaurant,
+            note_id=note_id,
+            **serializer.validated_data,
+        )
+
+        return Response(
+            KDSNoteSerializer(note).data,
+        )
+
+    def delete(self, request, note_id):
+
+        restaurant = get_restaurant(request)
 
         archive_note(
             restaurant=restaurant,
             note_id=note_id,
-            staff=staff,
         )
 
         return Response(
             status=status.HTTP_204_NO_CONTENT,
         )
+        
+        

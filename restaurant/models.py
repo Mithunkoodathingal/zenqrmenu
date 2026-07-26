@@ -281,6 +281,24 @@ class Restaurant(models.Model):
         default=20,
         help_text="Minutes"
     )
+    
+    # ==========================================
+    # Status
+    # ==========================================
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    is_deleted = models.BooleanField(
+        default=False,
+    )
+
+    deleted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    
     class Meta:
 
         indexes = [
@@ -290,6 +308,12 @@ class Restaurant(models.Model):
             models.Index(fields=["delivery_enabled"]),
 
             models.Index(fields=["pickup_enabled"]),
+            
+            models.Index(fields=["is_active"]),
+            
+            models.Index(fields=["is_deleted"]),
+            
+            models.Index(fields=["owner", "is_deleted"]),
 
         ]
 

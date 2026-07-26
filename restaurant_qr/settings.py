@@ -92,6 +92,8 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.facebook',
+    "django_extensions",
+    "drf_spectacular",
     'storages',
 
     # sites (required by allauth)
@@ -488,6 +490,9 @@ AUTHENTICATION_BACKENDS = (
 )
 
 REST_FRAMEWORK = {
+    
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
@@ -645,3 +650,17 @@ PAYMENT_ENCRYPTION_KEY = config("PAYMENT_ENCRYPTION_KEY")
 BRAND_NAME = "ZenQRMenu"
 
 BRAND_URL = "https://zenqrmenu.com"
+
+
+SPECTACULAR_SETTINGS = {
+
+    "TITLE": "ZenQRMenu API",
+
+    "DESCRIPTION": "Restaurant QR Menu SaaS API",
+
+    "VERSION": "1.0.0",
+
+    "SERVE_INCLUDE_SCHEMA": False,
+
+    "COMPONENT_SPLIT_REQUEST": True,
+}

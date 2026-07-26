@@ -36,7 +36,9 @@ Features
 
 ===============================================================================
 """
+from drf_spectacular.utils import extend_schema_field
 
+from drf_spectacular.types import OpenApiTypes
 
 # =============================================================================
 # Django Imports
@@ -90,6 +92,147 @@ from .models import (
 )
 
 
+
+
+
+# =============================================================================
+# User Serializer
+# =============================================================================
+
+class UserSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    username = serializers.CharField(read_only=True)
+    email = serializers.EmailField(read_only=True)
+    
+# =============================================================================
+# User Response Serializer
+# =============================================================================
+class UserResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+    user = UserSerializer()
+    
+# =============================================================================
+# Register Serializer
+# =============================================================================
+
+class RegisterSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    email = serializers.EmailField()
+    password1 = serializers.CharField(write_only=True)
+    password2 = serializers.CharField(write_only=True)
+    
+# =============================================================================
+# Register Response Filter Serializer
+# =============================================================================
+
+class RegisterResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+    message = serializers.CharField()
+    email = serializers.EmailField()
+
+# =============================================================================
+#  Login Serializer
+# =============================================================================
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField(
+        help_text="Username or email address"
+    )
+    password = serializers.CharField(write_only=True)
+    
+# =============================================================================
+#  Google - Login Serializer
+# =============================================================================
+
+class GoogleLoginSerializer(serializers.Serializer):
+    token = serializers.CharField()
+
+# =============================================================================
+# Login Response Serializer
+# =============================================================================
+
+class LoginResponseSerializer(serializers.Serializer):
+    message = serializers.CharField()
+    access = serializers.CharField()
+    refresh = serializers.CharField()
+    user = UserSerializer()
+
+# =============================================================================
+# Logout Response Serializer
+# =============================================================================
+
+class LogoutResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+    message = serializers.CharField()
+    
+# =============================================================================
+# Error Serializer
+# =============================================================================
+
+class ErrorSerializer(serializers.Serializer):
+    """Generic error response serializer."""
+    success = serializers.BooleanField(default=False)
+    message = serializers.CharField()
+    error_code = serializers.CharField(required=False)
+
+# =============================================================================
+# Validation Error Serializer
+# =============================================================================
+
+class ValidationErrorSerializer(serializers.Serializer):
+    success = serializers.BooleanField(default=False)
+    errors = serializers.DictField(
+        child=serializers.ListField(
+            child=serializers.CharField() ))
+    
+# =============================================================================
+# Authentication Error Serializer
+# =============================================================================
+    
+class AuthenticationErrorSerializer(serializers.Serializer):
+    error = serializers.CharField()
+    
+# =============================================================================
+# Email Serializer
+# =============================================================================
+
+class EmailSerializer(serializers.Serializer):
+    """Serializer for email input."""
+    email = serializers.EmailField(required=True)
+    
+# =============================================================================
+# Email - Verification Required Serializer
+# =============================================================================
+    
+class EmailVerificationRequiredSerializer(serializers.Serializer):
+    error = serializers.CharField()
+    email = serializers.EmailField()
+    
+# =============================================================================
+# Password - Reset Serializer
+# =============================================================================
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    new_password1 = serializers.CharField(write_only=True)
+    new_password2 = serializers.CharField(write_only=True)
+
+# =============================================================================
+# Success Serializer
+# =============================================================================
+class SuccessSerializer(serializers.Serializer):
+    """Serializer for success responses."""
+    message = serializers.CharField()
+    success = serializers.BooleanField(default=True)
+    
+
+    
+    
+    
+    
+    
+
 # ================= RESTAURANT =================
 
 
@@ -140,14 +283,18 @@ from .models import (
 
 
 
+
+
+
 # =============================================================================
 # Restaurant Serializer
 # =============================================================================
 
-
 class RestaurantSerializer(serializers.ModelSerializer):
     """
     Enterprise serializer for Restaurant.
+    
+    POST /restaurants/, PUT/PATCH /restaurants/{id}/
 
     Responsibilities
 
@@ -173,6 +320,7 @@ class RestaurantSerializer(serializers.ModelSerializer):
     logo_url = serializers.SerializerMethodField()
 
     cover_image_url = serializers.SerializerMethodField()
+    
 
     # =========================================================================
     # Meta
@@ -388,8 +536,8 @@ class RestaurantSerializer(serializers.ModelSerializer):
     # -------------------------------------------------------------------------
     # Restaurant Name
     # -------------------------------------------------------------------------
-
-    def validate_name(self, value):
+    def validate_name(self, value: str) -> str:
+    # def validate_name(self, value):
         """
         Validate restaurant name.
         """
@@ -886,7 +1034,9 @@ class RestaurantSerializer(serializers.ModelSerializer):
     # Logo URL
     # =========================================================================
 
-    def get_logo_url(self, obj):
+    @extend_schema_field(OpenApiTypes.URI)
+    def get_logo_url(self, obj) -> str | None:
+    # def get_logo_url(self, obj):
         """
         Return an absolute URL for the restaurant logo.
 
@@ -946,12 +1096,16 @@ class RestaurantSerializer(serializers.ModelSerializer):
     # =========================================================================
     # Update Restaurant
     # =========================================================================
-
     def update(
         self,
-        instance,
-        validated_data,
-    ):
+        instance: Restaurant,
+        validated_data: dict,
+    ) -> Restaurant:
+    # def update(
+    #     self,
+    #     instance,
+    #     validated_data,
+    # ):
         """
         Update an existing restaurant.
 
@@ -1224,6 +1378,23 @@ class RestaurantSerializer(serializers.ModelSerializer):
 
     #     return instance
 
+# =============================================================================
+# Restaurant Category Serializer
+# =============================================================================
+
+class RestaurantCategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Category
+        fields = [
+            "id",
+            "name",
+        ]
+
+
+
+
+
 
 # ================= FOOD ITEM ================= #
 
@@ -1398,8 +1569,8 @@ class FoodItemSerializer(serializers.ModelSerializer):
     # =========================================================================
     # Name
     # =========================================================================
-
-    def validate_name(self, value):
+    def validate_name(self, value: str) -> str:
+    # def validate_name(self, value):
         """
         Validate food item name.
         """
@@ -1541,12 +1712,16 @@ class FoodItemSerializer(serializers.ModelSerializer):
     # =========================================================================
     # Update
     # =========================================================================
-
     def update(
         self,
-        instance,
-        validated_data,
-    ):
+        instance: Restaurant,
+        validated_data: dict,
+    ) -> Restaurant:
+    # def update(
+    #     self,
+    #     instance,
+    #     validated_data,
+    # ):
         """
         Update food item.
 
@@ -2027,12 +2202,17 @@ class OrderItemSerializer(serializers.ModelSerializer):
     # =========================================================================
     # Update
     # =========================================================================
-
     def update(
         self,
-        instance,
-        validated_data,
-    ):
+        instance: Restaurant,
+        validated_data: dict,
+    ) -> Restaurant:
+        
+    # def update(
+    #     self,
+    #     instance,
+    #     validated_data,
+    # ):
 
         addon_ids = validated_data.pop(
 
@@ -2096,6 +2276,18 @@ class OrderItemSerializer(serializers.ModelSerializer):
 #         fields = ["id", "name"]
 
 # ======================================================
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # =============================================================================
@@ -2224,6 +2416,552 @@ class CategorySerializer(serializers.ModelSerializer):
             )
 
         return attrs
+
+
+# =============================================================================
+# Restaurant List Serializer
+# =============================================================================
+
+class RestaurantListSerializer(RestaurantSerializer):
+    """
+    Lightweight serializer used for restaurant listing.
+
+    Used By
+
+        • Restaurant List API
+        
+        GET /restaurants/
+
+    Purpose
+
+        • Reduce response payload
+        • Improve API performance
+        • Customer restaurant browsing
+    """
+
+    class Meta(RestaurantSerializer.Meta):
+
+        fields = [
+
+            "id",
+
+            "name",
+
+            "about",
+
+            "city",
+
+            "state",
+
+            "country",
+
+            "cuisine_type",
+
+            "logo_url",
+
+            "cover_image_url",
+
+            "delivery_enabled",
+
+            "pickup_enabled",
+
+            "average_preparation_time",
+
+        ]
+
+        read_only_fields = fields
+
+# =============================================================================
+# Nearby Restaurant Serializer
+# =============================================================================
+
+class NearbyRestaurantSerializer(RestaurantListSerializer):
+    """
+    Serializer used by the Nearby Restaurants API.
+    
+    GET /restaurants/nearby/
+
+    Includes calculated distance from the customer.
+    """
+
+    distance_km = serializers.SerializerMethodField()
+
+    class Meta(RestaurantListSerializer.Meta):
+
+        fields = RestaurantListSerializer.Meta.fields + [
+
+            "distance_km",
+
+        ]
+
+        read_only_fields = fields
+
+    @extend_schema_field(OpenApiTypes.FLOAT)
+    def get_distance_km(self, obj) -> float | None:
+
+        distance = getattr(obj, "distance_km", None)
+
+        if distance is None:
+            return None
+
+        return round(float(distance), 2)
+        
+# =============================================================================
+# Nearby Restaurant Request Serializer
+# =============================================================================
+
+class NearbyRestaurantRequestSerializer(serializers.Serializer):
+    """
+    Request serializer for nearby restaurants.
+    """
+
+    latitude = serializers.FloatField(
+
+        min_value=-90,
+
+        max_value=90,
+
+    )
+
+    longitude = serializers.FloatField(
+
+        min_value=-180,
+
+        max_value=180,
+
+    )        
+
+# =============================================================================
+# Restaurant List Request Serializer
+# =============================================================================
+
+class RestaurantListRequestSerializer(serializers.Serializer):
+    """
+    Query parameters for restaurant discovery.
+    """
+
+    search = serializers.CharField(
+        required=False,
+        allow_blank=True,
+    )
+
+    city = serializers.CharField(
+        required=False,
+    )
+
+    state = serializers.CharField(
+        required=False,
+    )
+
+    country = serializers.CharField(
+        required=False,
+    )
+
+    cuisine = serializers.CharField(
+        required=False,
+    )
+
+    delivery = serializers.BooleanField(
+        required=False,
+    )
+
+    pickup = serializers.BooleanField(
+        required=False,
+    )
+
+    dine_in = serializers.BooleanField(
+        required=False,
+    )
+
+    ordering = serializers.ChoiceField(
+        choices=[
+            "name",
+            "-name",
+            "created_at",
+            "-created_at",
+        ],
+        required=False,
+        default="name",
+    )
+
+    latitude = serializers.FloatField(
+        required=False,
+    )
+
+    longitude = serializers.FloatField(
+        required=False,
+    )
+
+
+# =============================================================================
+# Restaurant Detail Serializer
+# =============================================================================
+
+class RestaurantDetailSerializer(RestaurantSerializer):
+    """
+    Detailed serializer for a single restaurant.
+
+    Used By
+
+        • Restaurant Details API
+        
+        GET /restaurants/{id}/
+
+    Includes nested relationships.
+    """
+
+    categories = RestaurantCategorySerializer(
+        many=True,
+        read_only=True,
+    )
+
+    class Meta(RestaurantSerializer.Meta):
+
+        fields = RestaurantSerializer.Meta.fields + [
+
+            "categories",
+
+        ]
+
+        read_only_fields = [
+
+            "id",
+            "owner",
+            "logo_url",
+            "cover_image_url",
+            "categories",
+
+        ]
+        
+
+# =============================================================================
+# Restaurant Create Request Serializer
+# =============================================================================
+
+class RestaurantCreateRequestSerializer(RestaurantSerializer):
+    """
+    Request serializer for creating a restaurant.
+
+    Used By
+
+        • Create Restaurant API
+
+    Notes
+
+        • Owner is assigned automatically.
+        • Computed fields are read-only.
+    """
+
+    class Meta(RestaurantSerializer.Meta):
+
+        fields = [
+
+            # ==========================================================
+            # Basic Information
+            # ==========================================================
+
+            "name",
+
+            "about",
+
+            "address",
+
+            "city",
+
+            "state",
+
+            "country",
+
+            "pincode",
+
+            "cuisine_type",
+
+            # ==========================================================
+            # Images
+            # ==========================================================
+
+            "logo",
+
+            "cover_image",
+
+            # ==========================================================
+            # Contact
+            # ==========================================================
+
+            "phone_country_code",
+
+            "phone",
+
+            "alternate_phone",
+
+            "email",
+
+            "website",
+
+            # ==========================================================
+            # Tax
+            # ==========================================================
+
+            "tax_enabled",
+
+            "tax_name",
+
+            "tax_percentage",
+
+            "prices_include_tax",
+
+            "tax_registration_number",
+
+            "fssai_number",
+
+            "cgst_percentage",
+
+            "sgst_percentage",
+
+            "igst_percentage",
+
+            # ==========================================================
+            # Invoice
+            # ==========================================================
+
+            "invoice_prefix",
+
+            "currency_code",
+
+            "currency_symbol",
+
+            "currency_decimal_places",
+
+            "footer_message",
+
+            "timezone",
+
+            # ==========================================================
+            # Payments
+            # ==========================================================
+
+            "default_payment_gateway",
+
+            # ==========================================================
+            # Delivery
+            # ==========================================================
+
+            "delivery_enabled",
+
+            "pickup_enabled",
+
+            "cash_on_delivery",
+
+            "cash_on_pickup",
+
+            "delivery_latitude",
+
+            "delivery_longitude",
+
+            "free_delivery_radius_km",
+
+            "maximum_delivery_radius_km",
+
+            "delivery_charge_per_km",
+
+            "minimum_delivery_order",
+
+            "average_preparation_time",
+
+        ]
+        
+# =============================================================================
+# Restaurant Update Request Serializer
+# =============================================================================
+
+class RestaurantUpdateRequestSerializer(RestaurantSerializer):
+    """
+    Request serializer for updating a restaurant.
+
+    Used By
+
+        • Update Restaurant API
+
+    Notes
+
+        • Owner cannot be changed.
+        • ID cannot be changed.
+        • Computed fields remain read-only.
+    """
+
+    class Meta(RestaurantSerializer.Meta):
+
+        fields = RestaurantCreateRequestSerializer.Meta.fields
+        
+                
+# =============================================================================
+# Restaurant Response Serializer
+# =============================================================================
+
+class RestaurantResponseSerializer(serializers.Serializer):
+    """
+    Standard response returned after successful
+    restaurant create, retrieve and update operations.
+    """
+
+    success = serializers.BooleanField()
+
+    message = serializers.CharField()
+
+    restaurant = RestaurantSerializer(read_only=True)
+    
+    
+# =============================================================================
+# Restaurant List Response Serializer
+# =============================================================================
+
+class RestaurantListResponseSerializer(serializers.Serializer):
+    """
+    Response serializer for restaurant listing.
+    """
+
+    success = serializers.BooleanField(
+        default=True
+    )
+
+    count = serializers.IntegerField()
+
+    restaurants = RestaurantListSerializer(
+        many=True
+    )
+    
+    
+# =============================================================================
+# Nearby Restaurant Response Serializer
+# =============================================================================
+
+class NearbyRestaurantResponseSerializer(serializers.Serializer):
+    """
+    Response serializer for nearby restaurants.
+    """
+
+    success = serializers.BooleanField(
+        default=True
+    )
+
+    count = serializers.IntegerField()
+
+    restaurants = NearbyRestaurantSerializer(
+        many=True
+    )
+    
+# =============================================================================
+# Restaurant Detail Response Serializer
+# =============================================================================
+
+class RestaurantDetailResponseSerializer(serializers.Serializer):
+    """
+    Response serializer for restaurant details.
+    """
+
+    success = serializers.BooleanField(
+        default=True
+    )
+
+    restaurant = RestaurantDetailSerializer()
+    
+# =============================================================================
+# Restaurant Delete Response Serializer
+# =============================================================================
+
+class RestaurantDeleteResponseSerializer(serializers.Serializer):
+    """
+    Response serializer returned after deleting a restaurant.
+    """
+
+    success = serializers.BooleanField(
+        default=True
+    )
+
+    message = serializers.CharField()
+    
+    
+# =============================================================================
+# My Restaurant Response Serializer
+# =============================================================================
+
+class MyRestaurantResponseSerializer(serializers.Serializer):
+    """
+    Response serializer for the authenticated user's restaurant.
+    """
+
+    success = serializers.BooleanField(
+        default=True,
+    )
+
+    restaurant = RestaurantDetailSerializer()
+
+
+# =============================================================================
+# Update Restaurant Response Serializer
+# =============================================================================
+
+class UpdateRestaurantResponseSerializer(serializers.Serializer):
+    """
+    Response serializer returned after successfully updating
+    a restaurant.
+    """
+
+    success = serializers.BooleanField(
+        default=True,
+    )
+
+    message = serializers.CharField()
+
+    restaurant = RestaurantDetailSerializer()
+
+
+# =============================================================================
+# Restaurant Not Found Serializer
+# =============================================================================
+
+class RestaurantNotFoundSerializer(serializers.Serializer):
+    """
+    Response serializer when a restaurant cannot be found.
+    """
+
+    success = serializers.BooleanField(
+        default=False,
+    )
+
+    message = serializers.CharField(
+        default="Restaurant not found.",
+    )
+
+
+# =============================================================================
+# Restaurant Permission Denied Serializer
+# =============================================================================
+
+class RestaurantPermissionDeniedSerializer(serializers.Serializer):
+    """
+    Response serializer when the authenticated user does not
+    have permission to access or modify a restaurant.
+    """
+
+    success = serializers.BooleanField(
+        default=False,
+    )
+
+    message = serializers.CharField(
+        default="You do not have permission to perform this action.",
+    )
+
+
+
+
+
+
+
+
+
+
+
 
 # ================= ORDER =================
 
@@ -2357,6 +3095,32 @@ class OrderSerializer(serializers.ModelSerializer):
         many=True,
         read_only=True,
     )
+    
+    delivery_person_name = serializers.SerializerMethodField()
+
+    delivery_person_phone = serializers.SerializerMethodField()
+    
+    # ============================================================
+    # Delivery Partner
+    # ============================================================
+
+    def get_delivery_person_name(self, obj) -> str | None:
+
+        if not obj.delivery_partner:
+            return None
+
+        return (
+            f"{obj.delivery_partner.first_name} "
+            f"{obj.delivery_partner.last_name}"
+        ).strip()
+
+
+    def get_delivery_person_phone(self, obj) -> str | None:
+
+        if not obj.delivery_partner:
+            return None
+
+        return obj.delivery_partner.mobile
 
     # =========================================================================
     # Meta
@@ -2665,22 +3429,6 @@ class OrderSerializer(serializers.ModelSerializer):
                 "required": False,
 
                 "allow_null": True,
-
-            },
-
-            "delivery_person_name": {
-
-                "required": False,
-
-                "allow_blank": True,
-
-            },
-
-            "delivery_person_phone": {
-
-                "required": False,
-
-                "allow_blank": True,
 
             },
 
@@ -4433,13 +5181,18 @@ class RestaurantDeliverySerializer(serializers.ModelSerializer):
     # =========================================================================
     # Update Order
     # =========================================================================
-
-    @transaction.atomic
     def update(
         self,
-        instance,
-        validated_data,
-    ):
+        instance: Restaurant,
+        validated_data: dict,
+    ) -> Restaurant:
+
+    # @transaction.atomic
+    # def update(
+    #     self,
+    #     instance,
+    #     validated_data,
+    # ):
         """
         Update an existing order.
 
@@ -4937,8 +5690,10 @@ class NearbyRestaurantSerializer(serializers.ModelSerializer):
     # ==========================================================
     # Logo URL
     # ==========================================================
-
-    def get_logo_url(self, obj):
+    
+    @extend_schema_field(OpenApiTypes.URI)
+    def get_logo_url(self, obj) -> str | None:
+    # def get_logo_url(self, obj):
 
         request = self.context.get("request")
 
@@ -5207,8 +5962,9 @@ class RestaurantMapSerializer(serializers.ModelSerializer):
     # ==========================================================
     # Logo URL
     # ==========================================================
-
-    def get_logo_url(self, obj):
+    @extend_schema_field(OpenApiTypes.URI)
+    def get_logo_url(self, obj) -> str | None:
+    # def get_logo_url(self, obj):
 
         request = self.context.get("request")
 
@@ -6621,12 +7377,17 @@ class KDSStatusSerializer(serializers.ModelSerializer):
     # ==========================================================
     
     #----I recommend not using this serializer's update() method in your view.........
-    
     def update(
         self,
-        instance,
-        validated_data,
-    ):
+        instance: Restaurant,
+        validated_data: dict,
+    ) -> Restaurant:
+    
+    # def update(
+    #     self,
+    #     instance,
+    #     validated_data,
+    # ):
         """
         Kitchen timeline updates are handled
         by the service layer.
@@ -6806,12 +7567,17 @@ class KDSPrioritySerializer(serializers.ModelSerializer):
     # ==========================================================
     # Update
     # ==========================================================
-
     def update(
         self,
-        instance,
-        validated_data,
-    ):
+        instance: Restaurant,
+        validated_data: dict,
+    ) -> Restaurant:
+
+    # def update(
+    #     self,
+    #     instance,
+    #     validated_data,
+    # ):
         """
         
         Priority updates should normally
@@ -7006,6 +7772,63 @@ class KDSStatisticsSerializer(serializers.Serializer):
 
     average_preparation_time = serializers.FloatField(read_only=True)
 
+# ==========================================================
+# Staff Shift Schedule Serializer
+# ==========================================================
+
+class StaffShiftScheduleSerializer(serializers.ModelSerializer):
+
+    class Meta:
+
+        model = StaffShiftSchedule
+
+        fields = [
+
+            "id",
+
+            "staff",
+
+            "day_of_week",
+
+            "shift_start",
+
+            "shift_end",
+
+            "is_off_day",
+
+            "is_active",
+
+        ]
+
+    def validate(self, attrs):
+
+        shift_start = attrs.get(
+            "shift_start",
+            getattr(self.instance, "shift_start", None),
+        )
+
+        shift_end = attrs.get(
+            "shift_end",
+            getattr(self.instance, "shift_end", None),
+        )
+
+        is_off_day = attrs.get(
+            "is_off_day",
+            getattr(self.instance, "is_off_day", False),
+        )
+
+        if (
+            not is_off_day
+            and shift_start
+            and shift_end
+            and shift_start >= shift_end
+        ):
+            raise serializers.ValidationError(
+                "Shift end time must be after shift start time."
+            )
+
+        return attrs
+    
 # =============================================================================
 # Staff Serializer
 # =============================================================================
@@ -7030,6 +7853,14 @@ class StaffSerializer(serializers.ModelSerializer):
     has_login = serializers.ReadOnlyField()
     
     staff_status = serializers.SerializerMethodField()
+    
+    shift_schedules = StaffShiftScheduleSerializer(
+        
+        many=True,
+        
+        read_only=True,
+        
+    )
 
     class Meta:
 
@@ -7080,10 +7911,8 @@ class StaffSerializer(serializers.ModelSerializer):
             "salary",
 
             # Shift
-
-            "shift_start",
-
-            "shift_end",
+            
+            "shift_schedules",
 
             "is_on_shift",
 
@@ -7602,63 +8431,7 @@ class StaffRoleSerializer(serializers.ModelSerializer):
     
     #===========================================================
 
-# ==========================================================
-# Staff Shift Schedule Serializer
-# ==========================================================
 
-class StaffShiftScheduleSerializer(serializers.ModelSerializer):
-
-    class Meta:
-
-        model = StaffShiftSchedule
-
-        fields = [
-
-            "id",
-
-            "staff",
-
-            "day_of_week",
-
-            "shift_start",
-
-            "shift_end",
-
-            "is_off_day",
-
-            "is_active",
-
-        ]
-
-    def validate(self, attrs):
-
-        shift_start = attrs.get(
-            "shift_start",
-            getattr(self.instance, "shift_start", None),
-        )
-
-        shift_end = attrs.get(
-            "shift_end",
-            getattr(self.instance, "shift_end", None),
-        )
-
-        is_off_day = attrs.get(
-            "is_off_day",
-            getattr(self.instance, "is_off_day", False),
-        )
-
-        if (
-            not is_off_day
-            and shift_start
-            and shift_end
-            and shift_start >= shift_end
-        ):
-            raise serializers.ValidationError(
-                "Shift end time must be after shift start time."
-            )
-
-        return attrs
-    
 # ==========================================================
 # Staff Attendance Serializer
 # ==========================================================
@@ -8324,7 +9097,4 @@ class AuditLogFilterSerializer(serializers.Serializer):
             )
 
         return attrs
-    
-    
-    
     

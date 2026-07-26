@@ -1,3 +1,4 @@
+# restaurants/services/kitchen_notes.py
 
 from django.utils import timezone
 from restaurant.models import KitchenNote

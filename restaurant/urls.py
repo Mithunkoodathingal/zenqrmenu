@@ -153,6 +153,76 @@ urlpatterns = [
     
     path('menu/api/', include(router.urls)),
     
+    
+    
+# -----------------------------------------------------------------------------
+#                           Restaurant Create API
+# -----------------------------------------------------------------------------
+    
+    path(
+        "restaurants/",
+        RestaurantCreateAPIView.as_view(),
+        name="restaurant-create",
+    ),
+    
+    path(
+        "restaurants/<int:pk>/",
+        RestaurantDetailAPIView.as_view(),
+        name="restaurant-detail",
+    ),
+    
+    path(
+    "my/",
+        MyRestaurantAPIView.as_view(),
+        name="my-restaurant",
+    ),
+    
+    path(
+        "<int:restaurant_id>/",
+        RestaurantDetailAPIView.as_view(),
+        name="restaurant-detail",
+    ),
+    
+    path(
+        "<int:restaurant_id>/update/",
+        UpdateRestaurantAPIView.as_view(),
+        name="restaurant-update",
+    ),
+    
+    path(
+        "<int:restaurant_id>/delete/",
+        DeleteRestaurantAPIView.as_view(),
+        name="restaurant-delete",
+    ),
+    
+# =============================================================================
+# Nearby Restaurants
+# =============================================================================
+
+    path(
+
+        "nearby/",
+
+        NearbyRestaurantAPIView.as_view(),
+
+        name="nearby-restaurants",
+
+    ),
+    
+# =============================================================================
+# Restaurant List
+# =============================================================================
+
+    path(
+
+        "",
+
+        RestaurantListAPIView.as_view(),
+
+        name="restaurant-list",
+
+    ),
+    
 # -----------------------------------------------------------------------------
 #                           Password RESET
 # -----------------------------------------------------------------------------
