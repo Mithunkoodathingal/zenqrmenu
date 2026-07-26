@@ -16,6 +16,7 @@ django-allauth==65.11.2
 django-anymail==13.1
 django-cors-headers==4.7.0
 django-environ==0.11.2
+django-extensions==3.2.3
 django-storages==1.14.6
 django-widget-tweaks==1.5.0
 djangorestframework==3.14.0
