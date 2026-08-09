@@ -44,28 +44,28 @@ razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZOR
 
 
 
-def subscription_plans(request):
-    default_plans = [
-        {"name": "Free", "price": Decimal("0.00"), "duration_days": 30, "table_limit": 1,
-         "features": "Unlimited scans, unlimited categories & items"},
-        {"name": "Basic", "price": Decimal("100.00"), "duration_days": 30, "table_limit": 10,
-         "features": "Unlimited scans, unlimited categories & items"},
-        {"name": "Standard", "price": Decimal("200.00"), "duration_days": 30, "table_limit": 20,
-         "features": "Unlimited scans, unlimited categories & items"},
-        {"name": "Enterprise", "price": Decimal("500.00"), "duration_days": 30, "table_limit": 100,
-         "features": "Ideal for hotels, unlimited scans, categories & items"},
-    ]
+# def subscription_plans(request):
+#     default_plans = [
+#         {"name": "Free", "price": Decimal("0.00"), "duration_days": 30, "table_limit": 1,
+#          "features": "Unlimited scans, unlimited categories & items"},
+#         {"name": "Basic", "price": Decimal("100.00"), "duration_days": 30, "table_limit": 10,
+#          "features": "Unlimited scans, unlimited categories & items"},
+#         {"name": "Standard", "price": Decimal("200.00"), "duration_days": 30, "table_limit": 20,
+#          "features": "Unlimited scans, unlimited categories & items"},
+#         {"name": "Enterprise", "price": Decimal("500.00"), "duration_days": 30, "table_limit": 100,
+#          "features": "Ideal for hotels, unlimited scans, categories & items"},
+#     ]
 
-    for p in default_plans:
-        SubscriptionPlan.objects.get_or_create(name=p["name"], defaults={
-            "price": p["price"],
-            "duration_days": p["duration_days"],
-            "table_limit": p["table_limit"],
-            "features": p["features"],
-        })
+#     for p in default_plans:
+#         SubscriptionPlan.objects.get_or_create(name=p["name"], defaults={
+#             "price": p["price"],
+#             "duration_days": p["duration_days"],
+#             "table_limit": p["table_limit"],
+#             "features": p["features"],
+#         })
 
-    plans = SubscriptionPlan.objects.all().order_by('price', 'id')
-    return render(request, 'subscription/subscription_plans.html', {'plans': plans})
+#     plans = SubscriptionPlan.objects.all().order_by('price', 'id')
+#     return render(request, 'subscription/subscription_plans.html', {'plans': plans})
 
 
 # @login_required
@@ -383,10 +383,10 @@ def payment_success_return(request):
     })
 
 
-class SubscriptionDetailView(DetailView):
-    model = Subscription
-    template_name = 'subscription/subscription_detail.html'
-    context_object_name = 'subscription'
+# class SubscriptionDetailView(DetailView):
+#     model = Subscription
+#     template_name = 'subscription/subscription_detail.html'
+#     context_object_name = 'subscription'
 
 
 class SubscriptionCancelView(LoginRequiredMixin, UserPassesTestMixin, View):

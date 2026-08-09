@@ -177,11 +177,11 @@ urlpatterns = [
         name="my-restaurant",
     ),
     
-    path(
-        "<int:restaurant_id>/",
-        RestaurantDetailAPIView.as_view(),
-        name="restaurant-detail",
-    ),
+    # path(
+    #     "<int:restaurant_id>/",
+    #     RestaurantDetailAPIView.as_view(),
+    #     name="restaurant-detail",
+    # ),
     
     path(
         "<int:restaurant_id>/update/",
@@ -441,15 +441,15 @@ urlpatterns = [
     # Staff Role API
     # ----------------------------------------------------------
     
-    path(
+    # path(
         
-        "staff/role/<int:staff_id>/",
+    #     "staff/role/<int:staff_id>/",
         
-        StaffRoleAPIView.as_view(),
+    #     StaffRoleAPIView.as_view(),
         
-        name="staff-role",
+    #     name="staff-role",
         
-    ),
+    # ),
     
 # ==========================================================
 #                       KDS URL's
