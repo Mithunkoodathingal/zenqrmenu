@@ -6,6 +6,8 @@ class RestaurantConfig(AppConfig):
     name = 'restaurant'
 
     def ready(self):
-        # import signal handlers so they are registered when app is ready
-        # do NOT put heavy logic here — only imports
+        # Import signal handlers so they are registered when app is ready.
         import restaurant.signals  # noqa: F401
+        # Register supplemental API domain models without changing the existing
+        # restaurant/models.py module.
+        import restaurant.feature_models  # noqa: F401
