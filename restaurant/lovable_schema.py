@@ -138,7 +138,9 @@ ActualReviewListResponse = inline_serializer(
         "success": serializers.BooleanField(),
         "count": serializers.IntegerField(),
         "average_rating": serializers.FloatField(),
-        "reviews": ActualReview(many=True),
+        # inline_serializer() returns a serializer instance, not a class.
+        # ListField is therefore the correct way to express many=True here.
+        "reviews": serializers.ListField(child=ActualReview),
     },
 )
 
@@ -155,7 +157,7 @@ ActualReviewCreateRequest = inline_serializer(
 
 ActualReviewResponse = inline_serializer(
     name="ActualReviewResponse",
-    fields={"success": serializers.BooleanField(), "review": ActualReview()},
+    fields={"success": serializers.BooleanField(), "review": ActualReview},
 )
 
 ActualReportResponse = inline_serializer(
