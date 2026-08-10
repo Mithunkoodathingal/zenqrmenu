@@ -44,6 +44,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://zenqrmenu.onrender.com",
     "https://www.zenqrmenu.com",
     "https://zenqrmenu.com",
+    "https://api.zenqrmenu.com",
 ]
 
 
@@ -54,7 +55,7 @@ if USE_X_FORWARDED_HOST:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Trusted origins for CSRF (comma-separated), used for secure cookie handling + POSTs from frontends.
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
+# CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
 
 # -------------------------
 # Sentry (optional)
@@ -572,11 +573,11 @@ LOGGING = {
 # -------------------------
 # Misc
 # -------------------------
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
+# CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://zenqrmenu.com",
-]
+# CSRF_TRUSTED_ORIGINS = [
+#     "https://zenqrmenu.com",
+# ]
 
 CORS_ALLOW_ALL_ORIGINS = True   # 🔥 TEMP DEBUG (enable this now)
 
