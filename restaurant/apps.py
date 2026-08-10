@@ -11,3 +11,5 @@ class RestaurantConfig(AppConfig):
         # Register supplemental API domain models without changing the existing
         # restaurant/models.py module.
         import restaurant.feature_models  # noqa: F401
+        # Register drf-spectacular extensions for the core API endpoints.
+        import restaurant.core_api_schema  # noqa: F401
