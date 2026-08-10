@@ -1,6 +1,8 @@
 # restaurants/services/delivery_partner.py
 
-from datetime import timedelta, timezone
+from datetime import timedelta
+
+from django.utils import timezone
 
 from restaurant.models import DeliveryPartner, Order
 
