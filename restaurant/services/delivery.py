@@ -1,7 +1,7 @@
 # restaurant/services/delivery.py
 
 
-from datetime import timezone
+from django.utils import timezone
 
 from django.core.exceptions import ValidationError
 

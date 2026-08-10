@@ -2268,6 +2268,9 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
         return instance
 
+
+
+
 # =================== CATEGORY SERIALIZER ============== 
 
 # class CategorySerializer(serializers.ModelSerializer):
@@ -2276,17 +2279,6 @@ class OrderItemSerializer(serializers.ModelSerializer):
 #         fields = ["id", "name"]
 
 # ======================================================
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -2591,7 +2583,6 @@ class RestaurantListRequestSerializer(serializers.Serializer):
     longitude = serializers.FloatField(
         required=False,
     )
-
 
 # =============================================================================
 # Restaurant Detail Serializer
