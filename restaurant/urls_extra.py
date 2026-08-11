@@ -1,6 +1,8 @@
 from django.urls import path
 
-from restaurant.views.lovable_features import (
+# Importing from lovable_schema applies the explicit drf-spectacular
+# contracts before the views are registered in urlpatterns.
+from restaurant.lovable_schema import (
     AvailableDeliveryPartnersAPIView,
     AssignDeliveryPartnerAPIView,
     CouponDetailAPIView,
