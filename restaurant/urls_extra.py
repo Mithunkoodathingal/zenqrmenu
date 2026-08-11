@@ -27,6 +27,10 @@ from restaurant.lovable_schema import (
     UnassignDeliveryPartnerAPIView,
 )
 
+# Apply the final runtime-contract corrections after the base Lovable schema
+# annotations have been attached.
+import restaurant.lovable_schema_contract_fixes  # noqa: F401,E402
+
 urlpatterns = [
     # Orders
     path("api/orders/<int:order_id>/cancel/", OrderCancelAPIView.as_view(), name="api-order-cancel"),
