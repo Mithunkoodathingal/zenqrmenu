@@ -1,6 +1,7 @@
 # restaurant/apps.py
 from django.apps import AppConfig
 
+
 class RestaurantConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'restaurant'
@@ -13,3 +14,5 @@ class RestaurantConfig(AppConfig):
         import restaurant.feature_models  # noqa: F401
         # Register drf-spectacular extensions for the core API endpoints.
         import restaurant.core_api_schema  # noqa: F401
+        # Apply the final core endpoint schema corrections.
+        import restaurant.core_api_schema_contract_fixes  # noqa: F401
