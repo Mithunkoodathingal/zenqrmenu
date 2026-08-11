@@ -18,6 +18,13 @@ from restaurant.views.lovable_features import (
 )
 
 
+ActualDeliveryStatusRequest = inline_serializer(
+    name="ActualDeliveryStatusRequest",
+    fields={
+        "delivery_status": serializers.CharField(required=True),
+    },
+)
+
 ActualDeliveryStatusResponse = inline_serializer(
     name="ActualDeliveryStatusResponse",
     fields={
@@ -128,10 +135,11 @@ ActualReviewUpdateResponse = inline_serializer(
 )
 
 
-# The actual DeliveryStatusAPIView returns success + order and no message.
+# The actual DeliveryStatusAPIView returns success + order and expects
+# delivery_status (not status) in the request body.
 DeliveryStatusAPIView.patch = extend_schema(
     operation_id="Order_DeliveryStatus_Update",
-    request=s.DeliveryStatusRequestSerializer,
+    request=ActualDeliveryStatusRequest,
     responses={
         200: ActualDeliveryStatusResponse,
         400: s.APIErrorSerializer,
