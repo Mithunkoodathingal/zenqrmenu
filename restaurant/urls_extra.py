@@ -27,6 +27,27 @@ from restaurant.lovable_schema import (
     UnassignDeliveryPartnerAPIView,
 )
 
+from restaurant.views.phase3b import (
+    InventoryIngredientDetailAPIView,
+    InventoryIngredientsAPIView,
+    SearchAPIView,
+    DeliveryLocationAPIView,
+    DeliveryZoneAPIView,
+    DeliveryQuoteAPIView,
+    NearbyRestaurantsAPIView,
+    DashboardWidgetsAPIView,
+    AnalyticsAPIView,
+    RestaurantWorkingHoursAPIView,
+    RestaurantSettingsAPIView,
+)
+
+from restaurant.lovable_schema  import (
+    DeliveryPartnerListCreateAPIView,
+    DeliveryPartnerDetailAPIView,
+    DeliveryPartnerLocationAPIView,
+    DeliveryPartnerAvailabilityAPIView,
+)
+
 # Apply the final runtime-contract corrections after the base Lovable schema
 # annotations have been attached.
 import restaurant.lovable_schema_contract_fixes  # noqa: F401,E402
@@ -67,4 +88,114 @@ urlpatterns = [
 
     # Reports
     path("api/reports/", ReportsAPIView.as_view(), name="api-reports"),
+
+    # =============================================================================
+    # PHASE 3B — CANONICAL MENU API CONTRACT
+    # =============================================================================
+
+    # Search
+    path(
+        "menu/api/search/",
+        SearchAPIView.as_view(),
+        name="menu-api-search",
+    ),
+
+    # Delivery
+    path(
+        "menu/api/restaurant/location/",
+        DeliveryLocationAPIView.as_view(),
+        name="menu-api-restaurant-location",
+    ),
+
+    path(
+        "menu/api/restaurant/delivery-zone/",
+        DeliveryZoneAPIView.as_view(),
+        name="menu-api-delivery-zone",
+    ),
+
+    path(
+        "menu/api/delivery/quote/",
+        DeliveryQuoteAPIView.as_view(),
+        name="menu-api-delivery-quote",
+    ),
+
+    path(
+        "menu/api/restaurants/nearby/",
+        NearbyRestaurantsAPIView.as_view(),
+        name="menu-api-restaurants-nearby",
+    ),
+
+    # Dashboard widgets
+    path(
+        "menu/api/dashboard/widgets/",
+        DashboardWidgetsAPIView.as_view(),
+        name="menu-api-dashboard-widgets",
+    ),
+
+    # Analytics
+    path(
+        "menu/api/analytics/<str:metric>/",
+        AnalyticsAPIView.as_view(),
+        name="menu-api-analytics",
+    ),
+
+    # Restaurant settings
+    path(
+        "menu/api/restaurant/working-hours/",
+        RestaurantWorkingHoursAPIView.as_view(),
+        name="menu-api-working-hours",
+    ),
+
+    path(
+        "menu/api/restaurant/settings/",
+        RestaurantSettingsAPIView.as_view(),
+        name="menu-api-restaurant-settings",
+    ),
+
+
+# =============================================================================
+# PHASE 3B — DELIVERY PARTNERS
+# =============================================================================
+
+
+
+    path(
+        "menu/api/delivery-partners/",
+        DeliveryPartnerListCreateAPIView.as_view(),
+        name="menu-api-delivery-partners",
+    ),
+
+    path(
+        "menu/api/delivery-partners/<int:partner_id>/",
+        DeliveryPartnerDetailAPIView.as_view(),
+        name="menu-api-delivery-partner-detail",
+    ),
+
+    path(
+        "menu/api/delivery-partners/<int:partner_id>/location/",
+        DeliveryPartnerLocationAPIView.as_view(),
+        name="menu-api-delivery-partner-location",
+    ),
+
+    path(
+        "menu/api/delivery-partners/<int:partner_id>/availability/",
+        DeliveryPartnerAvailabilityAPIView.as_view(),
+        name="menu-api-delivery-partner-availability",
+    ),
+
+# =============================================================================
+# PHASE 3B — INVENTRY API
+# =============================================================================
+
+    path(
+        "menu/api/inventory/ingredients/",
+        InventoryIngredientsAPIView.as_view(),
+        name="menu-api-inventory",
+    ),
+
+    path(
+        "menu/api/inventory/ingredients/<int:ingredient_id>/",
+        InventoryIngredientDetailAPIView.as_view(),
+        name="menu-api-inventory-detail",
+    ),
 ]

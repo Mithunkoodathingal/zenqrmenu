@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from restaurant.models import DeliveryPartner, FoodItem, Order, Restaurant
+from restaurant.serializers import SuccessSerializer
 from restaurant.services.common import get_restaurant
 from restaurant.services.delivery import (
     calculate_distance,
@@ -30,6 +31,77 @@ from restaurant.services.analytics import (
     get_top_selling_items,
     get_weekly_sales,
     get_yearly_sales,
+)
+
+from restaurant.api_serializers import (
+    # Coupons
+    APIErrorSerializer,
+    CouponCreateRequestSerializer,
+    CouponUpdateRequestSerializer,
+    CouponListResponseSerializer,
+    CouponResponseSerializer,
+    CouponDeleteResponseSerializer,
+    CouponValidateRequestSerializer,
+    CouponValidateResponseSerializer,
+
+    # Delivery partners
+    DeliveryPartnerCreateRequestSerializer,
+    DeliveryPartnerUpdateRequestSerializer,
+    DeliveryPartnerListResponseSerializer,
+    DeliveryPartnerResponseSerializer,
+    DeliveryPartnerDeleteResponseSerializer,
+    DeliveryPartnerAvailabilityRequestSerializer,
+    DeliveryPartnerAvailabilityResponseSerializer,
+    DeliveryPartnerLocationRequestSerializer,
+    DeliveryPartnerLocationResponseSerializer,
+
+    # Inventory
+    InventoryCreateRequestSerializer,
+    InventoryUpdateRequestSerializer,
+    InventoryListResponseSerializer,
+    InventoryCreateResponseSerializer,
+    InventoryUpdateResponseSerializer,
+    InventoryDeleteResponseSerializer,
+
+    # Orders
+    AssignDeliveryPartnerRequestSerializer,
+    AssignDeliveryPartnerResponseSerializer,
+    OrderCancelRequestSerializer,
+    OrderCancelResponseSerializer,
+    DeliveryStatusRequestSerializer,
+    DeliveryStatusResponseSerializer,
+    OrderPrintStatusRequestSerializer,
+    OrderPrintStatusResponseSerializer,
+    DeliveryTrackingResponseSerializer,
+    ReviewCreateRequestSerializer,
+    ReviewListResponseSerializer,
+    ReviewResponseSerializer,
+    ReviewUpdateRequestSerializer,
+    UnassignDeliveryPartnerResponseSerializer,
+
+    # Restaurant
+    RestaurantLocationResponseSerializer,
+    # RestaurantLocationUpdateRequestSerializer,
+    RestaurantLocationUpdateSerializer,
+    DeliverySummaryResponseSerializer,
+    FulfillmentOptionsResponseSerializer,
+
+    # Reviews
+    # ActualReviewListResponseSerializer,
+    # ActualReviewCreateRequestSerializer,
+    # ActualReviewResponseSerializer,
+    # ActualReviewUpdateRequestSerializer,
+
+    # Reports
+    # ActualReportResponseSerializer,
+    ReportsResponseSerializer,
+)
+
+from drf_spectacular.utils import (
+    extend_schema,
+    extend_schema_view,
+    OpenApiParameter,
+    OpenApiTypes,
 )
 
 from restaurant.feature_models import Coupon, CouponRedemption, InventoryItem, Review
@@ -57,6 +129,28 @@ def _order_payload(order):
     }
 
 
+
+
+# ============================================================================================================
+
+# ============================================================================================================
+
+@extend_schema_view(
+    post=extend_schema(
+        operation_id="Order_Cancel",
+        description=(
+            "Cancel an active order belonging to the authenticated restaurant."
+        ),
+        tags=["api"],
+        request=OrderCancelRequestSerializer,
+        responses={
+            200: OrderCancelResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class OrderCancelAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -88,6 +182,20 @@ class OrderCancelAPIView(APIView):
         return Response({"success": True, "message": "Order cancelled successfully.", "reason": reason, "order": _order_payload(order)})
 
 
+@extend_schema_view(
+    patch=extend_schema(
+        operation_id="Order_PrintStatus_Update",
+        description="Update kitchen and/or receipt print flags for an order.",
+        tags=["api"],
+        request=OrderPrintStatusRequestSerializer,
+        responses={
+            200: OrderPrintStatusResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class OrderPrintStatusAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -109,6 +217,32 @@ class OrderPrintStatusAPIView(APIView):
         return Response({"success": True, "message": "Print status updated.", "order": _order_payload(order)})
 
 
+@extend_schema_view(
+    get=extend_schema(
+        operation_id="Restaurant_Location_Retrieve",
+        description=(
+            "Return the authenticated restaurant's delivery/location data."
+        ),
+        tags=["api"],
+        responses={
+            200: RestaurantLocationResponseSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+    patch=extend_schema(
+        operation_id="Restaurant_Location_Update",
+        description="Update supported restaurant location fields.",
+        tags=["api"],
+        request=RestaurantLocationUpdateSerializer,
+        responses={
+            200: RestaurantLocationResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class RestaurantLocationAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -142,6 +276,37 @@ class RestaurantLocationAPIView(APIView):
         return self.get(request)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        operation_id="Restaurant_DeliverySummary",
+        description=(
+            "Calculate delivery eligibility, distance, charge and pickup "
+            "options for a customer location."
+        ),
+        tags=["api"],
+        parameters=[
+            OpenApiParameter(
+                name="latitude",
+                type=OpenApiTypes.DOUBLE,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="Customer latitude.",
+            ),
+            OpenApiParameter(
+                name="longitude",
+                type=OpenApiTypes.DOUBLE,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="Customer longitude.",
+            ),
+        ],
+        responses={
+            200: DeliverySummaryResponseSerializer,
+            400: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class DeliverySummaryAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -161,6 +326,16 @@ class DeliverySummaryAPIView(APIView):
         }})
 
 
+@extend_schema_view(
+    get=extend_schema(
+        operation_id="Restaurant_FulfillmentOptions",
+        tags=["api"],
+        responses={
+            200: FulfillmentOptionsResponseSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class FulfillmentOptionsAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -179,6 +354,28 @@ class FulfillmentOptionsAPIView(APIView):
         }})
 
 
+@extend_schema_view(
+    get=extend_schema(
+        operation_id="DeliveryPartner_List",
+        tags=["api"],
+        responses={
+            200: DeliveryPartnerListResponseSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+    post=extend_schema(
+        operation_id="DeliveryPartner_Create",
+        tags=["api"],
+        request=DeliveryPartnerCreateRequestSerializer,
+        responses={
+            201: DeliveryPartnerResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class DeliveryPartnerListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -208,6 +405,38 @@ class DeliveryPartnerListCreateAPIView(APIView):
         return Response({"success": True, "delivery_partner": self.serialize(partner)}, status=201)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        operation_id="DeliveryPartner_Retrieve",
+        tags=["api"],
+        responses={
+            200: DeliveryPartnerResponseSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+    patch=extend_schema(
+        operation_id="DeliveryPartner_Update",
+        tags=["api"],
+        request=DeliveryPartnerUpdateRequestSerializer,
+        responses={
+            200: DeliveryPartnerResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+    delete=extend_schema(
+        operation_id="DeliveryPartner_Deactivate",
+        tags=["api"],
+        responses={
+            200: DeliveryPartnerDeleteResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class DeliveryPartnerDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -250,6 +479,19 @@ class DeliveryPartnerDetailAPIView(APIView):
         return Response({"success": True, "message": "Delivery partner deactivated."})
 
 
+@extend_schema_view(
+    post=extend_schema(
+        operation_id="DeliveryPartner_Availability_Update",
+        tags=["api"],
+        request=DeliveryPartnerAvailabilityRequestSerializer,
+        responses={
+            200: DeliveryPartnerAvailabilityResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class DeliveryPartnerAvailabilityAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -262,6 +504,19 @@ class DeliveryPartnerAvailabilityAPIView(APIView):
         return Response({"success": True, "is_available": partner.is_available})
 
 
+@extend_schema_view(
+    post=extend_schema(
+        operation_id="DeliveryPartner_Location_Update",
+        tags=["api"],
+        request=DeliveryPartnerLocationRequestSerializer,
+        responses={
+            200: DeliveryPartnerLocationResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class DeliveryPartnerLocationAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -278,6 +533,17 @@ class DeliveryPartnerLocationAPIView(APIView):
         return Response({"success": True, "partner_id": partner.id, "latitude": lat, "longitude": lng, "updated_at": partner.last_location_update})
 
 
+@extend_schema_view(
+    get=extend_schema(
+        operation_id="DeliveryPartner_AvailableList",
+        tags=["api"],
+        responses={
+            200: DeliveryPartnerListResponseSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class AvailableDeliveryPartnersAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -289,6 +555,19 @@ class AvailableDeliveryPartnersAPIView(APIView):
         return Response({"success": True, "count": partners.count(), "delivery_partners": [DeliveryPartnerListCreateAPIView.serialize(p) for p in partners]})
 
 
+@extend_schema_view(
+    post=extend_schema(
+        operation_id="Order_DeliveryPartner_Assign",
+        tags=["api"],
+        request=AssignDeliveryPartnerRequestSerializer,
+        responses={
+            200: AssignDeliveryPartnerResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class AssignDeliveryPartnerAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -317,6 +596,18 @@ class AssignDeliveryPartnerAPIView(APIView):
         return Response({"success": True, "message": "Delivery partner assigned successfully.", "order": _order_payload(order), "partner": DeliveryPartnerListCreateAPIView.serialize(partner)})
 
 
+@extend_schema_view(
+    post=extend_schema(
+        operation_id="Order_DeliveryPartner_Unassign",
+        tags=["api"],
+        responses={
+            200: UnassignDeliveryPartnerResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class UnassignDeliveryPartnerAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -338,6 +629,19 @@ class UnassignDeliveryPartnerAPIView(APIView):
         return Response({"success": True, "message": "Delivery partner unassigned successfully.", "order": _order_payload(order)})
 
 
+@extend_schema_view(
+    patch=extend_schema(
+        operation_id="Order_DeliveryStatus_Update",
+        tags=["api"],
+        request=DeliveryStatusRequestSerializer,
+        responses={
+            200: DeliveryStatusResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class DeliveryStatusAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -356,6 +660,17 @@ class DeliveryStatusAPIView(APIView):
         return Response({"success": True, "order": _order_payload(order)})
 
 
+@extend_schema_view(
+    get=extend_schema(
+        operation_id="Order_DeliveryTracking_Retrieve",
+        tags=["api"],
+        responses={
+            200: DeliveryTrackingResponseSerializer,
+            400: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class DeliveryTrackingPublicAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -377,6 +692,28 @@ class DeliveryTrackingPublicAPIView(APIView):
         }})
 
 
+@extend_schema_view(
+    get=extend_schema(
+        operation_id="Inventory_List",
+        tags=["api"],
+        responses={
+            200: InventoryListResponseSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+    post=extend_schema(
+        operation_id="Inventory_Create",
+        tags=["api"],
+        request=InventoryCreateRequestSerializer,
+        responses={
+            201: InventoryCreateResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class InventoryAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -400,6 +737,28 @@ class InventoryAPIView(APIView):
         return Response({"success": True, "inventory_id": item.id}, status=201)
 
 
+@extend_schema_view(
+    patch=extend_schema(
+        operation_id="Inventory_Update",
+        tags=["api"],
+        request=InventoryUpdateRequestSerializer,
+        responses={
+            200: InventoryUpdateResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+    delete=extend_schema(
+        operation_id="Inventory_Delete",
+        tags=["api"],
+        responses={
+            200: InventoryDeleteResponseSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class InventoryDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -423,6 +782,28 @@ class InventoryDetailAPIView(APIView):
         return Response({"success": True, "message": "Inventory item archived."})
 
 
+@extend_schema_view(
+    get=extend_schema(
+        operation_id="Coupon_List",
+        tags=["api"],
+        responses={
+            200: CouponListResponseSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+    post=extend_schema(
+        operation_id="Coupon_Create",
+        tags=["api"],
+        request=CouponCreateRequestSerializer,
+        responses={
+            201: CouponResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class CouponListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -448,6 +829,29 @@ class CouponListCreateAPIView(APIView):
         return Response({"success": True, "coupon": self.serialize(coupon)}, status=201)
 
 
+
+@extend_schema_view(
+    patch=extend_schema(
+        operation_id="Coupon_Update",
+        tags=["api"],
+        request=CouponUpdateRequestSerializer,
+        responses={
+            200: CouponResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+    delete=extend_schema(
+        operation_id="Coupon_Deactivate",
+        tags=["api"],
+        responses={
+            200: CouponDeleteResponseSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class CouponDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -469,6 +873,20 @@ class CouponDetailAPIView(APIView):
         return Response({"success": True, "message": "Coupon deactivated."})
 
 
+
+@extend_schema_view(
+    post=extend_schema(
+        operation_id="Coupon_Validate",
+        tags=["api"],
+        request=CouponValidateRequestSerializer,
+        responses={
+            200: CouponValidateResponseSerializer,
+            400: APIErrorSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class CouponValidateAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -491,43 +909,198 @@ class CouponValidateAPIView(APIView):
         return Response({"success": True, "coupon": {"id": coupon.id, "code": coupon.code}, "discount_amount": discount})
 
 
+
+@extend_schema_view(
+    get=extend_schema(
+        operation_id="Review_List",
+        tags=["api"],
+        responses={
+            200: ReviewListResponseSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+    post=extend_schema(
+        operation_id="Review_Create",
+        tags=["api"],
+        request=ReviewCreateRequestSerializer,
+        responses={
+            201: ReviewResponseSerializer,
+            400: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class ReviewListCreateAPIView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, restaurant_id):
-        restaurant = get_object_or_404(Restaurant, id=restaurant_id, is_active=True, is_deleted=False)
-        qs = Review.objects.filter(restaurant=restaurant, is_published=True)
-        return Response({"success": True, "count": qs.count(), "average_rating": qs.aggregate(avg=Avg("rating"))["avg"] or 0, "reviews": [self.serialize(x) for x in qs]})
+        restaurant = get_object_or_404(
+            Restaurant,
+            id=restaurant_id,
+            is_active=True,
+            is_deleted=False,
+        )
+
+        qs = Review.objects.filter(
+            restaurant=restaurant,
+            is_published=True,
+        )
+
+        return Response({
+            "success": True,
+            "count": qs.count(),
+            "average_rating": qs.aggregate(
+                avg=Avg("rating")
+            )["avg"] or 0,
+            "reviews": [
+                self.serialize(x)
+                for x in qs
+            ],
+        })
 
     @staticmethod
     def serialize(x):
-        return {"id": x.id, "customer_name": x.customer_name, "rating": x.rating, "comment": x.comment, "owner_response": x.owner_response, "created_at": x.created_at}
+        return {
+            "id": x.id,
+            "customer_name": x.customer_name,
+            "rating": x.rating,
+            "comment": x.comment,
+            "owner_response": x.owner_response,
+            "created_at": x.created_at,
+        }
 
     def post(self, request, restaurant_id):
-        restaurant = get_object_or_404(Restaurant, id=restaurant_id, is_active=True, is_deleted=False)
-        rating = int(request.data.get("rating", 0))
+        restaurant = get_object_or_404(
+            Restaurant,
+            id=restaurant_id,
+            is_active=True,
+            is_deleted=False,
+        )
+
+        rating = int(
+            request.data.get("rating", 0)
+        )
+
         if rating < 1 or rating > 5:
-            return Response({"success": False, "message": "rating must be between 1 and 5."}, status=400)
+            return Response(
+                {
+                    "success": False,
+                    "message": "rating must be between 1 and 5.",
+                },
+                status=400,
+            )
+
         order = None
+
         if request.data.get("order_id"):
-            order = get_object_or_404(Order, id=request.data["order_id"], restaurant=restaurant, is_deleted=False)
-        review = Review.objects.create(restaurant=restaurant, order=order, customer_name=str(request.data.get("customer_name", "Customer"))[:120], customer_email=request.data.get("customer_email", ""), rating=rating, comment=request.data.get("comment", ""))
-        return Response({"success": True, "review": self.serialize(review)}, status=201)
+            order = get_object_or_404(
+                Order,
+                id=request.data["order_id"],
+                restaurant=restaurant,
+                is_deleted=False,
+            )
+
+        review = Review.objects.create(
+            restaurant=restaurant,
+            order=order,
+            customer_name=str(
+                request.data.get(
+                    "customer_name",
+                    "Customer",
+                )
+            )[:120],
+            customer_email=request.data.get(
+                "customer_email",
+                "",
+            ),
+            rating=rating,
+            comment=request.data.get(
+                "comment",
+                "",
+            ),
+        )
+
+        return Response(
+            {
+                "success": True,
+                "review": self.serialize(review),
+            },
+            status=201,
+        )
 
 
+
+
+@extend_schema_view(
+    patch=extend_schema(
+        operation_id="Review_Update",
+        tags=["api"],
+        request=ReviewUpdateRequestSerializer,
+        responses={
+            200: ReviewResponseSerializer,
+            400: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+    delete=extend_schema(
+        operation_id="Review_Delete",
+        tags=["api"],
+        responses={
+            200: SuccessSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class ReviewDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, review_id):
         restaurant, error = _restaurant_or_404(request)
-        if error: return error
-        review = get_object_or_404(Review, id=review_id, restaurant=restaurant)
-        for field in ["owner_response", "is_published"]:
-            if field in request.data: setattr(review, field, request.data[field])
+
+        if error:
+            return error
+
+        review = get_object_or_404(
+            Review,
+            id=review_id,
+            restaurant=restaurant,
+        )
+
+        for field in [
+            "owner_response",
+            "is_published",
+        ]:
+            if field in request.data:
+                setattr(
+                    review,
+                    field,
+                    request.data[field],
+                )
+
         review.save()
-        return Response({"success": True, "review": ReviewListCreateAPIView.serialize(review)})
+
+        return Response({
+            "success": True,
+            "review": ReviewListCreateAPIView.serialize(review),
+        })
 
 
+
+@extend_schema_view(
+    get=extend_schema(
+        operation_id="Reports_Retrieve",
+        description=(
+            "Return restaurant sales, order, menu, staff, delivery, "
+            "customer and top-item statistics."
+        ),
+        tags=["api"],
+        responses={
+            200: ReportsResponseSerializer,
+            401: APIErrorSerializer,
+            404: APIErrorSerializer,
+        },
+    ),
+)
 class ReportsAPIView(APIView):
     permission_classes = [IsAuthenticated]
 

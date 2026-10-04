@@ -37,6 +37,7 @@ from restaurant.models import Restaurant
 from django.http import JsonResponse
 from restaurant.views.views import get_user_restaurant
 
+
 logger = logging.getLogger(__name__)
 
 # initialize razorpay client
@@ -663,7 +664,7 @@ def api_create_subscription(request):
                 "contact": restaurant.phone,
             }
         })
-    
+
 
     except Exception as e:
 
@@ -817,4 +818,194 @@ def ensure_free_subscription(user, restaurant):
         sub.save()
 
     return sub
+
+# =====================================================
+#     SUBSCRIPTION API ENDPOINTS
+# =====================================================
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def subscription_current_api(request):
+    subscription = (
+        Subscription.objects
+        .filter(user=request.user)
+        .select_related("plan", "restaurant")
+        .first()
+    )
+
+    if not subscription or not subscription.plan:
+        return Response(
+            {
+                "plan": "none",
+                "status": "cancelled",
+                "started_at": None,
+                "renews_at": None,
+            }
+        )
+
+    status_value = (
+        "cancelled"
+        if subscription.is_cancelled
+        else "active"
+        if subscription.has_active_subscription()
+        else "past_due"
+    )
+
+    days_remaining = 0
+
+    if subscription.end_date:
+        days_remaining = max(
+            (
+                subscription.end_date -
+                timezone.now()
+            ).days,
+            0,
+        )
+
+    return Response(
+        {
+            "plan": subscription.plan.name,
+            "status": status_value,
+            "started_at": subscription.start_date,
+            "renews_at": subscription.end_date,
+            "days_remaining": days_remaining,
+        }
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def subscription_usage_api(request):
+    subscription = (
+        Subscription.objects
+        .filter(user=request.user)
+        .select_related("plan", "restaurant")
+        .first()
+    )
+
+    if not subscription:
+        return Response(
+            {
+                "qr_codes": {
+                    "used": 0,
+                    "limit": 0,
+                },
+                "tables": {
+                    "used": 0,
+                    "limit": 0,
+                },
+                "storage": {
+                    "used_mb": 0,
+                    "limit_mb": 0,
+                },
+                "menu_items": {
+                    "used": 0,
+                    "limit": 0,
+                },
+            }
+        )
+
+    restaurant = subscription.restaurant
+    plan = subscription.plan
+
+    return Response(
+        {
+            "qr_codes": {
+                "used":
+                    restaurant.tables.count(),
+                "limit":
+                    plan.table_limit,
+            },
+            "tables": {
+                "used":
+                    restaurant.tables.count(),
+                "limit":
+                    plan.table_limit,
+            },
+            "storage": {
+                "used_mb": 0,
+                "limit_mb": 0,
+            },
+            "menu_items": {
+                "used":
+                    restaurant.food_items.count(),
+                "limit":
+                    plan.menu_item_limit,
+            },
+        }
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def subscription_invoices_api(request):
+    subscription = (
+        Subscription.objects
+        .filter(user=request.user)
+        .first()
+    )
+
+    if not subscription:
+        return Response([])
+
+    payments = (
+        PaymentTransaction.objects
+        .filter(
+            subscription=subscription,
+            status="paid",
+        )
+        .order_by("-created_at")
+    )
+
+    return Response(
+        [
+            {
+                "id": payment.id,
+                "number":
+                    payment.razorpay_order_id
+                    or str(payment.id),
+                "amount":
+                    float(payment.amount),
+                "currency":
+                    payment.currency,
+                "status":
+                    "paid",
+                "issued_at":
+                    payment.created_at,
+                "pdf_url":
+                    payment.receipt_url,
+            }
+            for payment in payments
+        ]
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def subscription_cancel_api(request):
+    subscription = get_object_or_404(
+        Subscription,
+        user=request.user,
+    )
+
+    subscription.is_cancelled = True
+    subscription.auto_renew = False
+    subscription.cancelled_at = timezone.now()
+
+    subscription.save(
+        update_fields=[
+            "is_cancelled",
+            "auto_renew",
+            "cancelled_at",
+        ]
+    )
+
+    return Response(
+        {
+            "success": True,
+            "message":
+                "Subscription cancellation scheduled.",
+        }
+    )
+
 #=========================revert to specific commit===============
