@@ -2268,7 +2268,34 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
         return instance
 
+# =============================================================================
+# Public Table Order Serialize
+# =============================================================================
 
+class PublicTableOrderSerializer(serializers.ModelSerializer):
+    order_items = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = [
+            "id",
+            "order_number",
+            "status",
+            "total_price_cached",
+            "created_at",
+            "order_items",
+        ]
+
+    def get_order_items(self, obj):
+        return [
+            {
+                "id": item.id,
+                "food_item_id": item.food_item_id,
+                "food_item_name": item.food_item.name,
+                "quantity": item.quantity,
+            }
+            for item in obj.order_items.select_related("food_item").all()
+        ]
 
 
 # =================== CATEGORY SERIALIZER ============== 
@@ -9088,4 +9115,96 @@ class AuditLogFilterSerializer(serializers.Serializer):
             )
 
         return attrs
+    
+# =============================================================================
+# Review Serializers
+# =============================================================================
+
+
+class ReviewSerializer(serializers.Serializer):
+    """
+    Public review representation returned by the Review APIs.
+
+    Matches ReviewListCreateAPIView.serialize().
+    """
+
+    id = serializers.IntegerField()
+    customer_name = serializers.CharField()
+    rating = serializers.IntegerField()
+    comment = serializers.CharField()
+    owner_response = serializers.CharField()
+    created_at = serializers.DateTimeField()
+
+
+class ReviewListResponseSerializer(serializers.Serializer):
+    """
+    Response returned by:
+        GET /api/restaurants/{restaurant_id}/reviews/
+    """
+
+    success = serializers.BooleanField()
+    count = serializers.IntegerField()
+    average_rating = serializers.FloatField()
+    reviews = ReviewSerializer(many=True)
+
+
+class ReviewCreateRequestSerializer(serializers.Serializer):
+    """
+    Request accepted by:
+        POST /api/restaurants/{restaurant_id}/reviews/
+    """
+
+    order_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+    )
+
+    customer_name = serializers.CharField(
+        required=False,
+        max_length=120,
+    )
+
+    customer_email = serializers.EmailField(
+        required=False,
+        allow_blank=True,
+    )
+
+    rating = serializers.IntegerField(
+        min_value=1,
+        max_value=5,
+        required=True,
+    )
+
+    comment = serializers.CharField(
+        required=False,
+        allow_blank=True,
+    )
+
+
+class ReviewResponseSerializer(serializers.Serializer):
+    """
+    Response returned after creating/updating a review.
+    """
+
+    success = serializers.BooleanField()
+    review = ReviewSerializer()
+
+
+class ReviewUpdateRequestSerializer(serializers.Serializer):
+    """
+    Request accepted by:
+        PATCH /api/reviews/{review_id}/
+
+    The actual ReviewDetailAPIView only processes these two fields.
+    """
+
+    owner_response = serializers.CharField(
+        required=False,
+        allow_blank=True,
+    )
+
+    is_published = serializers.BooleanField(
+        required=False,
+    )
+    
     

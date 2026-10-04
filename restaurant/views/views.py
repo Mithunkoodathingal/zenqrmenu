@@ -34,7 +34,6 @@ from django.db import IntegrityError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.decorators import api_view, permission_classes, parser_classes
-from drf_spectacular.utils import extend_schema, OpenApiExample
 from django.core.exceptions import ValidationError
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, F, DecimalField, ExpressionWrapper, Q
@@ -56,7 +55,16 @@ from django.utils.http import urlsafe_base64_decode
 from allauth.account.forms import ResetPasswordForm
 from allauth.account.adapter import get_adapter
 from rest_framework import viewsets, status
-from ..serializers import NearbyRestaurantRequestSerializer, NearbyRestaurantResponseSerializer, NearbyRestaurantSerializer, RestaurantDeleteResponseSerializer, RestaurantDetailResponseSerializer, RestaurantDetailSerializer, RestaurantListRequestSerializer, RestaurantListResponseSerializer, RestaurantListSerializer, RestaurantNotFoundSerializer, RestaurantSerializer
+from ..serializers import NearbyRestaurantRequestSerializer, PublicTableOrderSerializer, NearbyRestaurantResponseSerializer, NearbyRestaurantSerializer, RestaurantDeleteResponseSerializer, RestaurantDetailResponseSerializer, RestaurantDetailSerializer, RestaurantListRequestSerializer, RestaurantListResponseSerializer, RestaurantListSerializer, RestaurantNotFoundSerializer, RestaurantSerializer
+from restaurant.serializers import (
+    LogoutResponseSerializer,
+    ErrorSerializer,
+)
+from restaurant.api_serializers import (
+    APIErrorSerializer,
+    PublicMenuByTableResponseSerializer,
+)
+
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.views.decorators.csrf import csrf_exempt
@@ -103,11 +111,6 @@ from subscription.models import Subscription
 
 from google import genai
 # from google.genai import types
-
-from drf_spectacular.utils import (
-    OpenApiExample,
-    extend_schema,
-)
 
 from rest_framework.generics import GenericAPIView
 
@@ -2814,25 +2817,28 @@ def api_login(request):
 # ==========================================================
 
 
-@extend_schema(
-    tags=["Authentication"],
-    operation_id="auth_logout",
-    summary="Logout",
-    description=(
-        "Logout the authenticated user. "
-        "Since JWT authentication is stateless, "
-        "the frontend should discard the stored tokens."
-    ),
-    responses={
-        200: LogoutResponseSerializer,
-    },
+@extend_schema_view(
+    post=extend_schema(
+        tags=["Authentication"],
+        operation_id="auth_logout",
+        summary="Logout",
+        description=(
+            "Logout the authenticated user. "
+            "Since JWT authentication is stateless, "
+            "the frontend should discard the stored tokens."
+        ),
+        responses={
+            200: LogoutResponseSerializer,
+            401: ErrorSerializer,
+        },
+    )
 )
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def api_logout(request):
     return Response({
         "success": True,
-        "message": "Logged out (delete token on frontend)"
+        "message": "Logged out (delete token on frontend)",
     })
 
 # ==========================================================
@@ -2871,6 +2877,64 @@ def dashboard_api(request):
     return Response({
         "message": f"Welcome {request.user.username}"
     })
+
+
+# ==========================================================
+# TABLE QR API
+# ==========================================================
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def table_qr_api(request, table_id):
+    """
+    Return the canonical public URL for a restaurant table QR.
+
+    GET /menu/api/qr/table/<table_id>/
+
+    Authentication:
+        Required
+
+    The QR itself points to the public table menu URL.
+    """
+
+    restaurant = get_user_restaurant(request.user)
+
+    if not restaurant:
+        return Response(
+            {
+                "success": False,
+                "message": "Restaurant not found."
+            },
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    table = get_object_or_404(
+        Table,
+        id=table_id,
+        restaurant=restaurant,
+    )
+
+    menu_path = reverse(
+        "menu_by_table",
+        kwargs={
+            "table_id": table.id,
+        },
+    )
+
+    public_url = request.build_absolute_uri(menu_path)
+
+    return Response(
+        {
+            "success": True,
+            "table": {
+                "id": table.id,
+                "table_number": table.table_number,
+            },
+            "qr_url": public_url,
+            "menu_url": public_url,
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 # ==========================================================
@@ -2933,7 +2997,7 @@ def public_menu(request, restaurant_id):
 
 
 # ==========================================================
-#              PUBLIC MENU VIEW BY TABLE API
+#               MENU VIEW BY TABLE API
 # ==========================================================
 
 def menu_view_by_table(request, table_id):
@@ -2945,26 +3009,54 @@ def menu_view_by_table(request, table_id):
         'table_id': table.id
     })
 
+# ==========================================================
+#              PUBLIC MENU VIEW BY TABLE API
+# ==========================================================
+
+@extend_schema(
+    tags=["Public Menu"],
+    operation_id="PublicMenu_ByTable",
+    summary="Get Public Menu By Table",
+    description=(
+        "Return the public restaurant menu associated with a specific "
+        "restaurant table. Authentication is not required."
+    ),
+    responses={
+        200: PublicMenuByTableResponseSerializer,
+        404: APIErrorSerializer,
+    },
+)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def public_menu_by_table(request, table_id):
 
-    table = get_object_or_404(Table, id=table_id)
+    table = get_object_or_404(
+        Table,
+        id=table_id,
+    )
+
     restaurant = table.restaurant
 
-    categories = Category.objects.filter(restaurant=restaurant)
-
-    items = FoodItem.objects.filter(
+    categories = Category.objects.filter(
         restaurant=restaurant,
-        is_paused=False
-    ).select_related("category").prefetch_related("addons")
+    )
+
+    items = (
+        FoodItem.objects
+        .filter(
+            restaurant=restaurant,
+            is_paused=False,
+        )
+        .select_related("category")
+        .prefetch_related("addons")
+    )
 
     categories_data = [
         {
-            "id": c.id,
-            "name": c.name,
+            "id": category.id,
+            "name": category.name,
         }
-        for c in categories
+        for category in categories
     ]
 
     items_data = [
@@ -2973,36 +3065,49 @@ def public_menu_by_table(request, table_id):
             "name": item.name,
             "description": item.description,
             "price": float(item.price),
-            "image": item.image.url if item.image else None,
+            "image": (
+                request.build_absolute_uri(item.image.url)
+                if item.image
+                else None
+            ),
             "category": item.category.id,
             "addons": [
                 {
-                    "id": a.id,
-                    "name": a.name,
-                    "price": float(a.price),
+                    "id": addon.id,
+                    "name": addon.name,
+                    "price": float(addon.price),
                 }
-                for a in item.addons.all()
+                for addon in item.addons.all()
             ],
         }
         for item in items
     ]
 
     return Response({
-            "restaurant": {
-                "id": restaurant.id,
-                "name": restaurant.name,
-                "logo": request.build_absolute_uri(restaurant.logo.url) if restaurant.logo else None,
-                "cover_image": request.build_absolute_uri(restaurant.cover_image.url) if restaurant.cover_image else None,
-                "address": restaurant.address,
-            },
-            "table": {
-                "id": table.id,
-                "table_number": table.table_number
-            },
-            "categories": categories_data,
-            "items": items_data,
-        })
-
+        "restaurant": {
+            "id": restaurant.id,
+            "name": restaurant.name,
+            "logo": (
+                request.build_absolute_uri(restaurant.logo.url)
+                if restaurant.logo
+                else None
+            ),
+            "cover_image": (
+                request.build_absolute_uri(restaurant.cover_image.url)
+                if restaurant.cover_image
+                else None
+            ),
+            "address": restaurant.address,
+        },
+        "table": {
+            "id": table.id,
+            "table_number": table.table_number,
+        },
+        "categories": categories_data,
+        "items": items_data,
+    })
+    
+    
 # ==========================================================
 #                     CATEGORY API
 # ==========================================================
@@ -3733,6 +3838,70 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
     
+    
+# ==========================================================
+# TABLE ACTIVE ORDERS API
+# ==========================================================
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def table_orders_api(request, table_id):
+    """
+    Return active orders for a table.
+
+    GET /menu/api/table/<table_id>/orders/
+
+    This endpoint is public because customers scanning a table QR
+    may need to see the current table/order state.
+    """
+
+    table = get_object_or_404(
+        Table.objects.select_related("restaurant"),
+        id=table_id,
+    )
+
+    active_statuses = [
+        "pending",
+        "accepted",
+        "preparing",
+        "ready",
+        "served",
+    ]
+
+    orders = (
+        Order.objects
+        .filter(
+            table=table,
+            status__in=active_statuses,
+        )
+        .prefetch_related(
+            "order_items__food_item",
+            "order_items__selected_addons",
+        )
+        .order_by("-created_at")
+    )
+
+    serializer = PublicTableOrderSerializer(
+        orders,
+        many=True,
+        context={
+            "request": request,
+        },
+    )
+
+    return Response(
+        {
+            "success": True,
+            "table": {
+                "id": table.id,
+                "table_number": table.table_number,
+            },
+            "orders": serializer.data,
+        },
+        status=status.HTTP_200_OK,
+    )    
+    
+
 ######################### EMAIL UPDATE/VERIFICATION ########################
 
 ############################################################################

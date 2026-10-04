@@ -12,6 +12,76 @@ from rest_framework import serializers
 from restaurant.feature_models import Coupon, InventoryItem, Review
 
 
+
+from rest_framework import serializers
+
+
+# =============================================================================
+# PUBLIC MENU BY TABLE
+# =============================================================================
+
+
+class PublicMenuAddonSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    price = serializers.FloatField()
+
+
+class PublicMenuCategorySerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
+class PublicMenuItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    description = serializers.CharField(
+        allow_blank=True,
+        allow_null=True,
+        required=False,
+    )
+    price = serializers.FloatField()
+    image = serializers.CharField(
+        allow_null=True,
+        required=False,
+    )
+    category = serializers.IntegerField()
+    addons = PublicMenuAddonSerializer(
+        many=True,
+        required=False,
+    )
+
+
+class PublicMenuRestaurantSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    logo = serializers.CharField(
+        allow_null=True,
+        required=False,
+    )
+    cover_image = serializers.CharField(
+        allow_null=True,
+        required=False,
+    )
+    address = serializers.CharField(
+        allow_blank=True,
+        allow_null=True,
+        required=False,
+    )
+
+
+class PublicMenuTableSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    table_number = serializers.IntegerField()
+
+
+class PublicMenuByTableResponseSerializer(serializers.Serializer):
+    restaurant = PublicMenuRestaurantSerializer()
+    table = PublicMenuTableSerializer()
+    categories = PublicMenuCategorySerializer(many=True)
+    items = PublicMenuItemSerializer(many=True)
+
+
 # =============================================================================
 # Common responses / errors
 # =============================================================================
@@ -101,7 +171,7 @@ class UnassignDeliveryPartnerResponseSerializer(serializers.Serializer):
 
 
 class DeliveryStatusRequestSerializer(serializers.Serializer):
-    status = serializers.CharField()
+    delivery_status = serializers.CharField()
 
 
 class DeliveryStatusResponseSerializer(serializers.Serializer):

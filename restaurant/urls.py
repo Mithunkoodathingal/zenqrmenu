@@ -320,6 +320,18 @@ urlpatterns = [
     path('menu/table/<int:table_id>/', menu_view_by_table, name='menu_by_table'),
     
     path('menu/api/table/<int:table_id>/', public_menu_by_table),
+    
+    path(
+        "menu/api/qr/table/<int:table_id>/",
+        table_qr_api,
+        name="table-qr-api",
+    ),
+
+    path(
+        "menu/api/table/<int:table_id>/orders/",
+        table_orders_api,
+        name="table-orders-api",
+    ),
 
 # -----------------------------------------------------------------------------
 #                       AI Menu Creation API's
