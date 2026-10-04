@@ -3396,7 +3396,7 @@ def create_table_api(request):
         )
 
         # ✅ Generate QR
-        qr_url = request.build_absolute_uri(f"/menu/table/{table.id}/")
+        qr_url = f"https://zenqrmenu.com/menu/{table.id}"
 
         qr = qrcode.make(qr_url)
 
