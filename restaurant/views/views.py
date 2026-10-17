@@ -449,14 +449,8 @@ Business Rules
 class UpdateRestaurantAPIView(APIView):
     """
     Update restaurant.
-    
+
     PATCH /api/restaurants/5/update/
-    
-    {
-        "name": "ZenQR Restaurant",
-        "description": "Updated description"
-    }
-            
     """
 
     permission_classes = [
@@ -473,47 +467,33 @@ class UpdateRestaurantAPIView(APIView):
         request,
         restaurant_id,
     ):
-
-        restaurant = get_restaurant(
+        restaurant = get_restaurant_by_id(
             restaurant_id=restaurant_id,
         )
 
+        if restaurant.owner_id != request.user.id:
+            return Response(
+                {"detail": "You do not have permission to update this restaurant."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         serializer = RestaurantSerializer(
-
             restaurant,
-
             data=request.data,
-
             partial=False,
-
         )
-
         serializer.is_valid(
             raise_exception=True,
         )
 
         restaurant = update_restaurant(
-
-            restaurant_id=restaurant_id,
-
+            restaurant=restaurant,
             validated_data=serializer.validated_data,
-
-            staff=getattr(
-                request.user,
-                "staff_profile",
-                None,
-            ),
-
-            request=request,
-
         )
 
         return Response(
-
-            RestaurantSerializer(
-                restaurant,
-            ).data
-
+            RestaurantSerializer(restaurant).data,
+            status=status.HTTP_200_OK,
         )
 
     def patch(
@@ -521,47 +501,33 @@ class UpdateRestaurantAPIView(APIView):
         request,
         restaurant_id,
     ):
-
-        restaurant = get_restaurant(
+        restaurant = get_restaurant_by_id(
             restaurant_id=restaurant_id,
         )
 
+        if restaurant.owner_id != request.user.id:
+            return Response(
+                {"detail": "You do not have permission to update this restaurant."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         serializer = RestaurantSerializer(
-
             restaurant,
-
             data=request.data,
-
             partial=True,
-
         )
-
         serializer.is_valid(
             raise_exception=True,
         )
 
         restaurant = update_restaurant(
-
-            restaurant_id=restaurant_id,
-
+            restaurant=restaurant,
             validated_data=serializer.validated_data,
-
-            staff=getattr(
-                request.user,
-                "staff_profile",
-                None,
-            ),
-
-            request=request,
-
         )
 
         return Response(
-
-            RestaurantSerializer(
-                restaurant,
-            ).data
-
+            RestaurantSerializer(restaurant).data,
+            status=status.HTTP_200_OK,
         )
 
 
