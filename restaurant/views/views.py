@@ -185,7 +185,7 @@ class MyRestaurantAPIView(APIView):
     ):
 
         restaurant = get_my_restaurant(
-            request=request,
+            user=request.user,
         )
 
         serializer = RestaurantSerializer(
