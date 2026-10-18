@@ -7309,6 +7309,7 @@ class KDSOrderSerializer(serializers.ModelSerializer):
     )
 
     items = OrderItemSerializer(
+        source="order_items",
         many=True,
         read_only=True,
     )
