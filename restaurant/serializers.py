@@ -1712,11 +1712,14 @@ class FoodItemSerializer(serializers.ModelSerializer):
     # =========================================================================
     # Update
     # =========================================================================
+    
     def update(
         self,
-        instance: Restaurant,
+        instance: FoodItem,
         validated_data: dict,
-    ) -> Restaurant:
+    ) -> FoodItem:
+        
+        
     # def update(
     #     self,
     #     instance,
@@ -2202,11 +2205,12 @@ class OrderItemSerializer(serializers.ModelSerializer):
     # =========================================================================
     # Update
     # =========================================================================
+    
     def update(
         self,
-        instance: Restaurant,
+        instance: OrderItem,
         validated_data: dict,
-    ) -> Restaurant:
+    ) -> OrderItem:
         
     # def update(
     #     self,
@@ -3461,6 +3465,44 @@ class OrderSerializer(serializers.ModelSerializer):
             },
 
         }
+        
+        
+    # =========================================================================
+    #   Create Item Function
+    # =========================================================================
+
+    @transaction.atomic
+    def create(self, validated_data):
+        items_data = validated_data.pop("items", [])
+
+        if not items_data:
+            raise serializers.ValidationError({
+                "items": "At least one order item is required."
+            })
+
+        # Create the parent order without passing nested items to the model.
+        order = Order.objects.create(**validated_data)
+
+        # Create each item and associate it with this order.
+        for item_data in items_data:
+            addon_ids = item_data.pop("selected_addons_ids", [])
+            food_item_id = item_data.pop("food_item_id")
+
+            food_item = FoodItem.objects.get(id=food_item_id)
+
+            order_item = OrderItem.objects.create(
+                order=order,
+                food_item=food_item,
+                **item_data,
+            )
+
+            if addon_ids:
+                order_item.selected_addons.set(
+                    AddOn.objects.filter(id__in=addon_ids)
+                )
+
+        return order
+
         
         
     # =========================================================================
