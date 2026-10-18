@@ -7298,10 +7298,7 @@ class KDSOrderSerializer(serializers.ModelSerializer):
     Kitchen Display System order serializer.
     """
 
-    customer_name = serializers.CharField(
-        source="customer_name",
-        read_only=True,
-    )
+    customer_name = serializers.CharField(read_only=True)
 
     table_number = serializers.CharField(
         source="table.table_number",
