@@ -175,7 +175,7 @@ def _get_kds_queryset(
         .prefetch_related(
 
             Prefetch(
-                "items",
+                "order_items",
                 queryset=OrderItem.objects.select_related(
                     "food_item",
                 ),
