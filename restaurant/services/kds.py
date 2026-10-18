@@ -182,7 +182,7 @@ def _get_kds_queryset(
             ),
 
             Prefetch(
-                "kitchen_notes",
+                "kitchen_note_logs",
                 queryset=KitchenNote.objects.filter(
                     is_deleted=False,
                 ).order_by(
