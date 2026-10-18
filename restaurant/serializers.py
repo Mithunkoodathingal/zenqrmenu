@@ -7299,7 +7299,7 @@ class KDSOrderSerializer(serializers.ModelSerializer):
     """
 
     customer_name = serializers.CharField(
-        source="customer.name",
+        source="customer_name",
         read_only=True,
     )
 
@@ -7309,6 +7309,7 @@ class KDSOrderSerializer(serializers.ModelSerializer):
     )
 
     items = OrderItemSerializer(
+        source="order_items",
         many=True,
         read_only=True,
     )
