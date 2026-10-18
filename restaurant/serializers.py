@@ -7314,6 +7314,13 @@ class KDSOrderSerializer(serializers.ModelSerializer):
         read_only=True,
     )
 
+    # Order model stores customer instructions as customer_note.
+    # Expose the API's expected special_instructions field through that model field.
+    special_instructions = serializers.CharField(
+        source="customer_note",
+        read_only=True,
+    )
+
     elapsed_minutes = serializers.SerializerMethodField()
 
     class Meta:
