@@ -230,6 +230,8 @@ def get_kds_orders(
     queryset = _get_kds_queryset(
         restaurant=restaurant,
     )
+    
+    queryset = queryset.exclude(status="completed")
 
     if kitchen_status:
 
