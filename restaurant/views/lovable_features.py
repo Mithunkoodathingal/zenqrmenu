@@ -114,6 +114,29 @@ def _restaurant_or_404(request):
     return restaurant, None
 
 
+def _clean_days(raw):
+    """Normalise applicable_days to a sorted list of ints 0..6 (0=Sunday)."""
+    if not raw: return []
+    try:
+        days = sorted({int(d) for d in raw if 0 <= int(d) <= 6})
+    except (TypeError, ValueError):
+        return []
+    return [] if len(days) == 7 else days
+
+
+def _bogo_discount(items):
+    """Buy-one-get-one: every second unit (cheapest first) is free."""
+    if not isinstance(items, list) or not items: return None
+    units = []
+    try:
+        for it in items:
+            units += [Decimal(str(it.get("price", 0)))] * max(int(it.get("quantity", 1)), 0)
+    except Exception:
+        return None
+    units.sort()
+    return sum(units[: len(units) // 2], Decimal("0"))
+
+
 def _order_payload(order):
     return {
         "id": order.id,
@@ -815,7 +838,7 @@ class CouponListCreateAPIView(APIView):
 
     @staticmethod
     def serialize(c):
-        return {"id": c.id, "code": c.code, "discount_type": c.discount_type, "value": c.value, "minimum_order_amount": c.minimum_order_amount, "maximum_discount": c.maximum_discount, "usage_limit": c.usage_limit, "used_count": c.used_count, "valid_from": c.valid_from, "valid_until": c.valid_until, "applies_to_dinein": c.applies_to_dinein, "applies_to_pickup": c.applies_to_pickup, "applies_to_delivery": c.applies_to_delivery, "is_active": c.is_active}
+        return {"id": c.id, "code": c.code, "discount_type": c.discount_type, "value": c.value, "minimum_order_amount": c.minimum_order_amount, "maximum_discount": c.maximum_discount, "usage_limit": c.usage_limit, "used_count": c.used_count, "valid_from": c.valid_from, "valid_until": c.valid_until, "applies_to_dinein": c.applies_to_dinein, "applies_to_pickup": c.applies_to_pickup, "applies_to_delivery": c.applies_to_delivery, "is_active": c.is_active, "description": c.description, "per_user_limit": c.per_user_limit, "applicable_days": c.applicable_days or []}
 
     def post(self, request):
         restaurant, error = _restaurant_or_404(request)
@@ -823,7 +846,7 @@ class CouponListCreateAPIView(APIView):
         code = str(request.data.get("code", "")).strip().upper()
         if not code: return Response({"success": False, "message": "code is required."}, status=400)
         try:
-            coupon = Coupon.objects.create(restaurant=restaurant, code=code, discount_type=request.data.get("discount_type", "percent"), value=request.data.get("value", 0), minimum_order_amount=request.data.get("minimum_order_amount", 0), maximum_discount=request.data.get("maximum_discount"), usage_limit=request.data.get("usage_limit"), valid_from=request.data.get("valid_from"), valid_until=request.data.get("valid_until"), applies_to_dinein=request.data.get("applies_to_dinein", True), applies_to_pickup=request.data.get("applies_to_pickup", True), applies_to_delivery=request.data.get("applies_to_delivery", True))
+            coupon = Coupon.objects.create(restaurant=restaurant, code=code, discount_type=request.data.get("discount_type", "percent"), value=request.data.get("value", 0), minimum_order_amount=request.data.get("minimum_order_amount", 0), maximum_discount=request.data.get("maximum_discount"), usage_limit=request.data.get("usage_limit"), valid_from=request.data.get("valid_from"), valid_until=request.data.get("valid_until"), applies_to_dinein=request.data.get("applies_to_dinein", True), applies_to_pickup=request.data.get("applies_to_pickup", True), applies_to_delivery=request.data.get("applies_to_delivery", True), description=request.data.get("description", "") or "", per_user_limit=request.data.get("per_user_limit"), applicable_days=_clean_days(request.data.get("applicable_days")))
         except Exception as exc:
             return Response({"success": False, "message": str(exc)}, status=400)
         return Response({"success": True, "coupon": self.serialize(coupon)}, status=201)
@@ -859,10 +882,17 @@ class CouponDetailAPIView(APIView):
         restaurant, error = _restaurant_or_404(request)
         if error: return error
         coupon = get_object_or_404(Coupon, id=coupon_id, restaurant=restaurant)
-        fields = ["code", "discount_type", "value", "minimum_order_amount", "maximum_discount", "usage_limit", "valid_from", "valid_until", "applies_to_dinein", "applies_to_pickup", "applies_to_delivery", "is_active"]
+        fields = ["code", "discount_type", "value", "minimum_order_amount", "maximum_discount", "usage_limit", "valid_from", "valid_until", "applies_to_dinein", "applies_to_pickup", "applies_to_delivery", "is_active", "description", "per_user_limit"]
         for field in fields:
             if field in request.data: setattr(coupon, field, request.data[field])
-        coupon.save()
+        if "applicable_days" in request.data:
+            coupon.applicable_days = _clean_days(request.data.get("applicable_days"))
+        if "code" in request.data:
+            coupon.code = str(coupon.code).strip().upper()
+        try:
+            coupon.save()
+        except Exception as exc:
+            return Response({"success": False, "message": str(exc)}, status=400)
         return Response({"success": True, "coupon": CouponListCreateAPIView.serialize(coupon)})
 
     def delete(self, request, coupon_id):
@@ -903,7 +933,21 @@ class CouponValidateAPIView(APIView):
         if coupon.usage_limit is not None and coupon.used_count >= coupon.usage_limit: return Response({"success": False, "message": "Coupon usage limit reached."}, status=400)
         if order_amount < coupon.minimum_order_amount: return Response({"success": False, "message": "Minimum order amount not reached."}, status=400)
         if not getattr(coupon, f"applies_to_{order_type}", False): return Response({"success": False, "message": "Coupon does not apply to this order type."}, status=400)
-        discount = order_amount * coupon.value / Decimal("100") if coupon.discount_type == "percent" else coupon.value
+        if coupon.applicable_days:
+            weekday_sun0 = (timezone.localtime(now).weekday() + 1) % 7
+            if weekday_sun0 not in coupon.applicable_days: return Response({"success": False, "message": "Coupon is not valid today."}, status=400)
+        if coupon.per_user_limit:
+            phone = str(request.data.get("customer_phone", "") or "").strip()
+            email = str(request.data.get("customer_email", "") or "").strip()
+            if not phone and not email: return Response({"success": False, "message": "customer_phone or customer_email is required for this coupon."}, status=400)
+            used = CouponRedemption.objects.filter(coupon=coupon)
+            used = used.filter(order__customer_phone=phone) if phone else used.filter(order__customer_email__iexact=email)
+            if used.count() >= coupon.per_user_limit: return Response({"success": False, "message": "You have already used this coupon the maximum number of times."}, status=400)
+        if coupon.discount_type == "bogo":
+            discount = _bogo_discount(request.data.get("items"))
+            if discount is None: return Response({"success": False, "message": "items (price, quantity) are required for a buy-one-get-one coupon."}, status=400)
+        else:
+            discount = order_amount * coupon.value / Decimal("100") if coupon.discount_type == "percent" else coupon.value
         if coupon.maximum_discount is not None: discount = min(discount, coupon.maximum_discount)
         discount = min(discount, order_amount).quantize(Decimal("0.01"))
         return Response({"success": True, "coupon": {"id": coupon.id, "code": coupon.code}, "discount_amount": discount})
@@ -1119,3 +1163,32 @@ class ReportsAPIView(APIView):
             "top_items": list(get_top_selling_items(restaurant=restaurant)),
         }
         return Response({"success": True, "report": report})
+
+
+
+class OwnerReviewListAPIView(APIView):
+    """Owner-only list of ALL reviews (published + hidden) for moderation.
+
+    GET /api/reviews/?status=published|hidden
+    The public endpoint only returns published reviews, so moderation needs this.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        restaurant, error = _restaurant_or_404(request)
+        if error: return error
+        qs = Review.objects.filter(restaurant=restaurant)
+        st = request.query_params.get("status")
+        if st == "published": qs = qs.filter(is_published=True)
+        elif st == "hidden": qs = qs.filter(is_published=False)
+        all_qs = Review.objects.filter(restaurant=restaurant)
+        return Response({
+            "success": True,
+            "count": qs.count(),
+            "average_rating": all_qs.aggregate(avg=Avg("rating"))["avg"] or 0,
+            "total_reviews": all_qs.count(),
+            "reviews": [
+                {**ReviewListCreateAPIView.serialize(r), "is_published": r.is_published, "order_id": r.order_id}
+                for r in qs
+            ],
+        })

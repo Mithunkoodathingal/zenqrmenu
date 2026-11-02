@@ -236,12 +236,17 @@ def list_restaurants(
         queryset = queryset.filter(
             pickup_enabled=filters["pickup"]
         )
+        
+# -----------------------------------------------------        
+    # Dine-in filtering is skipped because Restaurant
+    # currently has no dine_in_enabled model field.
+# -----------------------------------------------------
 
-    if filters.get("dine_in") is not None:
+    # if filters.get("dine_in") is not None:
 
-        queryset = queryset.filter(
-            dine_in_enabled=filters["dine_in"]
-        )
+    #     queryset = queryset.filter(
+    #         dine_in_enabled=filters["dine_in"]
+    #     )
 
     queryset = queryset.order_by(
         filters.get("ordering", "name")

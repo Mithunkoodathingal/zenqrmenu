@@ -41,10 +41,14 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='http://localhost:8000/', cast=C
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    "http://10.42.148.199:8000",
+    "http://10.42.148.199:8080",
+    "http://192.168.29.137:8080",
     "https://zenqrmenu.onrender.com",
     "https://www.zenqrmenu.com",
     "https://zenqrmenu.com",
     "https://api.zenqrmenu.com",
+    "http://192.168.29.137:8080",
 ]
 
 
@@ -316,89 +320,6 @@ STATICFILES_DIRS = [BASE_DIR / "restaurant" / "static"]
 
 
 
-
-
-# USE_S3 = config("USE_S3", default=False, cast=bool)
-
-# # Common defaults
-# STATICFILES_LOCATION = config("STATICFILES_LOCATION", default="static")
-# MEDIAFILES_LOCATION = config("MEDIAFILES_LOCATION", default="media")
-
-# if USE_S3:
-#     # --- S3 credentials and settings ---
-#     AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID")
-#     AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY")
-#     AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME")
-
-#     AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME') or None
-#     AWS_S3_CUSTOM_DOMAIN = config("AWS_S3_CUSTOM_DOMAIN", default="")  # optional
-#     AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL') or None
-
-#     AWS_DEFAULT_ACL = None
-#     AWS_S3_FILE_OVERWRITE = config("AWS_S3_FILE_OVERWRITE", default=False, cast=bool)
-#     AWS_QUERYSTRING_AUTH = False
-#     AWS_S3_SIGNATURE_VERSION = config("AWS_S3_SIGNATURE_VERSION", default="s3v4")
-#     AWS_S3_OBJECT_PARAMETERS = {}
-
-#     # Backward-compatible OPTIONS
-#     _default_options = {}
-#     if AWS_S3_ENDPOINT_URL:
-#         _default_options["endpoint_url"] = AWS_S3_ENDPOINT_URL
-
-#     # --- Django 5 STORAGES mapping ---
-#     STORAGES = {
-#         "default": {
-#             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-#             "OPTIONS": _default_options,
-#         },
-#         "staticfiles": {
-#             "BACKEND": "restaurant.storages.StaticS3Storage",
-#             "OPTIONS": {"location": STATICFILES_LOCATION},
-#         },
-#         "media": {
-#             "BACKEND": "restaurant.storages.MediaS3Storage",
-#             "OPTIONS": {"location": MEDIAFILES_LOCATION},
-#         },
-#     }
-
-#     # --- URLs for public access ---
-#     if AWS_S3_CUSTOM_DOMAIN:
-#         STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{STATICFILES_LOCATION}/"
-#         MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{MEDIAFILES_LOCATION}/"
-#     else:
-#         if AWS_S3_ENDPOINT_URL:
-#             STATIC_URL = f"{AWS_S3_ENDPOINT_URL.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}/{STATICFILES_LOCATION}/"
-#             MEDIA_URL = f"{AWS_S3_ENDPOINT_URL.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}/{MEDIAFILES_LOCATION}/"
-#         else:
-#             STATIC_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{STATICFILES_LOCATION}/"
-#             MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{MEDIAFILES_LOCATION}/"
-
-# else:
-#     # --- Local dev fallback ---
-#     STATIC_URL = config("STATIC_URL", default="/static/")
-#     STATIC_ROOT = config("STATIC_ROOT", default=os.path.join(BASE_DIR, "staticfiles"))
-#     STATICFILES_DIRS = [BASE_DIR / "restaurant" / "static"]
-
-#     MEDIA_URL = config("MEDIA_URL", default="/media/")
-#     MEDIA_ROOT = config("MEDIA_ROOT", default=os.path.join(BASE_DIR, "media"))
-
-#     STORAGES = {
-#         "default": {
-#             "BACKEND": "django.core.files.storage.FileSystemStorage",
-#             "OPTIONS": {"location": MEDIA_ROOT},
-#         },
-#         "staticfiles": {
-#             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-#             "OPTIONS": {"location": STATIC_ROOT},
-#         },
-#     }
-
-# ✅ REMOVE the following lines if present anywhere:
-# DEFAULT_FILE_STORAGE = ...
-# STATICFILES_STORAGE = ...
-
-
-
 # -------------------------
 # Sites / allauth / Email
 # -------------------------
@@ -509,9 +430,9 @@ SIMPLE_JWT = {
 
 # Login/Logout
 LOGIN_REDIRECT_URL = config('LOGIN_REDIRECT_URL', default='dashboard')
-LOGOUT_REDIRECT_URL = config('LOGOUT_REDIRECT_URL', default="https://www.zenqrmenu.com/login")
-ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "https://www.zenqrmenu.com/email-verified"
-ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = "https://www.zenqrmenu.com/email-verified"
+LOGOUT_REDIRECT_URL = config('LOGOUT_REDIRECT_URL', default="http://192.168.29.137:8080/login")
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "http://192.168.29.137:8080/email-verified"
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = "http://192.168.29.137:8080/email-verified"
 ACCOUNT_CONFIRM_EMAIL_ON_GET = True
 
 # Third party credentials
@@ -603,14 +524,25 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "https://zenqrmenu.com",
     "https://api.zenqrmenu.com",
+    "http://192.168.29.137:8080",
+    "http://10.42.148.199:8080",
+    "http://10.42.148.199:8000",
+
 ]
 
 
-SESSION_COOKIE_SAMESITE = "None"
-SESSION_COOKIE_SECURE = True
+# SESSION_COOKIE_SAMESITE = "None"
+# SESSION_COOKIE_SECURE = False
 
-CSRF_COOKIE_SAMESITE = "None"
-CSRF_COOKIE_SECURE = True
+# CSRF_COOKIE_SAMESITE = "None"
+# CSRF_COOKIE_SECURE = False
+
+
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SAMESITE = "Lax"
 
 # Optional: if you need file uploads to be served from a cloud storage (S3, etc.), configure here.
 

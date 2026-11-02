@@ -60,10 +60,12 @@ class InventoryItem(models.Model):
 class Coupon(models.Model):
     DISCOUNT_PERCENT = "percent"
     DISCOUNT_FIXED = "fixed"
+    DISCOUNT_BOGO = "bogo"
 
     DISCOUNT_CHOICES = [
         (DISCOUNT_PERCENT, "Percentage"),
         (DISCOUNT_FIXED, "Fixed"),
+        (DISCOUNT_BOGO, "Buy one get one"),
     ]
 
     restaurant = models.ForeignKey(
@@ -88,6 +90,11 @@ class Coupon(models.Model):
     applies_to_pickup = models.BooleanField(default=True)
     applies_to_delivery = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
+    # Added for the Lovable coupon screen (additive, nullable/defaulted).
+    description = models.TextField(blank=True, default="")
+    per_user_limit = models.PositiveIntegerField(null=True, blank=True)
+    # Weekdays the coupon is valid on, 0=Sunday..6=Saturday. Empty = every day.
+    applicable_days = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
