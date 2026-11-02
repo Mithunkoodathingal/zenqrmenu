@@ -41,7 +41,7 @@ from restaurant.services.hooks import (
 from restaurant.services.queries import (
     list_nearby_restaurants,
     get_restaurant_queryset,
-    list_restaurants
+    list_restaurants as list_filtered_restaurants,
 )
 
 # =============================================================================
@@ -344,16 +344,18 @@ def get_restaurant_list(
             Filtered queryset of restaurants.
     """
 
-    return list_restaurants(
-        search=search,
-        city=city,
-        state=state,
-        country=country,
-        cuisine=cuisine,
-        delivery=delivery,
-        pickup=pickup,
-        dine_in=dine_in,
-        ordering=ordering,
+    return list_filtered_restaurants(
+        filters={
+            "search": search,
+            "city": city,
+            "state": state,
+            "country": country,
+            "cuisine": cuisine,
+            "delivery": delivery,
+            "pickup": pickup,
+            "dine_in": dine_in,
+            "ordering": ordering,
+        }
     )
     
 

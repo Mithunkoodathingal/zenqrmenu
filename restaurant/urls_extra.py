@@ -27,6 +27,8 @@ from restaurant.lovable_schema import (
     UnassignDeliveryPartnerAPIView,
 )
 
+from restaurant.views.lovable_features import OwnerReviewListAPIView  # noqa: E402
+
 from restaurant.views.phase3b import (
     InventoryIngredientDetailAPIView,
     InventoryIngredientsAPIView,
@@ -84,6 +86,7 @@ urlpatterns = [
 
     # Reviews
     path("api/restaurants/<int:restaurant_id>/reviews/", ReviewListCreateAPIView.as_view(), name="api-reviews"),
+    path("api/reviews/", OwnerReviewListAPIView.as_view(), name="api-owner-reviews"),
     path("api/reviews/<int:review_id>/", ReviewDetailAPIView.as_view(), name="api-review-detail"),
 
     # Reports

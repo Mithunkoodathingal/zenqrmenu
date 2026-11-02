@@ -109,8 +109,10 @@ from ..models import (
 )
 from subscription.models import Subscription
 
-from google import genai
+
 # from google.genai import types
+from google import genai
+from google.genai import types as genai_types
 
 from rest_framework.generics import GenericAPIView
 
@@ -4255,11 +4257,11 @@ Schema:
         
             model="gemini-2.5-flash",
             contents=[
-                types.Part.from_bytes(
+                genai_types.Part.from_bytes(
                     data=file_bytes,
                     mime_type=mime,
                 ),
-                prompt,
+                                prompt,
             ],
             )
 
