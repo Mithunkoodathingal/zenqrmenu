@@ -21,7 +21,7 @@ class Restaurant(models.Model):
     address = models.TextField(blank=True)
     phone = models.CharField(max_length=20)
     email = models.EmailField()
-    google_business_url = models.URLField(blank=True)
+    google_business_url = models.URLField(max_length=1000, blank=True, null=True)
     logo = models.ImageField(upload_to="restaurants/logos/", blank=True, null=True)
     cover_image = models.ImageField(upload_to="restaurants/covers/", blank=True, null=True)
 
