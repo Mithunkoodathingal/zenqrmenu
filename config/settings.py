@@ -24,7 +24,7 @@ def env_list(name, default=""):
     return [v.strip() for v in os.environ.get(name, default).split(",") if v.strip()]
 
 
-DEBUG = env_bool("DEBUG", False)
+DEBUG = env_bool("DEBUG", True)
 SECRET_KEY = env("SECRET_KEY") or ("dev-only-insecure-key" if DEBUG else None)
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY must be set when DEBUG is off.")
