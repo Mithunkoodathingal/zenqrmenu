@@ -30,8 +30,17 @@ if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY must be set when DEBUG is off.")
 
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "api.zenqrmenu.com,localhost,127.0.0.1")
-FRONTEND_URL = env("FRONTEND_URL", "https://zenqrmenu.com").rstrip("/")
-BACKEND_URL = env("BACKEND_URL", "https://api.zenqrmenu.com").rstrip("/")
+
+FRONTEND_URL = env(
+    "FRONTEND_URL",
+    "https://zenqrmenu.com"
+).rstrip("/")
+
+BACKEND_URL = env(
+    "BACKEND_URL",
+    "https://api.zenqrmenu.com"
+).rstrip("/")
+
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -92,6 +101,20 @@ DATABASES = {"default": dj_database_url.parse(
     conn_max_age=600,
     ssl_require=env_bool("DB_SSL_REQUIRE", False),
 )}
+
+# ------------------------------- Newly added after Lovable-----------------
+
+if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
+    db_options = DATABASES["default"].get("OPTIONS", {})
+    db_options.pop("sslmode", None)
+
+    if db_options:
+        DATABASES["default"]["OPTIONS"] = db_options
+    else:
+        DATABASES["default"].pop("OPTIONS", None)
+
+# ---------------------------------------------------------------------------
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -131,10 +154,28 @@ else:
         "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage" if not DEBUG else "django.contrib.staticfiles.storage.StaticFilesStorage"},
     }
 
-CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "https://zenqrmenu.com,https://www.zenqrmenu.com,https://magicqrmenu.lovable.app")
-CORS_ALLOWED_ORIGIN_REGEXES = env_list("CORS_ALLOWED_ORIGIN_REGEXES", r"^https://.*\.lovable\.app$,^https://.*\.lovableproject\.com$")
+
+# ----------------------------------------------Forrmatted according to GPT-----------
+CORS_ALLOWED_ORIGINS = env_list(
+    "CORS_ALLOWED_ORIGINS",
+    "https://zenqrmenu.com,https://www.zenqrmenu.com,https://magicqrmenu.lovable.app"
+)
+
+CORS_ALLOWED_ORIGIN_REGEXES = env_list(
+    "CORS_ALLOWED_ORIGIN_REGEXES",
+    r"^https://.*\.lovable\.app$,^https://.*\.lovableproject\.com$"
+)
+
+CSRF_TRUSTED_ORIGINS = env_list(
+    "CSRF_TRUSTED_ORIGINS",
+    "https://api.zenqrmenu.com,https://zenqrmenu.com"
+)
+
+# --------------------------------------------------------------------------------
+
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "https://api.zenqrmenu.com,https://zenqrmenu.com")
+
+# CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "https://api.zenqrmenu.com,https://zenqrmenu.com")
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework_simplejwt.authentication.JWTAuthentication"],
