@@ -1,4 +1,4 @@
-"""Diner sign-in with an emailed code, profile, saved addresses and order history."""
+"""Diner profile, saved addresses and order history (sign-in: auth_views.py)."""
 import secrets
 from datetime import timedelta
 
@@ -77,68 +77,7 @@ def _phone(v, field="phone", required=False):
     return v
 
 
-# ─── Sign-in ──────────────────────────────────────────────────────────────
-
-@api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
-@throttle_classes([OtpThrottle])
-def request_code(request):
-    email = _email(request.data.get("email"))
-    intent = request.data.get("intent") or "login"
-    exists = CustomerProfile.objects.filter(email=email).exists()
-    if intent == "register" and exists:
-        raise ValidationError({"email": ["This email already has an account. Sign in instead."]})
-    if intent == "login" and not exists:
-        raise ValidationError({"email": ["No account for this email yet. Create one instead."]})
-    if EmailCode.objects.filter(email=email, created_at__gte=timezone.now() - timedelta(seconds=60)).exists():
-        return Response({"detail": "Please wait a minute before asking for another code."}, status=429)
-    code = EmailCode.issue(email)
-    sent = send_email(email, "Your Zen QR Menu sign-in code",
-                      f"Your sign-in code is {code}. It expires in {EmailCode.VALID_MINUTES} minutes.\n\n"
-                      "If you didn't ask for this, you can ignore this email.")
-    if not sent:
-        return Response({"detail": "We couldn't send the email right now. Try again shortly."}, status=503)
-    return Response({"detail": "Code sent."})
-
-
-@api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
-@throttle_classes([OtpThrottle])
-def verify_code(request):
-    d = request.data
-    email = _email(d.get("email"))
-    code = str(d.get("code") or "").strip()
-    entry = EmailCode.objects.filter(email=email, used_at__isnull=True).order_by("-created_at").first()
-    if entry is None or not entry.usable():
-        raise ValidationError({"code": ["This code has expired. Ask for a new one."]})
-    if not secrets.compare_digest(entry.code_hash, EmailCode.hash(code)):
-        entry.attempts += 1
-        entry.save(update_fields=["attempts"])
-        left = max(EmailCode.MAX_ATTEMPTS - entry.attempts, 0)
-        raise ValidationError({"code": [f"Wrong code. {left} tries left." if left else "Too many wrong tries. Ask for a new code."]})
-    name = str(d.get("name") or "").strip()[:150]
-    phone = _phone(d.get("phone"))
-    with transaction.atomic():
-        entry.used_at = timezone.now()
-        entry.save(update_fields=["used_at"])
-        profile = CustomerProfile.objects.select_related("user").filter(email=email).first()
-        if profile is None:
-            user = User.objects.create_user(username=f"cust_{secrets.token_hex(8)}", email=email)
-            user.set_unusable_password()
-            user.save()
-            profile = CustomerProfile(user=user, email=email, name=name or email.split("@")[0], phone=phone, email_verified=True)
-            profile.set_marketing(bool(d.get("marketing_opt_in")))
-            profile.save()
-        else:
-            profile.email_verified = True
-            if name and not profile.name:
-                profile.name = name
-            if phone and not profile.phone:
-                profile.phone = phone
-            profile.save()
-    return Response({**customer_tokens(profile.user), "customer": me_out(profile, request)})
+# ─── Sign-in lives in auth_views.py (password login; email code only activates new accounts) ───
 
 
 @api_view(["POST"])

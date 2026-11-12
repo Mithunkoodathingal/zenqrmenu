@@ -71,8 +71,13 @@ POST /subscription/api/create/
 POST /subscription/api/upgrade/
 POST /subscription/api/verify/
 POST /subscription/api/cancel/
-POST /api/customers/auth/email/request-otp/
-POST /api/customers/auth/email/verify-otp/
+POST /api/customers/auth/register/
+POST /api/customers/auth/verify-email/
+POST /api/customers/auth/resend-code/
+POST /api/customers/auth/login/
+POST /api/customers/auth/password/forgot/
+POST /api/customers/auth/password/reset/
+POST /api/customers/me/password/
 GET /api/coupons/
 POST /api/coupons/
 PATCH /api/coupons/1/
